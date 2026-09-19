@@ -39,14 +39,20 @@ type remoteItemsResult struct {
 func (r remoteItemsResult) apply(s *browserSession) bool {
 	q := &s.remoteRequests
 	if r.generation != q.generation {
+		r.command.Acknowledge(false)
 		return false
 	}
 	q.resolving = false
 	q.cancel = nil
-	if r.err != nil {
+	if r.command.Canceled() {
+		r.command.Acknowledge(false)
+	} else if r.err != nil {
+		r.command.Acknowledge(false)
 		s.message = browserMessage{MessagePresentation: rendering.MessagePresentation{Header: titleRemotePlayback, Text: requestFailure(messageRemoteItemsFailed, r.err), Until: time.Now().Add(8 * time.Second)}}
 	} else {
 		s.applyRemoteItems(r.command, r.items)
+		s.publishRemotePlayback(time.Now())
+		r.command.Acknowledge(true)
 	}
 	if len(q.requests) > 0 {
 		cmd := q.requests[0]
@@ -66,6 +72,9 @@ func (q *remoteRequests) cancelAll() {
 	q.cancelLocal()
 	q.generation++
 	q.resolving = false
+	for _, command := range q.requests {
+		command.Acknowledge(false)
+	}
 	q.requests = nil
 }
 
@@ -77,6 +86,8 @@ func (s *browserSession) requestRemotePlay(cmd remote.Command) {
 	if q.resolving {
 		if len(q.requests) < maxPendingRemoteRequests {
 			q.requests = append(q.requests, cmd)
+		} else {
+			cmd.Acknowledge(false)
 		}
 		return
 	}

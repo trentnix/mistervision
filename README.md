@@ -149,7 +149,7 @@ The case-sensitive `match` pattern must match the controller’s Linux device na
 
 The [playback guide](docs/GO_PLAYBACK.md#playback-controls) lists controller and keyboard controls. [About](docs/GO_BROWSING.md#about-and-updates) shows the installed version and provides [updates](#updates).
 
-To control playback from another Jellyfin client, select **MiSTerVision** as the playback device. Remote play, queues, pause/resume, seeking, shuffle, and repeat are supported. See [remote control](docs/GO_REMOTE.md).
+To control playback from another Jellyfin client, select **MiSTerVision** as the playback device. Remote play, queues, pause/resume, seeking, shuffle, and repeat are supported. Plex LAN video control is an experimental prototype. Plex Web timeline updates are blocked by a server-proxy issue. See [remote control](docs/GO_REMOTE.md).
 
 ## Screenshots
 
@@ -263,7 +263,7 @@ The harness builds the client automatically. The demo uses mock data and does no
 
 Jellyfin supports remote control from other Jellyfin clients. Plex supports local DVR Live TV with alternate audio when the stream provides it. Both providers share playback controls, music visuals, picture modes, captions, and the photo viewer.
 
-Search, automatic photo slideshows, and photo zoom are not implemented. Plex relay connections, remote control, multi-file movies, and free online TV are not supported. See [Plex details](docs/GO_PLEX.md) and [current limits](docs/README.md#current-limits).
+Search, automatic photo slideshows, and photo zoom are not implemented. Plex relay connections, remote music queues, multi-file movies, and free online TV are not supported. See [Plex details](docs/GO_PLEX.md) and [current limits](docs/README.md#current-limits).
 
 ## Deferred work
 

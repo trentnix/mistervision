@@ -14,7 +14,8 @@ import (
 // delaying playback. Existing whole-library shuffle keeps its rolling batches.
 func (s *browserSession) publishLocalQueue() {
 	q := &s.remoteRequests
-	if s.remote.source == nil || s.playbackQueue.active {
+	observer, observesQueues := s.remote.source.(remote.QueueObserver)
+	if !observesQueues || s.playbackQueue.active {
 		return
 	}
 	q.cancelLocal()
@@ -28,10 +29,10 @@ func (s *browserSession) publishLocalQueue() {
 				state.Current = key
 			}
 		}
-		s.remote.source.Publish(state)
+		observer.Publish(state)
 		return
 	}
-	s.remote.source.Publish(remote.QueueState{Entries: []remote.Entry{{ID: item.ID, Key: "local"}}, Current: "local", Repeat: remote.RepeatNone})
+	observer.Publish(remote.QueueState{Entries: []remote.Entry{{ID: item.ID, Key: "local"}}, Current: "local", Repeat: remote.RepeatNone})
 	parent, hasParent := s.model.Parent()
 	// Keep playlists paged, even when a remote source is connected. Loading a
 	// complete queue would delay large playlists and impose the remote size cap.

@@ -23,6 +23,8 @@ type playbackSession struct {
 	liveTV          bool
 	state           media.PlayState
 	played, started bool
+	videoStarted    bool
+	pauseOnReady    bool // Apply pause after the first frame or audio position, never during stream opening.
 	reporter        *progressReporter
 	preferences     *Preferences
 	preferenceKey   string
@@ -119,21 +121,27 @@ func (s *playbackSession) control(p *playerProcess, callbacks Callbacks, control
 		if control.Kind != TogglePause {
 			paused = control.Kind == SetPaused
 		}
+		if !paused {
+			s.pauseOnReady = false
+		}
 		if paused == s.state.IsPaused {
+			return
+		}
+		// MPlayer discards slave commands while opening its cache. Other
+		// decoders can freeze before rendering if paused too early. Apply the
+		// intent at the first frame, without waiting for browser feedback.
+		if !s.started && !s.videoStarted && paused {
+			s.pauseOnReady = true
 			return
 		}
 		if p.pause(paused) != nil {
 			return
 		}
+		s.pauseOnReady = false
 		s.state.IsPaused = paused
 		s.trace.record("playback.pause", slog.Bool("paused", paused))
-		if !s.started {
-			if paused {
-				startup.Stop()
-			} else {
-				startup.Reset(30 * time.Second)
-			}
-		}
+		// A startup pause still renders a first frame. Keep the startup deadline
+		// active so a stalled source cannot wait forever behind a paused state.
 		if callbacks.Paused != nil {
 			callbacks.Paused(paused)
 		}
@@ -236,7 +244,11 @@ func (s *playbackSession) monitor(ctx context.Context, cancel context.CancelFunc
 			}
 		case <-videoStarted:
 			videoStarted = nil
+			s.videoStarted = true
 			s.trace.record("playback.first-frame")
+			if s.pauseOnReady {
+				s.control(p, request.Callbacks, Control{Kind: SetPaused}, startup)
+			}
 			if request.Callbacks.VideoStarted != nil {
 				request.Callbacks.VideoStarted()
 			}
@@ -260,6 +272,9 @@ func (s *playbackSession) monitor(ctx context.Context, cancel context.CancelFunc
 			}
 		case seconds := <-p.positions:
 			s.update(seconds, request.Callbacks.Position, startup)
+			if s.pauseOnReady {
+				s.control(p, request.Callbacks, Control{Kind: SetPaused}, startup)
+			}
 		case <-poll.C:
 			p.poll()
 		case <-report.C:

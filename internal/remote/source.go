@@ -7,10 +7,16 @@ import "context"
 // Source supplies commands for one authenticated application session.
 // Run must honor cancellation and may reconnect internally. emit can block until
 // the application consumes a command. Run must stop calling it before returning.
-// Publish must not perform I/O or block on network work. It copies any retained
-// slices and may run concurrently with Run. No method may mutate caller data.
+// Sources can implement QueueObserver or PlaybackObserver for the facts they need.
+// No method may mutate caller data.
 type Source interface {
 	Run(context.Context, func(Command))
+}
+
+// QueueObserver receives local and remote queue changes. Publish must copy retained
+// slices and must not perform I/O. It may overlap Source.Run. Sources without this
+// capability do not trigger background local-queue lookup or adoption.
+type QueueObserver interface {
 	Publish(QueueState)
 }
 
@@ -43,6 +49,33 @@ type Command struct {
 	Repeat       RepeatMode
 	Shuffled     bool
 	Header, Text string
+	// Accepted optionally receives application acceptance, not decoder completion.
+	// Supply a buffered channel. Playback facts come from PlaybackObserver.
+	Accepted chan<- bool
+	// Done cancels admission while a network request or catalog lookup is pending.
+	// Once playback starts, cancellation does not stop it.
+	Done <-chan struct{}
+}
+
+// Canceled reports whether the source withdrew a command before admission.
+func (c Command) Canceled() bool {
+	select {
+	case <-c.Done:
+		return true
+	default:
+		return false
+	}
+}
+
+// Acknowledge reports application acceptance without blocking the event loop.
+// A nil channel preserves fire-and-forget sources.
+func (c Command) Acknowledge(accepted bool) {
+	if c.Accepted != nil {
+		select {
+		case c.Accepted <- accepted:
+		default:
+		}
+	}
 }
 
 // PlayMode determines how a Play command changes the current queue.

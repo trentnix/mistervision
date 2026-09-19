@@ -57,7 +57,7 @@ func TestConnectorKeepsAccountsSeparate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if session.Remote != nil || session.Server.Identity().Server != "plex:"+server.URL || session.Server.Identity().User != "7" {
+	if session.Remote == nil || session.Server.Identity().Server != "plex:"+server.URL || session.Server.Identity().User != "7" {
 		t.Fatal("wrong session services or identity")
 	}
 	after, err := os.ReadFile(filepath.Join(root, "session.json"))

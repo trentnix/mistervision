@@ -45,9 +45,10 @@ func (s *browserSession) handleRemote(cmd remote.Command) bool {
 		}
 		return s.setPaused(paused)
 	case remote.Seek:
-		if cmd.Position != nil {
-			s.controller.SeekTo(*cmd.Position, now)
+		if cmd.Position == nil || !s.controller.running || s.controller.stoppedByUser || (!s.controller.state.ProgressSeen && !s.controller.state.PositionKnown && !s.controller.state.VideoStarted) || media.IsLive(s.controller.item) {
+			return false
 		}
+		s.controller.SeekTo(*cmd.Position, now)
 	case remote.Next, remote.Previous:
 		direction := 1
 		if cmd.Kind == remote.Previous {

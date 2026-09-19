@@ -32,6 +32,7 @@ type PlaybackController struct {
 	// A zero process ID means that slot has no decoder.
 	active          playbackProcess
 	pending         playbackProcess
+	failed          bool // The active item ended with a playback failure. Reset by Start.
 	running         bool // Remains true across a seek, even between decoder processes.
 	stoppedByUser   bool
 	cleanupComplete bool // Final resume save has finished for the active process.
@@ -72,6 +73,7 @@ func (c *PlaybackController) Start(item media.Item, offset *int64, paused bool, 
 	c.pendingPause = ""
 	c.seekPhase = seekInactive
 	c.stoppedByUser = false
+	c.failed = false
 	c.cleanupComplete = false
 	c.notice = ""
 	c.state = playbackState{

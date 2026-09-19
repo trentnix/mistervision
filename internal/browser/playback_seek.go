@@ -87,10 +87,16 @@ func (c *PlaybackController) activatePendingSeek(now time.Time) {
 		c.trackOptions = c.tracks.TrackOptions
 	}
 	c.pending = playbackProcess{}
+	// The replacement has a fresh, empty control queue. Queue pause before
+	// opening its gate so playback need not wait for a browser feedback round trip.
+	if c.pauseRequested {
+		c.active.controls <- playback.Control{Kind: playback.SetPaused}
+	}
 	c.active.allowStart()
 	c.clearSeek()
 	c.state.SeekPresses = 0
 	c.state.Paused = false
+	c.state.ConfirmedPaused = false
 	c.state.PositionTicks = c.pendingTarget
 	c.state.ProgressSeen = false
 	c.state.VideoStarted = false

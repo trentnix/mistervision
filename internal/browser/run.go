@@ -76,6 +76,7 @@ func Run(ctx context.Context, config Config, player playback.Config, output vide
 		case r := <-s.events:
 			redraw = s.handleResult(r)
 		}
+		s.publishRemotePlayback(time.Now())
 		if s.model.Quit || (!s.update.exitAt.IsZero() && !time.Now().Before(s.update.exitAt)) {
 			return s.exitResult()
 		}

@@ -5,6 +5,7 @@ import (
 
 	"mistervision/internal/media"
 	"mistervision/internal/playback"
+	"mistervision/internal/remote"
 )
 
 // wantsPause returns user intent, excluding the temporary pause used for seeking.
@@ -20,9 +21,9 @@ func (c *PlaybackController) SetPaused(paused bool) {
 		return
 	}
 	c.pauseRequested = paused
-	if c.seekPhase != seekInactive || !c.state.ProgressSeen {
-		// A seek holds the original paused. The replacement applies user intent
-		// on its first position update, once its controls are ready.
+	if c.seekPhase != seekInactive || (!c.state.ProgressSeen && !c.state.PositionKnown && !c.state.VideoStarted) {
+		// A preparing seek holds the original paused. The replacement receives
+		// the latest intent before its gate opens. New items wait for readiness.
 		return
 	}
 	c.pendingPause = playback.Resume
@@ -49,7 +50,7 @@ func (c *PlaybackController) deliverPause() bool {
 // SeekTo uses the same video handoff as local seeking and a relative decoder
 // operation for audio. Live TV cannot seek. Targets are clamped to the duration.
 func (c *PlaybackController) SeekTo(target int64, now time.Time) {
-	if !c.running || c.stoppedByUser || !c.state.ProgressSeen || media.IsLive(c.item) {
+	if !c.running || c.stoppedByUser || (!c.state.ProgressSeen && !c.state.PositionKnown && !c.state.VideoStarted) || media.IsLive(c.item) {
 		return
 	}
 	target = max(0, target)
@@ -78,4 +79,28 @@ func (c *PlaybackController) SeekTo(target int64, now time.Time) {
 	c.state.SeekInFlight = false
 	c.state.SwitchingTracks = false
 	c.state.SeekDeadline = now.Add(500 * time.Millisecond)
+}
+
+// RemoteState exposes playback facts without drawing menus or exposing decoder
+// handles. During a seek, position remains the last accepted decoder position.
+func (c *PlaybackController) RemoteState(now time.Time) remote.PlaybackState {
+	state := remote.PlaybackState{Status: remote.Stopped, ItemID: c.item.ID,
+		PositionTicks: c.state.ConfirmedPositionTicks, DurationTicks: c.item.RunTimeTicks,
+		Audio: c.item.Type == "Audio", Live: media.IsLive(c.item)}
+	switch {
+	case c.failed:
+		state.Status = remote.Failed
+	case !c.running || c.stoppedByUser:
+	case c.seekPhase != seekInactive || c.state.SeekInFlight || c.state.SeekTarget != nil:
+		state.Status = remote.Seeking
+	case !c.state.ProgressSeen && !c.state.VideoStarted:
+		state.Status = remote.Loading
+	case c.state.ConfirmedPaused:
+		state.Status = remote.Paused
+	case c.state.Buffering || (!c.state.BufferingKnown && now.Sub(c.state.LastAdvance) >= 3*time.Second):
+		state.Status = remote.Buffering
+	default:
+		state.Status = remote.Playing
+	}
+	return state
 }

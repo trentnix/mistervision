@@ -25,7 +25,7 @@ type Connector struct {
 var _ connection.Connector = Connector{}
 
 // Connect validates saved credentials or requests approval at plex.tv/link.
-// Plex sessions do not provide a remote-control source.
+// Its remote receiver belongs to the active server and viewer session.
 func (c Connector) Connect(ctx context.Context, interaction connection.Interaction) (connection.Session, error) {
 	if err := ctx.Err(); err != nil {
 		return connection.Session{}, err
@@ -42,7 +42,13 @@ func (c Connector) Connect(ctx context.Context, interaction connection.Interacti
 	}
 	account := NewClient(Config{}, serverstate.Session{})
 	account.Version, account.Diagnostics = c.Version, c.Diagnostics
-	return c.connectDiscovered(ctx, interaction, &serverDiscovery{account: account, lan: gdmDiscovery{}})
+	session, err := c.connectDiscovered(ctx, interaction, &serverDiscovery{account: account, lan: gdmDiscovery{}})
+	if err == nil {
+		if client, ok := session.Server.(*Client); ok {
+			session.Remote = client.remoteSource()
+		}
+	}
+	return session, err
 }
 
 var errServerURL = errors.New("Plex requires an HTTP or HTTPS server address without credentials, query, or fragment")

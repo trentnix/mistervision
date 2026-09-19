@@ -94,11 +94,14 @@ func TestReplacementPauseRetriesWithoutPositionUpdates(t *testing.T) {
 	c.Tick(f.now.Add(time.Second))
 	c.Handle(PlaybackEvent{Kind: PlaybackPrepared, ID: c.pending.id}, f.now)
 	c.Handle(PlaybackEvent{Kind: PlaybackEnded, ID: c.active.id}, f.now)
+	expectCommand(t, c.active.controls, playback.SetPaused)
 	fillPlayerCommands(c)
 	c.Handle(PlaybackEvent{Kind: PlaybackPosition, ID: c.active.id, Ticks: 320000000}, f.now)
 	drainPlayerCommands(c)
 	c.Tick(f.now.Add(2 * time.Second))
-	expectCommand(t, c.active.controls, playback.SetPaused)
+	if len(c.active.controls) != 0 {
+		t.Fatal("seek startup repeated its primed pause")
+	}
 	if !c.wantsPause() {
 		t.Fatal("replacement lost paused intent")
 	}
@@ -181,4 +184,63 @@ func TestFailedSeekKeepsNewPauseIntent(t *testing.T) {
 	}
 	c.Key(control.Open, f.now)
 	expectCommand(t, c.active.controls, playback.Resume)
+}
+
+func TestPausedSeekIsPrimedBeforeFirstReplacementPosition(t *testing.T) {
+	f := newControllerFixture(t)
+	c := f.c
+	c.SetPaused(true)
+	drainPlayerCommands(c)
+	c.SeekTo(300000000, f.now)
+	c.Tick(f.now.Add(time.Second))
+	c.Handle(PlaybackEvent{Kind: PlaybackPrepared, ID: c.pending.id}, f.now)
+	c.Handle(PlaybackEvent{Kind: PlaybackEnded, ID: c.active.id}, f.now)
+	expectCommand(t, c.active.controls, playback.SetPaused)
+	if c.state.ProgressSeen {
+		t.Fatal("fixture already supplied replacement feedback")
+	}
+	// Resume must reach a loading replacement instead of being lost until a
+	// position report from a decoder that has already been told to pause.
+	c.SetPaused(false)
+	expectCommand(t, c.active.controls, playback.Resume)
+	c.Handle(PlaybackEvent{Kind: PlaybackPosition, ID: c.active.id, Ticks: 300000000}, f.now)
+	if len(c.active.controls) != 0 {
+		t.Fatal("first position replayed obsolete pause intent")
+	}
+}
+
+func TestRemoteSeekCanRetargetAReplacementBeforeItsFirstPosition(t *testing.T) {
+	f := newControllerFixture(t)
+	c := f.c
+	c.SeekTo(300000000, f.now)
+	c.Tick(f.now.Add(time.Second))
+	c.Handle(PlaybackEvent{Kind: PlaybackPrepared, ID: c.pending.id}, f.now)
+	c.Handle(PlaybackEvent{Kind: PlaybackEnded, ID: c.active.id}, f.now)
+	c.SeekTo(600000000, f.now.Add(2*time.Second))
+	if c.state.SeekTarget == nil || *c.state.SeekTarget != 600000000 {
+		t.Fatal("seek was discarded while the replacement loaded")
+	}
+}
+
+func TestPrimedPauseKeepsLoadingVisibleUntilFirstFrame(t *testing.T) {
+	now := time.Now()
+	state := playbackState{PlayingVideo: true, Paused: true, LastAdvance: now}
+	if state.videoWaitLabel(now) != "Loading..." {
+		t.Fatal("primed pause hid startup feedback")
+	}
+	state.VideoStarted = true
+	if state.videoWaitLabel(now) != "" {
+		t.Fatal("paused first frame kept loading feedback")
+	}
+}
+
+func TestRemoteSeekAcceptsFirstFrameBeforePosition(t *testing.T) {
+	f := newControllerFixture(t)
+	c := f.c
+	c.state.ProgressSeen, c.state.PositionKnown = false, false
+	c.state.VideoStarted = true
+	c.SeekTo(300000000, f.now)
+	if c.state.SeekTarget == nil || *c.state.SeekTarget != 300000000 {
+		t.Fatal("visible video rejected an absolute seek before its first position poll")
+	}
 }

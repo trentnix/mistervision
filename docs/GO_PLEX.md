@@ -89,7 +89,7 @@ Music uses artist → album → track navigation, ordered album queues, and whol
 
 Testing on Ghostty and MiSTer covered sign-in, library navigation, Continue Watching, artwork, music and track navigation, photos, video seeking, subtitles, and Live TV. These checks do not establish compatibility with every source format or server setup. The shared transcode limits apply to both providers. Jellyfin's MPEG-2 codec selection does not apply to Plex.
 
-Multi-file videos, relay connections, and Plex remote control are not implemented. The active viewing profile determines library access.
+Multi-file videos and relay connections are not implemented. [LAN video remote control](GO_REMOTE.md#plex-video-control) is an experimental prototype, paused pending resolution of a Plex Web timeline issue. Plex remote music queues are not implemented. The active viewing profile determines library access.
 
 ## Photos
 

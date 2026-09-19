@@ -123,6 +123,7 @@ func (c *PlaybackController) Handle(event PlaybackEvent, now time.Time) bool {
 		case PlaybackPaused:
 			// Feedback describes the decoder, not the user's latest intent.
 			c.state.Paused = event.Value
+			c.state.ConfirmedPaused = event.Value
 			c.state.LastAdvance = now
 		case PlaybackBuffering:
 			c.state.Buffering = event.Value
@@ -149,6 +150,7 @@ func (c *PlaybackController) replacementReady(id int, now time.Time) {
 
 func (c *PlaybackController) updatePosition(ticks int64, now time.Time) {
 	firstPosition := !c.state.ProgressSeen
+	firstItemPosition := !c.state.PositionKnown
 	if firstPosition && c.state.SeekTarget == nil {
 		c.state.finishSeekControls(now)
 	}
@@ -156,8 +158,10 @@ func (c *PlaybackController) updatePosition(ticks int64, now time.Time) {
 		c.state.LastAdvance = now
 	}
 	c.state.ProgressSeen = true
+	c.state.PositionKnown = true
 	c.state.PositionTicks = ticks
-	if firstPosition && c.pauseRequested {
+	c.state.ConfirmedPositionTicks = ticks
+	if firstItemPosition && c.pauseRequested {
 		c.SetPaused(true)
 	}
 }
@@ -181,6 +185,7 @@ func (c *PlaybackController) decoderEnded(event PlaybackEvent, now time.Time) bo
 		return false
 	}
 	c.clearSeek()
+	c.failed = event.Err != nil && !c.stoppedByUser
 	c.running = false
 	c.state.PlayingVideo = false
 	// Keep the music menu through the gap while the browser finds another track.

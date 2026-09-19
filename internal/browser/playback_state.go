@@ -21,12 +21,15 @@ type playbackState struct {
 	SeekInFlight    bool // Preparation or decoder handoff is in progress.
 	SeekDeadline    time.Time
 
-	PositionTicks  int64
-	ProgressSeen   bool      // The current decoder has reported its first position.
-	VideoStarted   bool      // The current decoder has presented a frame, even without a position.
-	LastAdvance    time.Time // Used to infer buffering when no explicit status exists.
-	Buffering      bool
-	BufferingKnown bool // The decoder has supplied an explicit buffering status.
+	PositionKnown          bool  // This item has reported a position, retained across seek replacements.
+	ConfirmedPositionTicks int64 // Last decoder position, excluding a prepared seek offset.
+	ConfirmedPaused        bool  // Decoder feedback, excluding optimistic UI pause intent.
+	PositionTicks          int64
+	ProgressSeen           bool      // The current decoder has reported its first position.
+	VideoStarted           bool      // The current decoder has presented a frame, even without a position.
+	LastAdvance            time.Time // Used to infer buffering when no explicit status exists.
+	Buffering              bool
+	BufferingKnown         bool // The decoder has supplied an explicit buffering status.
 
 	ControlsUntil time.Time // Menu timeout outside a seek.
 	SeekControls  bool      // Keep the open menu through seek preparation and startup.
@@ -54,7 +57,7 @@ func (m *playbackState) HideControls() {
 // seekVideo accumulates seek actions against the pending destination. It only
 // updates UI intent. The controller starts the request after the deadline.
 func (m *playbackState) seekVideo(item *media.Item, key control.Action, now time.Time) {
-	if !m.PlayingVideo || !m.ProgressSeen || item == nil || media.IsLive(*item) {
+	if !m.PlayingVideo || (!m.ProgressSeen && !m.PositionKnown) || item == nil || media.IsLive(*item) {
 		return
 	}
 	target := m.PositionTicks
@@ -87,11 +90,14 @@ func (m *playbackState) videoWaitLabel(now time.Time) string {
 		}
 		return "Seeking..."
 	}
-	if !m.PlayingVideo || m.Paused {
+	if !m.PlayingVideo {
 		return ""
 	}
 	if !m.ProgressSeen && !m.VideoStarted {
 		return "Loading..."
+	}
+	if m.Paused {
+		return ""
 	}
 	if m.Buffering || (!m.BufferingKnown && now.Sub(m.LastAdvance) >= 3*time.Second) {
 		return "Buffering..."

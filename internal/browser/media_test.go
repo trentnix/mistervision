@@ -184,8 +184,9 @@ func TestVideoWaitingStates(t *testing.T) {
 		t.Fatal("pause showed buffering", got)
 	}
 	state.ProgressSeen = false
+	state.VideoStarted = true
 	if got := state.videoWaitLabel(now); got != "" {
-		t.Fatal("pause showed loading", got)
+		t.Fatal("paused frame showed loading", got)
 	}
 }
 

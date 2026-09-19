@@ -13,7 +13,8 @@ Start with the [project README](../README.md) for installation and everyday use.
 | [Playback](GO_PLAYBACK.md) | Players, controls, seeking, subtitles, audio tracks, picture modes, and Live TV. |
 | [Input](GO_INPUT.md) | Controller profiles, axes, labels, and held-button behavior. |
 | [Music](GO_MUSIC.md) | Queues, shuffle, meters, and custom visual backgrounds. |
-| [Remote control](GO_REMOTE.md) | Jellyfin commands, queue behavior, and the control interface. |
+| [Remote control](GO_REMOTE.md) | Jellyfin queues, Plex LAN video control, and shared interfaces. |
+| [Plex remote control plan](PLEX_REMOTE_PLAN.md) | Compatibility findings, authenticated receiver validation, and remaining milestones. |
 | [Diagnostics](GO_DIAGNOSTICS.md) | Logging, recovery events, privacy, and troubleshooting. |
 | [Architecture](GO_RENDERING.md) | Application ownership, shared rendering, output backends, and decoder interfaces. |
 | [Third-party notices](THIRD_PARTY.md) | Attribution, licenses, and external components. |
@@ -22,7 +23,7 @@ Start with the [project README](../README.md) for installation and everyday use.
 
 Search, automatic photo slideshows, and photo zoom are not implemented. Server addresses can be set in configuration, but there is no on-screen address editor.
 
-Plex relay connections, remote control, multi-file movies, and Plex’s free online TV are not implemented. Home profile management stays in Plex. MiSTerVision selects existing viewers and respects their access. See [Plex support and limits](GO_PLEX.md).
+Plex relay connections, remote music queues, multi-file movies, and Plex’s free online TV are not implemented. Plex LAN video control is an experimental prototype. Development is paused because Plex Web ignores timeline updates through the server proxy. Home profile management stays in Plex. MiSTerVision selects existing viewers and respects their access. See [Plex support and limits](GO_PLEX.md).
 
 Jellyfin Live TV audio-track selection is unavailable. Plex exposes alternate live audio when the stream provides it. Live TV has no seeking or timeshift support.
 
