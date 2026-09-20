@@ -5,9 +5,11 @@ import (
 	"errors"
 	"log/slog"
 	"os"
+	"path/filepath"
 
 	"mistervision/internal/browser"
 	"mistervision/internal/connection"
+	"mistervision/internal/diagnostics"
 	"mistervision/internal/input"
 	"mistervision/internal/platform"
 	"mistervision/internal/playback"
@@ -45,8 +47,9 @@ func runBrowser(ctx context.Context, d platform.Display, o launchOptions, trace 
 	}
 	if executable, err := os.Executable(); err == nil {
 		if installer := installedUpdater(o, executable); installer != nil {
-			config.Updater = installer
-			config.RestartAfterUpdate = os.Getenv("MISTERVISION_AUTO_RESTART") == "1"
+			if err := configureInstalledUpdates(&config, installer, filepath.Dir(installationRoot)); err != nil {
+				trace.log.Record("update.manager", slog.String("error_kind", diagnostics.ErrorKind(err)))
+			}
 		}
 	}
 	if os.Getenv("MISTERVISION_UPDATE_RECOVERED") == "1" {

@@ -4,6 +4,8 @@ import (
 	"os"
 	"syscall"
 
+	"mistervision/internal/browser"
+
 	misterupdate "mistervision/internal/mister/update"
 )
 
@@ -39,4 +41,23 @@ func recoverUpdate(o launchOptions) error {
 		return syscall.Exec(executable, os.Args, os.Environ())
 	}
 	return nil
+}
+
+// configureInstalledUpdates keeps external update ownership separate from
+// startup rollback. Recovery must remain available for a pending transaction.
+func configureInstalledUpdates(config *browser.Config, installer *misterupdate.Installer, root string) error {
+	config.Updater = nil
+	config.RestartAfterUpdate = false
+	config.UpdateInstructions = ""
+	managed, err := misterupdate.DownloaderRegistered(root)
+	switch {
+	case err != nil:
+		config.UpdateInstructions = messageUpdateManagerUnreadable
+	case managed:
+		config.UpdateInstructions = messageDownloaderUpdates
+	default:
+		config.Updater = installer
+		config.RestartAfterUpdate = os.Getenv("MISTERVISION_AUTO_RESTART") == "1"
+	}
+	return err
 }

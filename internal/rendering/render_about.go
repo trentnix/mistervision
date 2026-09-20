@@ -185,7 +185,7 @@ func (a AboutPresentation) notesLayout(width, height int, labels control.Labels)
 		}
 	default:
 		hints = append(hints, pairedHint(labels, control.Up, control.Down, "Scroll"))
-		if a.CanInstall && !a.ManualInstall && a.Release.HasBundle {
+		if a.CanInstall && a.UpdateInstructions == "" && !a.ManualInstall && a.Release.HasBundle {
 			hints = append(hints, hint(labels, control.Open, "Install"))
 		}
 		hints = append(hints, hint(labels, control.Back, "Back"))

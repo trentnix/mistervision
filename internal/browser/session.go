@@ -77,7 +77,8 @@ func newBrowserSession(ctx context.Context, config Config, player playback.Confi
 	s.model.Rows = rendering.VisibleRows(s.geometry.Width, s.geometry.Height)
 	s.model.HomeRows = rendering.HomeVisibleRows(s.geometry.Width, s.geometry.Height)
 	s.about.Build = config.Build
-	s.about.CanInstall = config.Updater != nil
+	s.about.CanInstall = config.Updater != nil && config.UpdateInstructions == ""
+	s.about.UpdateInstructions = config.UpdateInstructions
 	s.refreshConnections()
 	s.about.CurrentConnection = config.ReturnConnectionID
 	s.about.CanReturnToConnection = config.ReturnConnectionID != ""

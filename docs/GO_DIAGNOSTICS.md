@@ -34,7 +34,7 @@ Each line is JSON with a timestamp and event name in `msg`.
 | `application.display` | Logical and physical dimensions. |
 | `input.backend`, `.device`, `.unavailable` | Backend, initial devices and bindings, and identification/open failures. No button presses. |
 | `mister.display`, `.framebuffer`, `.setting`, `.settings` | Interlaced state, kernel framebuffer geometry, and allowlisted numeric INI settings. |
-| `update.start`, `.end`, `.recovered`, `.restart` | Installation start, completion flags for failure/cancellation/recovery, startup rollback, and a restart request after successful cleanup. No download URLs or raw errors. |
+| `update.start`, `.end`, `.recovered`, `.restart`, `.manager` | Installation start, completion flags for failure/cancellation/recovery, startup rollback, and a restart request after successful cleanup. Update-manager configuration read failures. No download URLs or raw errors. |
 | `configuration.fallback` | Logical setting, safe error category, and selected recovery behavior. |
 | `connection.discovery`, `connection.rediscovery` | Discovered server count and failure flag for initial discovery or remembered-address recovery. No server names or addresses. |
 | `connection.address-recovered` | A confirmed new address was authenticated and saved successfully. No server names, addresses, or credentials. |

@@ -29,3 +29,9 @@ const (
 	messageMigrationNotNeeded         = "server settings already exist; migration is not needed"
 	messageConnectionSelectionInvalid = "unknown connection selection"
 )
+
+// Update ownership comes from native installation configuration, not the UI.
+const (
+	messageDownloaderUpdates       = "Updates managed by Downloader. Exit and run update_all."
+	messageUpdateManagerUnreadable = "Cannot read Downloader configuration. Check it before updating."
+)

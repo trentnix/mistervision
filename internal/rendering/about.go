@@ -40,6 +40,8 @@ type AboutPresentation struct {
 	CanInstall, Updating, Installed bool
 	// ManualInstall suppresses retrying an incompatible release in this updater.
 	ManualInstall bool
+	// UpdateInstructions explains external update ownership without platform I/O.
+	UpdateInstructions string
 	// Restarting distinguishes a supported automatic restart from manual relaunch.
 	Restarting bool
 	Progress   update.Progress
@@ -71,6 +73,8 @@ func (a AboutPresentation) Status() string {
 		return "Checking for updates..."
 	case a.Message != "":
 		return a.Message
+	case a.NotesVisible && a.UpdateInstructions != "":
+		return a.UpdateInstructions
 	case a.NotesVisible && (!a.CanInstall || a.ManualInstall):
 		return messageUpdateManual
 	case a.NotesVisible && !a.Release.HasBundle:
@@ -78,11 +82,11 @@ func (a AboutPresentation) Status() string {
 	case a.NotesVisible:
 		return "Install this release? Settings and sign-in are kept."
 	case a.Release.Available:
-		return "Release " + a.Release.Latest + " available"
+		return withUpdateInstructions("Release "+a.Release.Latest+" available", a.UpdateInstructions)
 	case a.Checked:
-		return "Up to date"
+		return withUpdateInstructions("Up to date", a.UpdateInstructions)
 	default:
-		return messageUpdateCheckUnavailable
+		return withUpdateInstructions(messageUpdateCheckUnavailable, a.UpdateInstructions)
 	}
 }
 
@@ -126,4 +130,12 @@ func (a AboutPresentation) ConnectionChoices() (string, []connection.Choice) {
 		title, choices = choices[index].Name, choices[index].Children
 	}
 	return title, choices
+}
+
+// withUpdateInstructions retains release status alongside update ownership.
+func withUpdateInstructions(status, instructions string) string {
+	if instructions == "" {
+		return status
+	}
+	return status + "\n" + instructions
 }

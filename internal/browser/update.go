@@ -22,7 +22,7 @@ type updateWork struct {
 }
 
 func (s *browserSession) installUpdate() {
-	if s.config.Updater == nil || !s.about.Release.HasBundle || s.about.ManualInstall || s.about.Updating {
+	if s.config.UpdateInstructions != "" || s.config.Updater == nil || !s.about.Release.HasBundle || s.about.ManualInstall || s.about.Updating {
 		return
 	}
 	if s.controller.running || s.media.pending || s.model.MusicQueueActive() {

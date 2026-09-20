@@ -14,7 +14,23 @@ My goal is a great media experience on CRTs. I test and use MiSTerVision on a Mi
 
 ## Run on MiSTer
 
-Starting with v1.4.1, releases include the interlaced core and two installation presets. Upgrading from v1.4.0 or earlier requires one manual installation. Later updates work through About and preserve settings. Build from source to try changes that have not been released.
+Starting with v1.4.1, releases include the interlaced core and two installation presets. Upgrading from v1.4.0 or earlier requires one installation through Downloader or a manual file copy. Later updates preserve settings. Use Downloader for registered installations or About for manual installations. Build from source to try changes that have not been released.
+
+### Install through update_all or Downloader
+
+Register the MiSTerVision database using the file below to install and update through `update_all` or Downloader.
+
+1. Download the [MiSTerVision database ZIP](https://raw.githubusercontent.com/theypsilon/MultiDatabases_MiSTer/db/mister-vision/downloader_MultiDatabases_mister-vision.zip) maintained by theypsilon.
+2. Extract its `downloader_MultiDatabases_mister-vision.ini` file to `/media/fat/` on the SD card. This registers the database without replacing `downloader.ini`.
+3. If MiSTerVision is running, exit it. Run `update_all` or MiSTer Downloader, then launch **MiSTerVision** from Scripts.
+
+The database follows our published progressive package, including the interlaced core. New installations start in progressive mode. Existing connections, sign-in, preferences, and display mode are preserved. For 480i, change the [interlaced setting](#progressive-and-interlaced-output). See the maintainer’s [database instructions](https://github.com/theypsilon/MultiDatabases_MiSTer/tree/main/mister-vision) for details.
+
+Use `update_all` or Downloader for subsequent updates. Do not mix that method with About’s built-in installer: Downloader can restore the version its database currently lists. Starting with v1.4.2, MiSTerVision detects the registered database and replaces Install with “Exit and run update_all” guidance while retaining release checks and notes. Released v1.4.1 does not yet detect update ownership, so its users must follow this rule themselves.
+
+To return to built-in updates, remove the MiSTerVision database registration and restart the app. Removing registration does not delete MiSTerVision. If you added the database to `downloader.ini` yourself, remove only its `[MultiDatabases/mister-vision]` section.
+
+### Manual installation
 
 For a new installation, choose `mistervision-vX.Y.Z-progressive.zip` (normally 240p) or `mistervision-vX.Y.Z-interlaced.zip` (normally 480i) from the [releases](https://github.com/trentnix/mistervision/releases). Both contain the same application and interlaced core. The selected preset creates `settings.json` on first launch only if no current or legacy configuration exists. Existing installations keep their display mode regardless of the ZIP chosen.
 

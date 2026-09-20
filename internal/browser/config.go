@@ -68,6 +68,9 @@ type Config struct {
 	// Updater installs a release outside the event loop. Nil permits release
 	// notes but requires manual installation. Run cancels and joins active work.
 	Updater update.Installer
+	// UpdateInstructions identifies an external update mechanism. Nonempty text
+	// keeps release checks available but disables installation in this browser.
+	UpdateInstructions string
 	// RestartAfterUpdate lets Run return update.ErrRestart after installation.
 	// Enable only when the caller and launcher support restarting after cleanup.
 	RestartAfterUpdate bool
