@@ -655,21 +655,29 @@ class BrowseIntegrationTests(BrowserFixture):
         self.wait_request("/Items/movie-tricky-0")
         self.key(b"b")
         self.wait_request("/Videos/movie-tricky-0/stream")
-        first = self.read_frame()
-        self.assertTrue(any(first), "loading screen was blank")
-        time.sleep(0.2)
-        self.assertNotEqual(first, self.read_frame(), "loading indicator did not animate")
+        def wait_frame(predicate, message):
+            # Player feedback and rendering run asynchronously. Wait for the
+            # visible result instead of assuming a fixed runner speed.
+            deadline = time.monotonic() + 3
+            while True:
+                frame = self.read_frame()
+                if predicate(frame):
+                    return frame
+                self.assertIsNone(self.process.poll(), "browser exited while waiting for a frame")
+                self.assertLess(time.monotonic(), deadline, message)
+                time.sleep(.02)
+
+        first = wait_frame(any, "loading screen was blank")
+        wait_frame(lambda frame: frame != first, "loading indicator did not animate")
         clean = bytes([23]) * 640 * 240 * 4
         for stage in (1, 2, 3):
             (self.directory / "stage").write_text(str(stage))
-            time.sleep(0.3)
             if stage == 2:
-                first = self.read_frame()
-                self.assertNotEqual(first, clean, "buffering was not shown")
-                time.sleep(0.2)
-                self.assertNotEqual(first, self.read_frame(), "buffering did not animate")
+                first = wait_frame(lambda frame: frame != clean, "buffering was not shown")
+                wait_frame(lambda frame: frame != first and frame != clean,
+                           "buffering did not animate")
             else:
-                self.assertEqual(self.read_frame(), clean, "indicator remained during playback")
+                wait_frame(lambda frame: frame == clean, "indicator remained during playback")
         self.key(b"a")
 
     def test_inline_playback_owns_frame_until_stop(self):
