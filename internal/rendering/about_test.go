@@ -288,3 +288,46 @@ func TestAboutHintsStayVisibleDuringUpdateCheck(t *testing.T) {
 		}
 	}
 }
+
+func TestExternalUpdateGuidance(t *testing.T) {
+	a := AboutPresentation{CanInstall: true, Checked: true, UpdateInstructions: "Updates managed by Downloader. Exit and run update_all."}
+	if !strings.Contains(a.Status(), "Up to date") || !strings.Contains(a.Status(), "update_all") {
+		t.Fatal(a.Status())
+	}
+	a.Release = release.Status{Available: true, HasBundle: true, Latest: "v1.4.2"}
+	if !strings.Contains(a.Status(), "v1.4.2") || !strings.Contains(a.Status(), "update_all") {
+		t.Fatal(a.Status())
+	}
+	a.NotesVisible = true
+	if a.Status() != a.UpdateInstructions {
+		t.Fatal(a.Status())
+	}
+	// The footer must not advertise Install even if a caller supplies both fields.
+	layout := a.notesLayout(640, 240, control.KeyboardLabels())
+	for _, row := range layout.controls {
+		for _, hint := range row {
+			if hint.description == "Install" {
+				t.Fatal("Install hint remains")
+			}
+		}
+	}
+}
+
+func TestExternalUpdateGuidanceFits(t *testing.T) {
+	for _, size := range [][2]int{{320, 240}, {640, 240}, {640, 288}} {
+		for _, notes := range []bool{false, true} {
+			a := AboutPresentation{Visible: true, Checked: true, NotesVisible: notes, UpdateInstructions: "Updates managed by Downloader. Exit and run update_all.", Release: release.Status{Available: true, HasBundle: true, Latest: "v1.4.2"}}
+			a.Notes = ReleaseNotes("This release improves installation and updates.", size[0])
+			canvas := ui.New(size[0], size[1])
+			renderScene(canvas, &sceneCache{}, Scene{Controls: control.KeyboardLabels(), About: a}, Animation{})
+			for _, line := range messageLines(a.Status(), size[0]-48, 6) {
+				if !screenContainsText(canvas, line) {
+					t.Fatalf("%dx%d notes=%v lost %q", size[0], size[1], notes, line)
+				}
+			}
+			if dir := os.Getenv("MISTERVISION_ABOUT_PREVIEWS"); dir != "" {
+				writeSetupPreview(t, dir, fmt.Sprintf("downloader-%dx%d-notes-%v.png", size[0], size[1], notes), canvas)
+			}
+		}
+	}
+}

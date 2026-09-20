@@ -330,3 +330,16 @@ func TestUpdateFailureGuidance(t *testing.T) {
 		})
 	}
 }
+
+func TestExternalUpdateInstructionsPreventInstall(t *testing.T) {
+	s := updateSession(t)
+	s.config.UpdateInstructions = "Exit and run update_all."
+	s.config.Updater = testUpdater(func(context.Context, release.Status, func(update.Progress)) error {
+		t.Error("external management invoked built-in installer")
+		return nil
+	})
+	s.installUpdate()
+	if s.about.Updating {
+		t.Fatal("managed installation started an update")
+	}
+}

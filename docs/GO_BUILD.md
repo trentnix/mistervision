@@ -94,6 +94,20 @@ Environment overrides now start with `MISTERVISION_`, for example `MISTERVISION_
 
 ## Application updates
 
+### Downloader-managed installations
+
+The [MultiDatabases MiSTerVision database](https://github.com/theypsilon/MultiDatabases_MiSTer/tree/main/mister-vision) installs the published progressive package and preserves active configuration and state. The [README](../README.md#install-through-update_all-or-downloader) describes registration and installation. Exit MiSTerVision before running an external updater.
+
+Native startup recognizes the `[MultiDatabases/mister-vision]` database registration in `/media/fat/downloader.ini`, then visible `.ini` files in `/media/fat/downloader/`, then `/media/fat/downloader_*.ini`. Each group is alphabetical, and the first matching section wins. The registration must include a nonempty `db_url`. Filenames alone do not establish ownership. These rules follow [Downloader’s documented locations and precedence](https://github.com/MiSTer-devel/Downloader_MiSTer/blob/main/docs/drop-in-databases.md).
+
+For registered installations, About keeps release checks and notes but shows external-update instructions instead of Install. The browser also rejects installation requests. The native registration reader stays outside the shared browser and renderer. They receive only instructions and an optional installer. Startup rollback still runs before this policy is applied, so adopting Downloader cannot strand a pending built-in update.
+
+Registration indicates update ownership, not that a previous download succeeded. Custom Downloader configuration paths, environment-only registrations, destination overrides, and download filters are not interpreted. Read failures or excessive configuration sizes suppress built-in installation with an explanation and a diagnostic event. Remove the registration and restart to restore the built-in updater. The app never edits Downloader configuration.
+
+This detection is available starting with v1.4.2. v1.4.1 supports database installation but still offers its built-in installer, which users of the database must avoid.
+
+### Built-in and manual updates
+
 MiSTerVision v1.4.0 and earlier require a one-time manual installation of v1.4.1 or later. These clients still show the available release and its notes, but the renamed ZIPs suppress the incompatible Install action. Their existing status line says “No installation bundle is available.” The release summary must explain the manual upgrade and point to the release page. Keep publishing the new archive names in later releases so older clients cannot offer an incompatible download.
 
 In About, select **View release**, review the notes, then select **Install**. Automatic installation requires the client at `/media/fat/mistervision/mistervision` and the configured player at `/media/fat/mistervision/mplayer-arm`. The standard Scripts launcher is updated with the pair. Custom installations and desktop development retain manual installation.
