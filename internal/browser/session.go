@@ -36,7 +36,9 @@ type browserSession struct {
 	about            rendering.AboutPresentation
 	connection       connectionManager
 	requests         requestState
+	guide            guideState
 	home             homeState
+	counts           libraryCountState
 	selection        selectionState
 	media            mediaNavigation
 	shuffle          shuffleQueue
@@ -73,6 +75,7 @@ func newBrowserSession(ctx context.Context, config Config, player playback.Confi
 		return s.driver.launch(s.client, item, offset, gate, prepared, tracks)
 	})
 	s.model.Rows = rendering.VisibleRows(s.geometry.Width, s.geometry.Height)
+	s.model.HomeRows = rendering.HomeVisibleRows(s.geometry.Width, s.geometry.Height)
 	s.about.Build = config.Build
 	s.about.CanInstall = config.Updater != nil
 	s.refreshConnections()
@@ -97,6 +100,8 @@ func newBrowserSession(ctx context.Context, config Config, player playback.Confi
 // cannot block shutdown while the event loop is no longer receiving results.
 func (s *browserSession) close() {
 	s.ticker.Stop()
+	s.guide.reset()
+	s.counts.reset()
 	s.update.close()
 	s.connection.close()
 	s.stopRemote()

@@ -12,6 +12,16 @@ func renderScene(c *ui.Canvas, cache *sceneCache, s Scene, anim Animation) []byt
 }
 
 func renderSceneWithMusic(c *ui.Canvas, cache *sceneCache, s Scene, anim Animation, music *musicviz.Renderer) []byte {
+	if cache == nil {
+		cache = &sceneCache{}
+	}
+	c.Typeface = cache.typeface(c.Width, c.Height)
+	if s.About.Visible || s.Setup.Kind != SetupHidden {
+		// Account and setup instructions need larger body text on a CRT.
+		face := *cache.face
+		face.bodyHeight = 9
+		c.Typeface = &face
+	}
 	sy := safeY(c.Width, c.Height)
 	p := screenPainter{
 		canvas: c, cache: cache, scene: s, animation: anim, visualizer: music,

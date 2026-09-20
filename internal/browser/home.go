@@ -77,7 +77,7 @@ func (s *browserSession) syncHomeViews() {
 		switch v.Location.Kind {
 		case "views":
 			if v.Page.Items != nil {
-				replaceHomePage(v, s.homeLibraries(v.Page), s.model.Rows)
+				replaceHomePage(v, s.homeLibraries(v.Page), s.model.rowsFor(v))
 			}
 		case "continue":
 			if v.Detail != nil {
@@ -100,7 +100,12 @@ func (s *browserSession) homeLibraries(page media.Page) media.Page {
 	// Reserve Continue before its first response so startup never presents a
 	// library and then changes focus when the slower feed arrives.
 	if !s.home.loaded || len(s.home.items) > 0 || s.home.err != nil {
-		items = append(items, media.Item{ID: continueID, Name: "Continue", Type: "Folder", IsFolder: true})
+		item := media.Item{ID: continueID, Name: "Continue", Type: "Folder", IsFolder: true}
+		if s.home.loaded {
+			count := len(s.home.items)
+			item.LibraryCount = &count
+		}
+		items = append(items, item)
 	}
 	for _, item := range page.Items {
 		if item.CollectionType == "boxsets" && s.config.ShowCollections != nil && !*s.config.ShowCollections {
@@ -151,13 +156,10 @@ func (s *browserSession) seedHomeArtwork() {
 	if s.selection.loader == nil || !s.home.loaded {
 		return
 	}
-	total := len(s.home.items)
 	items := s.home.items[:min(12, len(s.home.items))]
 	s.selection.loader.libraries.remember(continueID, func(lib *cachedLibrary) {
-		lib.count = &total
 		lib.items = items
-		lib.countUntil = time.Now().Add(libraryCacheTTL)
-		lib.itemsUntil = lib.countUntil
+		lib.itemsUntil = time.Now().Add(libraryCacheTTL)
 	})
 }
 

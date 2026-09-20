@@ -37,9 +37,9 @@ func drawNotice(c *ui.Canvas, header, text string, top, limit int) {
 	if len(lines) == 0 {
 		return
 	}
-	width := textWidth(header, 1)
+	width := c.MeasureText(header, 1)
 	for _, line := range lines {
-		width = max(width, textWidth(line, 1))
+		width = max(width, c.MeasureText(line, 1))
 	}
 	width = min(c.Width-64, width+24)
 	height := len(lines)*10 + 24

@@ -2,7 +2,9 @@ package browser
 
 import (
 	"context"
+	"errors"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"mistervision/internal/input/control"
@@ -88,10 +90,64 @@ func TestUpdateCheckIsAsyncAndSurvivesAboutClose(t *testing.T) {
 	select {
 	case result := <-s.events:
 		s.handleResult(result)
-	case <-time.After(time.Second):
+	case <-time.After(3 * time.Second):
 		t.Fatal("closed About lost the release result")
 	}
 	if s.about.Visible || s.about.Checking || !s.about.Release.Available {
 		t.Fatal("release result did not update the hidden page")
 	}
+}
+
+func TestUpdateCheckMinimumFeedbackDuration(t *testing.T) {
+	for _, delay := range []time.Duration{0, 1500 * time.Millisecond} {
+		for _, fails := range []bool{false, true} {
+			synctest.Test(t, func(t *testing.T) {
+				s := testSession(t)
+				s.about.Visible = true
+				s.config.CheckUpdate = func(context.Context) (release.Status, error) {
+					time.Sleep(delay)
+					if fails {
+						return release.Status{}, errors.New("offline")
+					}
+					return release.Status{Latest: "v2.0.0", Available: true}, nil
+				}
+				started := time.Now()
+				s.checkUpdate()
+				synctest.Wait()
+				time.Sleep(999 * time.Millisecond)
+				synctest.Wait()
+				select {
+				case <-s.events:
+					t.Fatal("update feedback ended before one second")
+				default:
+				}
+				result := <-s.events
+				if elapsed := time.Since(started); elapsed != max(time.Second, delay) {
+					t.Fatalf("feedback duration = %v, want %v", elapsed, max(time.Second, delay))
+				}
+				s.handleResult(result)
+				if s.about.Checking || !s.about.Checked {
+					t.Fatal("check did not finish")
+				}
+			})
+		}
+	}
+}
+
+func TestUpdateCheckFeedbackWaitCancelsOnExit(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := testSession(t)
+		ctx, cancel := context.WithCancel(context.Background())
+		s.ctx = ctx
+		s.config.CheckUpdate = func(context.Context) (release.Status, error) { return release.Status{}, nil }
+		s.checkUpdate()
+		synctest.Wait()
+		cancel()
+		synctest.Wait()
+		select {
+		case <-s.events:
+			t.Fatal("canceled check published a result")
+		default:
+		}
+	})
 }

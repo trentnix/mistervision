@@ -158,8 +158,10 @@ class BrowseIntegrationTests(BrowserFixture):
         self.assertFalse(self.home_gate.is_set())
         self.key(b"b")  # The initial selection must already be Continue.
         time.sleep(.5)
+        # Background totals use Limit=0 and do not open a library.
         self.assertFalse(any(urlparse(request).path == "/Items" and
-                             parse_qs(urlparse(request).query).get("ParentId") == ["view-movies"]
+                             parse_qs(urlparse(request).query).get("ParentId") == ["view-movies"] and
+                             parse_qs(urlparse(request).query).get("Limit") != ["0"]
                              for request in self.requests), "startup opened Movies instead of Continue")
         self.home_gate.set()
         self.wait_request("/Shows/NextUp", enableResumable="false")
@@ -708,7 +710,7 @@ class BrowseIntegrationTests(BrowserFixture):
     def test_live_captions_toggle_without_retuning(self):
         self.start_browser(Scenario(player="inline"))
         self.key(b"\x1b[C\x1b[C\x1b[Cb")
-        self.wait_request("/LiveTv/Channels", StartIndex=0)
+        self.wait_request("/LiveTv/Channels", StartIndex=0, Limit=64)
         self.key(b"b")
         self.wait_request("/Videos/channel-2-1/stream.ts")
         clean = bytes([23]) * 640 * 240 * 4
@@ -736,7 +738,7 @@ class BrowseIntegrationTests(BrowserFixture):
     def test_live_tv_playback_releases_tuner(self):
         self.start_browser(Scenario(page_delay=.3))
         self.key(b"\x1b[C\x1b[C\x1b[Cb")
-        self.wait_request("/LiveTv/Channels", StartIndex=0)
+        self.wait_request("/LiveTv/Channels", StartIndex=0, Limit=64)
         self.key(b"b")
         self.wait_request("/Videos/channel-2-1/stream.ts")
         self.key(b"a")

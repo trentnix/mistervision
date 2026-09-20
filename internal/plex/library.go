@@ -29,7 +29,11 @@ func (c *Client) Libraries(ctx context.Context) (media.Page, error) {
 		if !validID(section.Key) {
 			return media.Page{}, errors.New("invalid Plex library ID")
 		}
-		result.Items = append(result.Items, media.Item{ID: "library:" + section.Key, Name: section.Title, Type: "CollectionFolder", CollectionType: collection, IsFolder: true})
+		item := media.Item{ID: "library:" + section.Key, Name: section.Title, Type: "CollectionFolder", CollectionType: collection, IsFolder: true}
+		if section.Type == "artist" {
+			item.CountType = "MusicArtist"
+		}
+		result.Items = append(result.Items, item)
 	}
 	for _, card := range []media.Item{
 		{ID: "plex:collections", Name: "Collections", CollectionType: "boxsets", IsFolder: true},

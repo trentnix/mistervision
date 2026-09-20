@@ -49,7 +49,6 @@ const (
 	messageContinueIncomplete    = "Continue Watching incomplete."
 	messageContinueItemsFailed   = "Some Continue Watching items could not load."
 	messageDetailsFailed         = "Could not load details. Use Retry to try again."
-	messageCountFailed           = "Could not count this library. You can still open it."
 	messagePhotoFailed           = "Could not load this photo."
 	messageShuffleMoreFailed     = "Could not load more shuffle tracks. Try Next again."
 	messageShuffleStartFailed    = "Could not start shuffle. Close this message and choose Shuffle again."

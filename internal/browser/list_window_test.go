@@ -140,3 +140,32 @@ func TestUnknownTotalFindsEndWithoutDiscardingRows(t *testing.T) {
 		t.Fatal("empty final page lost rows or kept requesting")
 	}
 }
+
+func TestHomeListUsesItsOwnCapacity(t *testing.T) {
+	m := New()
+	m.Rows, m.HomeRows = 6, 5
+	m.Apply(*m.Load(0), windowPage(0, 12), nil)
+	// Moving in the carousel and switching to List must keep selection visible.
+	for range 7 {
+		m.Key(control.Next)
+	}
+	m.Key(control.Select)
+	v := m.Current()
+	if v.Selected != 7 || v.Scroll != 5 {
+		t.Fatalf("home selection=%d scroll=%d", v.Selected, v.Scroll)
+	}
+	m.Key(control.Previous)
+	if v.Selected != 2 {
+		t.Fatalf("home page step selected %d, want 2", v.Selected)
+	}
+	// Child libraries retain the original six-row page step.
+	m.Stack = append(m.Stack, View{Location: media.Location{Kind: "items"}, Page: windowPage(0, 30)})
+	m.Key(control.Next)
+	if m.Current().Selected != 6 {
+		t.Fatalf("library page step selected %d, want 6", m.Current().Selected)
+	}
+	m.Key(control.Back)
+	if m.Current().Selected != 2 || m.rowsFor(m.Current()) != 5 {
+		t.Fatal("Back changed home selection or capacity")
+	}
+}

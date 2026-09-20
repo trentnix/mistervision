@@ -48,7 +48,7 @@ func TestSelectionSnapshotExpiryAndRetry(t *testing.T) {
 		v.itemsUntil = future
 	})
 	data := loader.snapshot(item, true)
-	if data.count != nil || len(data.artwork.Covers) != 1 || data.artwork.Covers[0] != im {
+	if len(data.artwork.Covers) != 1 || data.artwork.Covers[0] != im {
 		t.Fatal("expired count hid a valid cover sample")
 	}
 	// The snapshot owns its cover slice, not the metadata sample or image cache.
@@ -58,7 +58,7 @@ func TestSelectionSnapshotExpiryAndRetry(t *testing.T) {
 	}
 	loader.libraries.remember(item.ID, func(v *cachedLibrary) { v.countUntil = future; v.itemsUntil = time.Time{} })
 	data = loader.snapshot(item, true)
-	if data.count == nil || *data.count != 42 || data.artwork.Covers != nil {
+	if data.artwork.Covers != nil {
 		t.Fatal("sample expiry discarded the count or reused stale sample")
 	}
 	if loader.artwork.Cached(cover, "Primary") != im {

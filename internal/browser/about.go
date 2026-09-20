@@ -23,9 +23,17 @@ func (s *browserSession) checkUpdate() {
 	s.about.Message = ""
 	check := s.config.CheckUpdate
 	go func() {
+		// Keep feedback readable without blocking input or delaying a slow request.
+		minimum := time.NewTimer(time.Second)
+		defer minimum.Stop()
 		work, cancel := context.WithTimeout(s.ctx, 10*time.Second)
 		defer cancel()
 		status, err := check(work)
+		select {
+		case <-minimum.C:
+		case <-s.ctx.Done():
+			return
+		}
 		s.send(s.ctx, updateResult{status: status, err: err})
 	}()
 }

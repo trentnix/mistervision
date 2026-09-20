@@ -14,7 +14,7 @@ My goal is a great media experience on CRTs. I test and use MiSTerVision on a Mi
 
 ## Run on MiSTer
 
-These instructions cover v1.3.0. Existing MiSTerVision installations can update through About.
+Existing MiSTerVision installations can update through About. Build from source to try changes that have not been released.
 
 For a new installation, download `mistervision-vX.Y.Z-mister.zip` from the [latest release](https://github.com/trentnix/mistervision/releases/latest). Extract the ZIP and copy these files to the SD card. Keep the launcher filename free of spaces. Make the launcher and both binaries executable if your filesystem requires it. If upgrading an existing installation manually, exit the application first and keep your configuration and state files.
 
@@ -69,7 +69,7 @@ Open **About → Connections → Use existing connection** to return to a config
 
 For Jellyfin, press Up in About for **Switch profile** when multiple users are saved. With only one user, About offers **Add user** directly. **Add user** opens Quick Connect. Approve the code while signed in as the user you want to add. Later launches reopen the last selected user. API-key connections keep their configured user. See [Jellyfin user switching](docs/GO_BROWSING.md#jellyfin-users).
 
-For Plex Home, press Up in About for **Switch profile** when more than one profile is available. The viewer’s avatar and name appear on the carousel and About. Protected viewers must enter their PIN again after an application restart. To change the linked Plex account, choose **Sign in with another account** on **Choose a Plex server**.
+For Plex Home, press Up in About for **Switch profile** when more than one profile is available. The viewer’s avatar and name appear on the home carousel, root List view, and About. Protected viewers must enter their PIN again after an application restart. To change the linked Plex account, choose **Sign in with another account** on **Choose a Plex server**.
 
 Back from a profile picker opened through About returns to About without changing the active user.
 
@@ -79,7 +79,7 @@ Jellyfin users and Plex Home viewers are different from named server connections
 
 ## Updates
 
-The client checks for the latest public release at startup. An available update appears beneath the carousel title. Use **Check updates** in About to check again.
+The client checks for the latest public release at startup. An available update appears beneath the title in both the home carousel and root List view. Use **Check updates** in About to check again.
 
 1. While browsing, press Start on a controller or F1 on a keyboard to open **About**.
 2. Select **View release** and review the changes.
@@ -153,25 +153,23 @@ To control playback from another Jellyfin client, select **MiSTerVision** as the
 
 ## Screenshots
 
-These images use the current shared renderer. Browsing captures come from the desktop harness. Setup previews use example names, addresses, approval codes, and a sample avatar. Controller and keyboard hints follow the active input device.
+These images show the v1.4.0 interface. Browsing captures come from the desktop harness. Setup previews use example names, addresses, approval codes, and a sample avatar. Controller and keyboard hints follow the active input device.
 
 | Continue Watching | Movie details |
 | --- | --- |
 | ![Continue Watching with saved playback positions](docs/images/screenshots/continue-watching.png) | ![Movie artwork, summary, runtime, and playback controls](docs/images/screenshots/movie-info.png) |
-
-| Choose a connection | Discover Jellyfin |
-| --- | --- |
+| **Choose a connection** | **Discover Jellyfin** |
 | ![Saved connections and Jellyfin or Plex setup](docs/images/screenshots/connections.png) | ![A discovered Jellyfin server with its name and address](docs/images/screenshots/jellyfin-discovery.png) |
-
-| Plex Home viewers | Protected profile |
-| --- | --- |
+| **Plex Home viewers** | **Protected profile** |
 | ![Three visible Plex Home cards and a counter for four viewers](docs/images/screenshots/plex-profiles.png) | ![Viewer avatar and name above the centered PIN keypad](docs/images/screenshots/plex-pin.png) |
-
-| Saved Jellyfin users | About and Plex sign-out |
-| --- | --- |
+| **Saved Jellyfin users** | **About and Plex sign-out** |
 | ![Saved Jellyfin users with Add user and Forget user controls](docs/images/screenshots/jellyfin-users.png) | ![About with Switch profile, Sign out, Connections, and update controls](docs/images/screenshots/about.png) |
 
-The [full gallery](docs/SCREENSHOTS.md) also shows account linking, server selection, the movie list, setup help, and About.
+The home carousel and root List view share library counts and show the active viewer and an update notice when available. Live TV lists show current and upcoming programs when the server supplies guide data. Shows with a single season open directly to their episodes. See [browsing behavior](docs/GO_BROWSING.md).
+
+Interface text uses the same smooth font as captions. Navigation hints and the clock keep the bitmap font.
+
+The [full gallery](docs/SCREENSHOTS.md) also shows the home List view, account linking, server selection, the movie list, setup help, and About.
 
 ## Configuration
 

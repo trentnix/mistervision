@@ -6,7 +6,6 @@ import "context"
 // never be sent to server as a real library ID or written to the disk cache.
 func (l *selectionLoader) loadHomeArtwork(ctx context.Context, emit func(selectionUpdate)) {
 	lib := l.libraries.cached(continueID)
-	emit(selectionUpdate{kind: selectionCount, count: lib.count})
 	if l.customBackground || !selectionDelay(ctx) {
 		return
 	}

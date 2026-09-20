@@ -42,7 +42,7 @@ The last successful profile is remembered. Unprotected profiles reconnect automa
 
 If the remembered profile has been removed, the picker explains the change and requires a selection, even when only one profile remains. If Plex Home is no longer available, returning to the linking account requires confirmation. Profile names and avatar references refresh when Plex Home access is checked.
 
-Open About and use **Switch profile** to change viewers. Back cancels the switch and returns to About on the current connection. The carousel and About show the active profile’s avatar beside its name. A missing avatar uses a silhouette there and on the PIN screen. The profile picker uses an initial instead. Profiles receive their own server grants, library access, Continue Watching, artwork cache, and playback choices.
+Open About and use **Switch profile** to change viewers. Back cancels the switch and returns to About on the current connection. The home carousel, root List view, and About show the active profile’s avatar beside its name. A missing avatar uses a silhouette there and on the PIN screen. The profile picker uses an initial instead. Profiles receive their own server grants, library access, Continue Watching, artwork cache, and playback choices.
 
 A successful switch keeps the current server when the profile can access it. Otherwise, the server picker offers that profile’s available servers. Back from that picker returns to the profiles.
 
@@ -103,7 +103,7 @@ A Live TV carousel card appears when the linked account can access enabled chann
 
 When a tuned channel exposes selectable audio alternatives, Select/Tab → Audio lists them with Plex’s labels. Changing audio briefly reloads at the live edge while keeping picture mode and the captions setting. Plex resolves each choice against the new session’s stream IDs before conversion. The choice applies to the current playback and is not saved in the client. Plex may remember the per-user selection.
 
-Channels come from enabled DVR mappings, with duplicate tuner mappings removed and channel numbers sorted naturally. Protected channels are omitted when the tuner identifies them. Guide names, logos, and current program titles are optional. Without a guide, the list uses tuner names or channel numbers. A full schedule grid, recording controls, and Plex's free online Live TV service are not included.
+Channels come from enabled DVR mappings, with duplicate tuner mappings removed and channel numbers sorted naturally. Protected channels are omitted when the tuner identifies them. Guide names and logos are optional. Current and next programs load in the background through the [shared channel-list guide](GO_BROWSING.md#live-tv-listings). Without a guide, the list uses tuner names or channel numbers. A full schedule grid, recording controls, and Plex's free online Live TV service are not included.
 
 Tuning uses the shared `media.LiveTV` interface. Tuner startup has a 30-second deadline. Ordinary metadata requests have a 15-second timeout. Diagnostics identify tune requests without logging private channel or consumer IDs.
 
@@ -121,7 +121,7 @@ Live TV from an HDHomeRun has been tested through Plex on Ghostty and MiSTer, in
 | Photos | Supported, including album folders and previous/next navigation. |
 | Collections and playlists | Carousel cards, collection hierarchy, and ordered playlist browsing and playback. See [browsing behavior](GO_BROWSING.md#collections-and-playlists). |
 
-Collections use `/library/all?type=18` and `/library/collections/{id}/items`. Playlists use `/playlists` and `/playlists/{id}/items`. Both normal and smart playlists are included. Playlist contents keep the server order and duplicate entries. Local playback stays paged, so large playlists do not inherit the 10,000-item remote queue limit. Edit playlists and collections in Plex.
+Collections use `/library/all?type=18` and `/library/collections/{id}/items`. Playlists use `/playlists` and `/playlists/{id}/items`. Music, video, and photo playlists are supported, including normal and smart playlists. Playlist contents keep the server order and duplicate entries. Local playback stays paged, so large playlists do not inherit the 10,000-item remote queue limit. Edit playlists and collections in Plex.
 
 ## Code boundaries
 

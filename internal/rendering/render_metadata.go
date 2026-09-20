@@ -26,6 +26,8 @@ func subtitle(i media.Item) (string, uint32) {
 			parts = append(parts, tracks)
 		}
 		return strings.Join(parts, " - "), color
+	case "Season":
+		return positiveCount(i.ChildCount, "episode"), color
 	case "Series":
 		seasons := positiveCount(i.ChildCount, "season")
 		if seasons != "" && i.RecursiveItemCount > 0 {
@@ -66,9 +68,7 @@ func itemTitle(i media.Item) string {
 		}
 		return s
 	}
-	if i.IsFolder || i.Type == "Series" || i.Type == "Season" || i.Type == "MusicArtist" || i.Type == "MusicAlbum" {
-		s = "> " + s
-	}
+
 	if i.ProductionYear > 0 && (i.Type == "Movie" || i.Type == "MusicVideo" || i.Type == "Video" || i.Type == "Series") {
 		s += fmt.Sprintf(" (%d)", i.ProductionYear)
 	}
@@ -102,4 +102,32 @@ func continueSubtitle(item media.Item) string {
 		}
 	}
 	return strings.Join(parts, " · ")
+}
+
+// libraryCountText names the server's count unit consistently in both home views.
+func libraryCountText(item media.Item, count int) string {
+	singular, plural := "item", "items"
+	switch item.CollectionType {
+	case "movies":
+		singular, plural = "movie", "movies"
+	case "tvshows":
+		singular, plural = "series", "series"
+	case "music":
+		singular, plural = "album", "albums"
+		if item.CountType == "MusicArtist" {
+			singular, plural = "artist", "artists"
+		}
+	case "musicvideos":
+		singular, plural = "video", "videos"
+	case "livetv":
+		singular, plural = "channel", "channels"
+	case "playlists":
+		singular, plural = "playlist", "playlists"
+	case "boxsets":
+		singular, plural = "collection", "collections"
+	}
+	if count == 1 {
+		return fmt.Sprintf("1 %s", singular)
+	}
+	return fmt.Sprintf("%d %s", count, plural)
 }

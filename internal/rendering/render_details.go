@@ -2,6 +2,7 @@ package rendering
 
 import (
 	"fmt"
+	"image"
 	"math"
 	"strings"
 
@@ -36,7 +37,7 @@ func (p *screenPainter) details() [][]controlHint {
 
 	hero := max(80, min(150, h-88)-extra)
 	full := max(h*3/4, hero)
-	cache.backdrop(c, art, true, nil, func(layer *ui.Canvas) {
+	cache.backdrop(c, art, true, nil, image.Rectangle{}, func(layer *ui.Canvas) {
 		layer.Rect(0, 0, w, full, 0x181818)
 		layer.Blit(art.Backdrop, 0, 0, w, full)
 		for y := 0; y < full; y++ {
@@ -65,7 +66,7 @@ func (p *screenPainter) details() [][]controlHint {
 	if v.Detail.ProductionYear > 0 {
 		year := fmt.Sprint(v.Detail.ProductionYear)
 		c.Text(metadataX, ty, year, dimColor, w)
-		metadataX += textWidth(year, 1) + 8
+		metadataX += c.MeasureText(year, 1) + 8
 	}
 	if v.Detail.CommunityRating > 0 {
 		for y := 0; y < 5; y++ {
@@ -78,7 +79,7 @@ func (p *screenPainter) details() [][]controlHint {
 	if media.IsLive(*v.Detail) {
 		center(c, ty, truncate(s, w-48, 1), col, 1)
 	} else {
-		c.Text(w-24-textWidth(s, 1), ty, s, col, w-24)
+		c.Text(w-24-c.MeasureText(s, 1), ty, s, col, w-24)
 	}
 	lines := min(3, (overviewBottom-(ty+16))/10)
 	if lines > 0 {

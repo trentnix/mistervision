@@ -1,10 +1,16 @@
 # Screenshots
 
-These images show the interface included in v1.3.0. Browsing images were captured from the desktop headless client using Jellyfin. Setup images use the production renderer with fictional names, addresses, and approval codes. Alex’s sample avatar is the project logo, not a real account image.
+These images show the v1.4.0 interface. Browsing images were captured from the desktop headless client using Jellyfin. Setup images use the production renderer with fictional names, addresses, and approval codes. Alex’s sample avatar is the project logo, not a real account image.
 
 The shared UI uses a 640×240 logical frame for NTSC. These PNGs double its rows to show the intended 4:3 proportions at 640×480. They do not show CRT scanout, interlace, animation, or video smoothness. Browsing captures show keyboard hints. Setup previews show the default MiSTer controller hints.
 
 ## Browsing
+
+The home carousel and root List view show the same update notice and active viewer. The home List view also shows each library’s count. Lists use bold titles and indented subtext. Library artwork is vertically centered in the wider information column.
+
+| Home List view | Exit confirmation |
+| --- | --- |
+| ![Library list retaining the update notice and active viewer](images/screenshots/home-list.png) | ![Full-width translucent exit stripe with balanced padding](images/screenshots/exit-confirmation.png) |
 
 | Home carousel | Continue Watching |
 | --- | --- |
@@ -20,7 +26,7 @@ Open About with Start on a controller or F1 on a keyboard, then press Down for C
 
 | Connection choices | Jellyfin discovery |
 | --- | --- |
-| ![Connect to your media with saved connections and provider choices](images/screenshots/connections.png) | ![A single discovered Jellyfin server with no unnecessary navigation hint](images/screenshots/jellyfin-discovery.png) |
+| ![Connect to your media with saved connections and provider choices](images/screenshots/connections.png) | ![A discovered Jellyfin server with its address and navigation hints](images/screenshots/jellyfin-discovery.png) |
 
 | Jellyfin Quick Connect | Plex account linking |
 | --- | --- |
@@ -42,7 +48,7 @@ See [Jellyfin user switching](GO_BROWSING.md#jellyfin-users).
 
 ## Plex Home
 
-The profile picker shows three cards at a time. Left/Right scrolls through additional viewers, and a counter shows the selection’s position. Protected viewers use the controller or keyboard keypad. The fourth digit submits the PIN.
+The profile picker shows three cards at a time. Left/Right scrolls through additional viewers, and a counter shows the selection’s position. Protected viewers use the controller or keyboard keypad. The fourth digit submits the PIN. Digits and action labels are centered in their selection blocks.
 
 | Viewing profiles | PIN entry |
 | --- | --- |
@@ -53,6 +59,12 @@ The profile picker shows three cards at a time. Left/Right scrolls through addit
 | ![About with the current viewer, Switch profile, Sign out, Connections, and update controls](images/screenshots/about.png) | ![Confirmation before removing the saved Plex sign-in from this connection](images/screenshots/plex-sign-out.png) |
 
 See [Plex Home behavior](GO_PLEX.md#plex-home-profiles) for remembered viewers, retry messages, cancellation, and permissions.
+
+About keeps its logo, identity block, and navigation hints steady while checking for updates. The checking message stays visible for at least one second. Exit confirmation uses a full-width translucent stripe with equal top and bottom padding.
+
+## Announcement images
+
+The [v1.4.0 announcement images](images/announcements/v1.4.0/README.md) include Akira and Hackers during playback, with and without controls, and Kids TV Shows with Dungeons & Dragons selected.
 
 ## Refreshing previews
 
@@ -65,4 +77,4 @@ DOCS_PREVIEW_DIR="$PWD/docs/images/screenshots" \
 
 The [preview fixtures](../internal/rendering/docs_preview_test.go) use the current `RasterRenderer`. The command needs no server, account, credentials, or MiSTer. Ordinary tests skip the exporter. Review each image after changing layouts, and keep fixture text aligned with the connection flow.
 
-The four browsing captures require the [desktop harness](../tools/ghostty/README.md) and a media library. Use isolated development state when capturing them. Export complete frames, preserve the physical 4:3 proportions, and check for private account details before adding images to the repository. Do not include real sign-in codes or credential files.
+The browsing captures require the [desktop harness](../tools/ghostty/README.md) and a media library. Use isolated development state when capturing them. Export complete frames, preserve the physical 4:3 proportions, and check for private account details before adding images to the repository. Do not include real sign-in codes or credential files.

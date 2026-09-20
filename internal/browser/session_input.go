@@ -178,6 +178,7 @@ func (s *browserSession) handleBrowseKey(key control.Action) bool {
 	if key == control.Retry {
 		if item := s.model.Current().Item(); item != nil {
 			s.selection.loader.forget(*item)
+			delete(s.counts.retryAfter, item.ID)
 		}
 		s.selection.key = ""
 	}

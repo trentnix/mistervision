@@ -3,50 +3,22 @@ package browser
 import (
 	"context"
 	"image"
-	"sync"
 	"time"
 
 	"mistervision/internal/artwork"
 	"mistervision/internal/media"
 )
 
-// loadLibrary lets counts arrive while cover sampling and images are pending.
-// Live TV has neither counts nor carousel covers. Both branches finish before
-// this method returns, including when the selection context is canceled.
+// loadLibrary loads selected library artwork. Home count work has its own lifetime.
 func (l *selectionLoader) loadLibrary(ctx context.Context, item media.Item, emit func(selectionUpdate)) {
 	if item.ID == continueID {
 		l.loadHomeArtwork(ctx, emit)
 		return
 	}
-	if item.CollectionType == "livetv" {
+	if item.CollectionType == "livetv" || l.customBackground {
 		return
 	}
-	if l.customBackground {
-		l.loadCount(ctx, item, emit)
-		return
-	}
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() { defer wg.Done(); l.loadCount(ctx, item, emit) }()
-	defer wg.Wait()
 	l.loadCovers(ctx, item, emit)
-}
-
-// loadCount reuses an unexpired total or refreshes it without an image debounce.
-func (l *selectionLoader) loadCount(ctx context.Context, item media.Item, emit func(selectionUpdate)) {
-	lib := l.libraries.cached(item.ID)
-	if time.Now().Before(lib.countUntil) {
-		emit(selectionUpdate{kind: selectionCount, count: lib.count})
-		return
-	}
-	count, err := l.client.LibraryCount(ctx, item)
-	if ctx.Err() != nil {
-		return
-	}
-	if err == nil {
-		l.libraries.remember(item.ID, func(value *cachedLibrary) { value.count = count; value.countUntil = time.Now().Add(libraryCacheTTL) })
-	}
-	emit(selectionUpdate{kind: selectionCount, count: count, err: err})
 }
 
 // loadCovers waits for selection to settle and refreshes the sample if needed.

@@ -22,8 +22,8 @@ func (p *screenPainter) photo() {
 		top := controlsTop(bottom, rows) - 3
 		c.Shade(0, top, w, h-top, 175)
 		count := s.PhotoCount
-		c.Text(24, sy, truncate(v.Detail.Name, w-60-textWidth(count, 1), 1), 0xffffff, w-24)
-		c.Text(w-24-textWidth(count, 1), sy, count, dimColor, w-24)
+		c.Text(24, sy, truncate(v.Detail.Name, w-60-c.MeasureText(count, 1), 1), 0xffffff, w-24)
+		c.Text(w-24-c.MeasureText(count, 1), sy, count, dimColor, w-24)
 		drawControls(c, bottom, rows)
 	}
 

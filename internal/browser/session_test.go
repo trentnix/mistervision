@@ -84,14 +84,13 @@ func TestSessionRejectsStaleAuthAndSelection(t *testing.T) {
 	for _, r := range []workerResult{
 		authCodeResult{generation: 1, presentation: rendering.SetupPresentation{Code: "stale"}},
 		selectionResult{generation: 2, update: selectionUpdate{kind: selectionDetails, detail: &media.Item{ID: "stale"}}},
-		selectionResult{generation: 2, update: selectionUpdate{kind: selectionCount, count: new(int)}},
 		selectionResult{generation: 2, update: selectionUpdate{kind: selectionArtwork, art: artUpdate{kind: "cover", total: 1}}},
 	} {
 		if s.handleResult(r) {
 			t.Fatal("stale result requested redraw")
 		}
 	}
-	if s.setup.Code != "current" || s.model.Current().Detail != nil || s.selection.current.count != nil || s.selection.current.artwork.Covers != nil {
+	if s.setup.Code != "current" || s.model.Current().Detail != nil || s.selection.current.artwork.Covers != nil {
 		t.Fatal("stale result changed current screen")
 	}
 }
@@ -479,4 +478,39 @@ func TestReportingWarningDoesNotRestartStoppedPlayback(t *testing.T) {
 	if s.controller.running || s.media.pending || s.model.MusicQueueActive() {
 		t.Fatal("warning restarted stopped playback")
 	}
+}
+
+// seasonRequestServer verifies the redirect reaches the shared provider boundary.
+type seasonRequestServer struct {
+	media.Server
+	requests chan media.Location
+}
+
+func (s seasonRequestServer) List(_ context.Context, loc media.Location, _, _ int) (media.Page, error) {
+	s.requests <- loc
+	return media.Page{}, nil
+}
+
+func TestSeasonPageStartsEpisodeRequestWithoutAnotherKey(t *testing.T) {
+	s := testSession(t)
+	s.ctx = t.Context()
+	requests := make(chan media.Location, 1)
+	s.client = seasonRequestServer{requests: requests}
+	s.model.Stack = append(s.model.Stack, View{Title: "Show", Location: media.Location{Kind: "seasons", SeriesID: "show"}})
+	request := s.model.Load(0)
+	if !s.handlePage(pageResult{request: *request, page: media.Page{Items: []media.Item{{ID: "season", Name: "Season 1", Type: "Season"}}}}) {
+		t.Fatal("season result rejected")
+	}
+	select {
+	case loc := <-requests:
+		if loc.Kind != "episodes" || loc.ParentID != "season" || loc.SeriesID != "show" {
+			t.Fatalf("unexpected request: %+v", loc)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("no automatic episode request")
+	}
+	if s.model.Current().Location.Kind != "episodes" || !s.model.Current().Loading || len(s.model.Stack) != 2 {
+		t.Fatal("season list remained in navigation")
+	}
+	s.requests.cancel()
 }

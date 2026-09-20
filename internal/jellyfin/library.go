@@ -71,7 +71,7 @@ func (c *Client) List(ctx context.Context, loc Location, start, limit int) (Page
 			q.Set("Fields", "RunTimeTicks")
 			q.Set("EnableUserData", "true")
 		} else {
-			q = url.Values{"userId": {c.Session.UserID}}
+			q = url.Values{"userId": {c.Session.UserID}, "Fields": {"ChildCount"}}
 		}
 	case "livetv":
 		path = "/LiveTv/Channels"
@@ -128,10 +128,11 @@ func collectionItemType(collection string) string {
 }
 
 // LibraryCount uses jf_count_items' query, independently of the cover sample.
-// Live TV has no item count in the C carousel.
+// Live TV uses the channel listing total instead of the general Items endpoint.
 func (c *Client) LibraryCount(ctx context.Context, item Item) (*int, error) {
 	if item.CollectionType == "livetv" {
-		return nil, nil
+		page, err := c.List(ctx, Location{Kind: "livetv"}, 0, 1)
+		return page.TotalRecordCount, err
 	}
 	if loc, ok := organizationLocation(item); ok {
 		page, err := c.List(ctx, loc, 0, 1)

@@ -28,6 +28,7 @@ func (s *browserSession) send(work context.Context, r workerResult) {
 // authenticate resets browser state and delegates connection work. The
 // connection manager rejects results from superseded attempts.
 func (s *browserSession) authenticate() {
+	s.counts.reset()
 	s.about.AccountMessage = ""
 	s.pendingAuthError = nil
 	s.stopRemote()
@@ -94,6 +95,7 @@ func (s *browserSession) handleAuth(r authResult) bool {
 		return false
 	}
 	if errors.Is(r.err, connection.ErrSignedOut) {
+		s.counts.reset()
 		s.stopRemote()
 		// Discard background results from the removed account, including errors
 		// that could otherwise replace cleanup recovery instructions.
@@ -154,6 +156,7 @@ func (s *browserSession) handleAuth(r authResult) bool {
 		s.model = New()
 		s.restoreNavigation()
 		s.model.Rows = rendering.VisibleRows(s.geometry.Width, s.geometry.Height)
+		s.model.HomeRows = rendering.HomeVisibleRows(s.geometry.Width, s.geometry.Height)
 		s.selection.key = ""
 		s.selection.loader = r.connection.selection
 		s.setup = rendering.SetupPresentation{}
@@ -191,6 +194,9 @@ func (s *browserSession) handlePage(r pageResult) bool {
 		s.selection.cancel()
 		s.selection.generation++
 		s.requireSignIn(r.err)
+	} else if req := s.model.skipSingleSeason(); req != nil {
+		s.loadSelection()
+		s.load(req)
 	} else {
 		s.loadSelection()
 		s.load(s.model.Prefetch())

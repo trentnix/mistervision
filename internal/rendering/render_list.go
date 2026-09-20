@@ -1,11 +1,15 @@
 package rendering
 
 import (
+	"image"
 	"math"
 
 	"mistervision/internal/input/control"
+	"mistervision/internal/media"
 	"mistervision/internal/ui"
 )
+
+const listSideWidth = 215
 
 // list draws a paginated item list and returns its configured button badges.
 func (p *screenPainter) list() [][]controlHint {
@@ -17,6 +21,10 @@ func (p *screenPainter) list() [][]controlHint {
 	anim := p.animation
 	v := &p.scene.Content
 	s := p.scene
+	live := v.Item() != nil && media.IsLive(*v.Item())
+	if live {
+		art.Primary = nil
+	}
 	var hints []controlHint
 	if v.Item() != nil {
 		hints = append(hints, hint(s.Controls, control.Open, "Select"))
@@ -34,8 +42,13 @@ func (p *screenPainter) list() [][]controlHint {
 	}
 	hints = append(hints, hint(s.Controls, control.Back, back))
 	controls := controlRows(w, hints)
+	top := sy + 21
+	if s.Root {
+		top += 24 // Leave the shared home status and viewer row unobstructed.
+	}
+	artBox := image.Rect(w-24-listSideWidth, top, w-24, max(top+1, controlsTop(p.bottom, controls)-12))
 
-	cache.backdrop(c, art, false, s.Background, func(layer *ui.Canvas) {
+	cache.backdrop(c, art, false, s.Background, artBox, func(layer *ui.Canvas) {
 		if s.Background != nil {
 			cache.customBackground(layer, s.Background)
 		} else if art.Backdrop != nil {
@@ -46,48 +59,110 @@ func (p *screenPainter) list() [][]controlHint {
 				layer.Shade(0, y, w, 1, 255-brightness)
 			}
 		}
-		if art.Primary != nil {
-			b := art.Primary.Bounds()
-			par := float64(w*3) / float64(h*4)
-			dh := min(140, int(175*float64(b.Dy())/float64(b.Dx())/par))
-			layer.Image(art.Primary, w-24-175, sy+21, 175, dh)
-		}
+		layer.Image(art.Primary, artBox.Min.X, artBox.Min.Y, artBox.Dx(), artBox.Dy())
 	})
-	p.header(s.title(), p.safeY)
+	if s.Root {
+		p.homeHeader()
+	} else {
+		p.header(s.title(), p.safeY)
+	}
 	width := w - 48
-	if art.Primary != nil {
-		width = w - 24 - 175 - 10 - 24
+	if !s.Root || live || art.Primary != nil {
+		width = w - 48 - listSideWidth - 10
 	}
 	// Borrow a vertical slice of the frame to clip moving rows without an
 	// intermediate image or a full-frame copy. Header and footer stay fixed.
-	top := sy + 21
-	rows := VisibleRows(w, h)
-	// Keep the same logical rows and scroll position when custom labels wrap.
-	// Compact their spacing only when the footer needs another instruction row.
-	rowHeight := max(20, min(30, (controlsTop(p.bottom, controls)-16-top)/rows))
+	rows := s.listRows(w, h)
+	// Preserve the roomier library row pitch. Home shows fewer rows to leave
+	// space for its status header without shrinking text or line spacing.
+	rowHeight := max(20, min(30, (controlsTop(p.bottom, controls)-16-(sy+21))/VisibleRows(w, h)))
+	rowHeight = min(rowHeight, max(20, (controlsTop(p.bottom, controls)-16-top)/rows))
 	list := *c
 	list.Height = min(rows*rowHeight, h-top)
 	list.Pixels = c.Pixels[top*w*4 : (top+list.Height)*w*4]
-	if len(v.Page.Items) > 0 {
-		list.Rect(20, int(math.Round(anim.Row*float64(rowHeight))), width+8, rowHeight-2, 0x0d377c)
+	if item := v.Item(); item != nil {
+		title, line := p.listRowText(*item, width, true, live)
+		geometry := placeListText(title, line, rowHeight)
+		list.Rect(20, int(math.Round(anim.Row*float64(rowHeight))), width+8, geometry.barHeight, 0x0d377c)
 	}
 	scroll := float64(v.Scroll) + anim.ScrollOffset
 	for index := max(0, int(math.Floor(scroll))); index < min(len(v.Page.Items), int(math.Ceil(scroll))+rows); index++ {
 		item := v.Page.Items[index]
-		y := 3 + int(math.Round((float64(index)-scroll)*float64(rowHeight)))
-		color := uint32(0xcccccc)
-		if index == v.Selected {
-			color = 0xffffff
+		y := int(math.Round((float64(index) - scroll) * float64(rowHeight)))
+		title, line := p.listRowText(item, width, index == v.Selected, live)
+		geometry := placeListText(title, line, rowHeight)
+
+		if title != nil {
+			list.Blit(title, 24, y+geometry.titleY, title.Bounds().Dx(), title.Bounds().Dy())
 		}
-		list.Text(24, y, truncate(itemTitle(item), width, 1), color, 24+width)
-		s, col := subtitle(item)
-		if v.Continue {
-			s, col = continueSubtitle(item), titleColor
+		if line != nil {
+			list.Blit(line, 34, y+geometry.subtitleY, line.Bounds().Dx(), line.Bounds().Dy())
 		}
-		list.Text(24, y+11, truncate(s, width, 1), col, 24+width)
 	}
 	if len(v.Page.Items) == 0 && !v.Loading && v.Error == "" {
 		center(c, h/2, "Nothing here", dimColor, 1)
 	}
+	if live {
+		p.channelGuide()
+	}
 	return controls
+}
+
+// listTextPlacement balances the selection's visible ink, not font line boxes.
+type listTextPlacement struct{ titleY, subtitleY, barHeight int }
+
+// placeListText keeps a title-only row at the same top inset. Two-line rows
+// receive equal whole-pixel padding above the title and below the subtext.
+func placeListText(title, subtitle *image.RGBA, rowHeight int) listTextPlacement {
+	height := func(im *image.RGBA) int {
+		if im == nil {
+			return 0
+		}
+		return im.Bounds().Dy()
+	}
+	titleHeight, subtitleHeight := height(title), height(subtitle)
+	if subtitleHeight == 0 {
+		return listTextPlacement{titleY: 3, barHeight: rowHeight - 2}
+	}
+	const gap = 2
+	content := titleHeight + gap + subtitleHeight
+	padding := max(1, (rowHeight-2-content)/2)
+	return listTextPlacement{titleY: padding, subtitleY: padding + titleHeight + gap, barHeight: content + 2*padding}
+}
+
+// listRowText uses the same type sizes and metadata treatment in every home
+// and library list. Label rasters and their ink bounds are cached.
+func (p *screenPainter) listRowText(item media.Item, width int, selected, live bool) (*image.RGBA, *image.RGBA) {
+	color := uint32(0xcccccc)
+	if selected {
+		color = 0xffffff
+	}
+	title := p.listText(itemTitle(item), width, 18, color, true)
+	s, col := subtitle(item)
+	if p.scene.Root {
+		s = ""
+		if item.LibraryCount != nil {
+			s = libraryCountText(item, *item.LibraryCount)
+		}
+	}
+	// Match channel-list contrast while retaining watched/resume colors.
+	if col == 0x585858 {
+		col = 0x999999
+		if selected {
+			col = 0xcccccc
+		}
+	}
+	if live {
+		current, _ := media.CurrentNext(p.scene.Guide[item.ID], p.scene.Now)
+		s = "No guide information"
+		if current != nil {
+			s = current.Title
+		}
+	}
+	if p.scene.Content.Continue {
+		s, col = continueSubtitle(item), titleColor
+	}
+	const indent = 10
+	line := p.listText(s, width-indent, 16, col, false)
+	return title, line
 }

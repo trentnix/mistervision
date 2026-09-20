@@ -1,5 +1,6 @@
 // Package caption shapes and rasterizes plain Unicode subtitles and closed
-// captions. It has no media-server, decoder, or display dependencies.
+// captions. Interface labels can reuse the same fonts and shaping through Label.
+// It has no media-server, decoder, or display dependencies.
 package caption
 
 import (
@@ -63,6 +64,11 @@ func (r *Renderer) Image(text string, width, height int) *image.NRGBA {
 // layout resolves paragraph direction, script, font fallback, and shaping before
 // wrapping at Unicode line breaks. Overlong words can break at grapheme boundaries.
 func (r *Renderer) layout(text string, width, size int) []shaping.Line {
+	return r.layoutLines(text, width, size, 3)
+}
+
+// layoutLines shares Unicode shaping between caption cues and interface labels.
+func (r *Renderer) layoutLines(text string, width, size, limit int) []shaping.Line {
 	var lines []shaping.Line
 	for _, paragraph := range strings.Split(text, "\n") {
 		if strings.TrimSpace(paragraph) == "" {
@@ -76,7 +82,7 @@ func (r *Renderer) layout(text string, width, size int) []shaping.Line {
 		for i, segment := range segments {
 			runs[i] = r.shaper.Shape(segment)
 		}
-		config := shaping.WrapConfig{Direction: direction, TruncateAfterLines: 3 - len(lines)}
+		config := shaping.WrapConfig{Direction: direction, TruncateAfterLines: limit - len(lines)}
 		config = config.WithTruncator(&r.shaper, shaping.Input{Text: []rune("…"), RunEnd: 1, Face: r.fonts.face("NotoSans-Regular.ttf"), Size: fixed.I(size), Direction: direction})
 		wrapped, _ := r.wrapper.WrapParagraph(config, width, runes, shaping.NewSliceIterator(runs))
 		for _, line := range wrapped {
@@ -85,7 +91,7 @@ func (r *Renderer) layout(text string, width, size int) []shaping.Line {
 			slices.SortFunc(line, func(a, b shaping.Output) int { return int(a.VisualIndex - b.VisualIndex) })
 			lines = append(lines, line)
 		}
-		if len(lines) == 3 {
+		if len(lines) == limit {
 			break
 		}
 	}

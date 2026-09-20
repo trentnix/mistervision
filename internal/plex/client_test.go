@@ -45,14 +45,14 @@ func TestLibraryHierarchyAndPagination(t *testing.T) {
 		case "/playlists", "/library/all":
 			fmt.Fprint(w, `{"MediaContainer":{"size":0,"totalSize":0}}`)
 		case "/library/sections":
-			fmt.Fprint(w, `{"MediaContainer":{"Directory":[{"key":"1","title":"Nostalgia","type":"movie"},{"key":"2","title":"Series","type":"show"}]}}`)
+			fmt.Fprint(w, `{"MediaContainer":{"Directory":[{"key":"1","title":"Nostalgia","type":"movie"},{"key":"2","title":"Series","type":"show"},{"key":"3","title":"Music","type":"artist"}]}}`)
 		case "/library/sections/1/all":
 			if r.URL.Query().Get("X-Plex-Container-Start") != "64" || r.URL.Query().Get("X-Plex-Container-Size") != "64" {
 				t.Error("incorrect pagination")
 			}
 			fmt.Fprint(w, `{"MediaContainer":{"offset":64,"totalSize":200,"Metadata":[{"ratingKey":"9","type":"movie","title":"Film"}]}}`)
 		case "/library/metadata/20/children":
-			fmt.Fprint(w, `{"MediaContainer":{"totalSize":1,"Directory":[{"key":"/library/metadata/20/allLeaves","title":"All episodes"}],"Metadata":[{"ratingKey":"21","parentRatingKey":"20","type":"season","title":"Season 1","index":1}]}}`)
+			fmt.Fprint(w, `{"MediaContainer":{"totalSize":1,"Directory":[{"key":"/library/metadata/20/allLeaves","title":"All episodes"}],"Metadata":[{"ratingKey":"21","parentRatingKey":"20","type":"season","title":"Season 1","index":1,"leafCount":12}]}}`)
 		case "/library/metadata/21/children":
 			fmt.Fprint(w, `{"MediaContainer":{"totalSize":1,"Metadata":[{"ratingKey":"22","grandparentRatingKey":"20","type":"episode","title":"Episode","grandparentTitle":"Show","parentIndex":1,"index":2}]}}`)
 		default:
@@ -61,15 +61,18 @@ func TestLibraryHierarchyAndPagination(t *testing.T) {
 		}
 	})
 	libraries, err := c.Libraries(t.Context())
-	if err != nil || len(libraries.Items) != 2 || libraries.Items[0].Name != "Nostalgia" || libraries.Items[0].ID != "library:1" {
+	if err != nil || len(libraries.Items) != 3 || libraries.Items[0].Name != "Nostalgia" || libraries.Items[0].ID != "library:1" {
 		t.Fatalf("libraries: %+v %v", libraries, err)
+	}
+	if libraries.Items[2].CountType != "MusicArtist" {
+		t.Fatal("Plex music counts must identify artists")
 	}
 	page, err := c.List(t.Context(), media.Location{Kind: "items", ParentID: "library:1"}, 64, 64)
 	if err != nil || *page.TotalRecordCount != 200 || page.Items[0].Type != "Movie" {
 		t.Fatalf("movies: %+v %v", page, err)
 	}
 	seasons, err := c.List(t.Context(), media.Location{Kind: "seasons", SeriesID: "20"}, 0, 64)
-	if err != nil || len(seasons.Items) != 1 || seasons.Items[0].SeriesID != "20" {
+	if err != nil || len(seasons.Items) != 1 || seasons.Items[0].SeriesID != "20" || seasons.Items[0].ChildCount != 12 {
 		t.Fatalf("seasons: %+v %v", seasons, err)
 	}
 	episodes, err := c.List(t.Context(), media.Location{Kind: "episodes", ParentID: "21", SeriesID: "20"}, 0, 64)

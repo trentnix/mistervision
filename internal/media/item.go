@@ -26,6 +26,10 @@ type MediaSource struct {
 // Available fields depend on the query. Durations and positions use shared
 // ticks of 100 nanoseconds. Images are identified by tags and fetched separately.
 type Item struct {
+	// LibraryCount is a cached home-list total. Nil means unavailable.
+	LibraryCount *int `json:"-"`
+	// CountType identifies a provider-specific count unit, such as MusicArtist.
+	CountType                                      string `json:"-"`
 	ID                                             string `json:"Id"`
 	Name, Type, CollectionType, SeriesID, Overview string
 	SeriesName                                     string

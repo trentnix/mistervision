@@ -81,7 +81,7 @@ func TestLiveTVQueriesAndLibraryNames(t *testing.T) {
 				calls++
 				limit := "64"
 				start := "64"
-				if !existing && calls == 1 {
+				if r.URL.Query().Get("Limit") == "1" {
 					limit = "1"
 					start = "0"
 				}
@@ -104,8 +104,8 @@ func TestLiveTVQueriesAndLibraryNames(t *testing.T) {
 				t.Fatal("missing probed Live TV view")
 			}
 			count, err := c.LibraryCount(context.Background(), page.Items[1])
-			if count != nil || err != nil {
-				t.Fatal("Live TV must not use Items counts")
+			if count == nil || *count != 66 || err != nil {
+				t.Fatal("Live TV must use the channel count")
 			}
 			channels, err := c.List(context.Background(), Location{Kind: "livetv"}, 64, 64)
 			if err != nil || len(channels.Items) != 2 || channels.Items[0].ID != "b" || channels.Items[1].ID != "a" || channels.Items[0].Type != "TvChannel" || channels.Items[0].Number != "12.2" || channels.Items[1].ChannelNumber != "3.1" || channels.Items[0].CurrentProgram.Name != "Evening News" {
@@ -126,9 +126,9 @@ func TestCountFailuresStayUnknown(t *testing.T) {
 	}
 }
 
-func TestSeasonEpisodeAndDetailsQueriesMatchC(t *testing.T) {
+func TestSeasonEpisodeAndDetailsQueries(t *testing.T) {
 	for _, tc := range []struct{ kind, path, query string }{
-		{"seasons", "/Shows/series/Seasons", "userId=user"},
+		{"seasons", "/Shows/series/Seasons", "userId=user&Fields=ChildCount"},
 		{"episodes", "/Shows/series/Episodes", "seasonId=season&userId=user&Fields=RunTimeTicks&EnableUserData=true&ImageTypeLimit=1&EnableImageTypes=Primary,Backdrop&StartIndex=64&Limit=64"},
 		{"details", "/Items/movie", "userId=user&Fields=Overview,ProductionYear,RunTimeTicks,People,MediaStreams,CommunityRating&EnableUserData=true&EnableImageTypes=Primary,Logo,Backdrop"},
 	} {
@@ -141,7 +141,7 @@ func TestSeasonEpisodeAndDetailsQueriesMatchC(t *testing.T) {
 				if tc.kind == "details" {
 					fmt.Fprint(w, `{"Id":"movie"}`)
 				} else {
-					fmt.Fprint(w, `{"Items":[{"Id":"one"}]}`)
+					fmt.Fprint(w, `{"Items":[{"Id":"one","ChildCount":12}]}`)
 				}
 			}))
 			defer server.Close()
@@ -151,8 +151,12 @@ func TestSeasonEpisodeAndDetailsQueriesMatchC(t *testing.T) {
 					t.Fatal(err)
 				}
 			} else {
-				if _, err := c.List(context.Background(), Location{Kind: tc.kind, SeriesID: "series", ParentID: "season"}, 64, 64); err != nil {
+				page, err := c.List(context.Background(), Location{Kind: tc.kind, SeriesID: "series", ParentID: "season"}, 64, 64)
+				if err != nil {
 					t.Fatal(err)
+				}
+				if tc.kind == "seasons" && (page.Items[0].Type != "Season" || page.Items[0].ChildCount != 12) {
+					t.Fatal("season lost its episode count")
 				}
 			}
 		})

@@ -41,10 +41,10 @@ func (p *screenPainter) profiles() {
 		profile := s.Profiles[selected]
 		const avatarSize, avatarGap = 64, 12
 		name := truncate(profile.Name, p.width-48-avatarSize-avatarGap, 2)
-		x := (p.width - textWidth(name, 2) - avatarSize - avatarGap) / 2
+		x := (p.width - c.MeasureText(name, 2) - avatarSize - avatarGap) / 2
 		drawProfileAvatar(c, x, top, avatarSize, profile.Avatar, titleColor)
 		c.TextScaled(x+avatarSize+avatarGap, top+8, name, titleColor, p.width-24, 2)
-		center(c, top+40, "Please enter your PIN:", 0xcccccc, 1)
+		center(c, top+40, "Please enter your PIN:", 0xffffff, 1)
 		mask := ""
 		for i := 0; i < 4; i++ {
 			if i < s.PINLength {
@@ -59,12 +59,24 @@ func (p *screenPainter) profiles() {
 		rowHeight := min(22, max(16, (bottom-keypadTop-14)/4))
 		for i, label := range labels {
 			x, y := p.width/2-114+(i%3)*76, keypadTop+(i/3)*rowHeight
-			color := uint32(dimColor)
+			color := uint32(0xffffff)
 			if i == s.PINKey && !s.PINChecking {
 				c.Rect(x, y-3, 72, rowHeight-2, 0x283446)
 				color = titleColor
 			}
-			c.Text(x+36-textWidth(label, 1)/2, y+2, label, color, x+72)
+			scale := 1
+			if len(label) == 1 {
+				scale = 2
+			}
+			textY := y + (rowHeight-7*scale)/2 - 3
+			if scale == 2 {
+				// Center the visible digit, accounting for the font’s baseline padding.
+				textY += 2
+			} else {
+				// Action labels use the taller setup body font.
+				textY -= 2
+			}
+			c.TextScaled(x+36-c.MeasureText(label, scale)/2, textY, label, color, x+72, scale)
 		}
 	} else {
 		center(c, top, "Who’s watching?", titleColor, 2)
@@ -75,7 +87,7 @@ func (p *screenPainter) profiles() {
 			profile := s.Profiles[i]
 			cx := p.width/2 + (i-start)*step - (count-1)*step/2
 			w, h := 96, 48
-			color := uint32(dimColor)
+			color := uint32(0xffffff)
 			if i == selected {
 				w, h = 120, 60
 				color = titleColor
@@ -89,17 +101,17 @@ func (p *screenPainter) profiles() {
 				name := []rune(profile.Name)
 				if len(name) > 0 {
 					label := strings.ToUpper(string(name[0]))
-					c.TextScaled(cx-textWidth(label, 3)/2, y+h/2-12, label, 0xffffff, cx+w/2, 3)
+					c.TextScaled(cx-c.MeasureText(label, 3)/2, y+h/2-12, label, 0xffffff, cx+w/2, 3)
 				}
 			}
 			label := truncate(profile.Name, step-16, 1)
-			c.Text(cx-textWidth(label, 1)/2, top+118, label, color, cx+step/2)
+			c.Text(cx-c.MeasureText(label, 1)/2, top+118, label, color, cx+step/2)
 			if profile.Protected {
-				c.Text(cx-textWidth("PIN required", 1)/2, top+132, "PIN required", dimColor, cx+step/2)
+				c.Text(cx-c.MeasureText("PIN required", 1)/2, top+132, "PIN required", 0xffffff, cx+step/2)
 			}
 		}
 		if len(s.Profiles) > 3 {
-			center(c, bottom-16, fmt.Sprintf("%d / %d", selected+1, len(s.Profiles)), dimColor, 1)
+			center(c, bottom-16, fmt.Sprintf("%d / %d", selected+1, len(s.Profiles)), 0xffffff, 1)
 		}
 	}
 	if s.PINChecking {
