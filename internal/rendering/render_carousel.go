@@ -1,7 +1,7 @@
 package rendering
 
 import (
-	"fmt"
+	"image"
 
 	"mistervision/internal/input/control"
 )
@@ -22,20 +22,17 @@ func (p *screenPainter) carousel() [][]controlHint {
 		music := v.Item() != nil && v.Item().CollectionType == "music"
 		cache.mosaic(c, art.Covers, music, anim.Seconds)
 	}
-	p.header(p.scene.title(), sy+4)
-	if p.scene.About.Release.Available {
-		c.Text(24, sy+24, "Update available", titleColor, w-24)
-	}
-	if profile := p.scene.About.Profile; profile != nil {
-		name := truncate(profile.Name, w/2-32-profileLabelInset, 1)
-		drawProfileLabel(c, w-24-textWidth(name, 1)-profileLabelInset, sy+24, name, profile.Avatar, dimColor)
-	}
+	p.homeHeader()
 	centers := make([]float64, len(v.Page.Items))
-	names := make([]string, len(centers))
+	names := make([]*image.RGBA, len(centers))
 	for i, item := range v.Page.Items {
-		names[i] = truncate(item.Name, 160, 2)
+		color := uint32(0xffffff)
+		if i == v.Selected {
+			color = titleColor
+		}
+		names[i] = p.headingText(item.Name, 160, 30, 1, color)
 		if i > 0 {
-			centers[i] = centers[i-1] + float64(textWidth(names[i-1], 2)+textWidth(names[i], 2))/2 + 74
+			centers[i] = centers[i-1] + float64(labelWidth(names[i-1])+labelWidth(names[i]))/2 + 74
 		}
 	}
 	if len(centers) > 0 {
@@ -45,28 +42,15 @@ func (p *screenPainter) carousel() [][]controlHint {
 		origin := centers[lo] + (centers[hi]-centers[lo])*(pos-float64(lo))
 		cy := (sy + 24 + h - sy - 28) / 2
 		for i, name := range names {
-			x := w/2 + int(centers[i]-origin) - textWidth(name, 2)/2
-			color := uint32(0xffffff)
-			if i == v.Selected {
-				color = titleColor
+			x := w/2 + int(centers[i]-origin) - labelWidth(name)/2
+			if name != nil {
+				c.Blit(name, x, cy-14, name.Bounds().Dx(), name.Bounds().Dy())
 			}
-			c.TextScaled(x, cy-10, name, color, w, 2)
 			if i == v.Selected && p.scene.LibraryLoading {
-				c.Text(w/2-textWidth("Loading...", 1)/2, cy+12, "Loading...", dimColor, w)
+				c.Text(w/2-c.MeasureText("Loading...", 1)/2, cy+12, "Loading...", dimColor, w)
 			} else if i == v.Selected && p.scene.LibraryCount != nil {
-				label := "items"
-				switch v.Page.Items[i].CollectionType {
-				case "movies":
-					label = "movies"
-				case "tvshows":
-					label = "series"
-				case "music":
-					label = "albums"
-				case "musicvideos":
-					label = "videos"
-				}
-				count := fmt.Sprintf("%d %s", *p.scene.LibraryCount, label)
-				c.Text(w/2-textWidth(count, 1)/2, cy+12, count, dimColor, w)
+				count := libraryCountText(v.Page.Items[i], *p.scene.LibraryCount)
+				c.Text(w/2-c.MeasureText(count, 1)/2, cy+12, count, dimColor, w)
 			}
 		}
 	}
@@ -81,4 +65,12 @@ func (p *screenPainter) carousel() [][]controlHint {
 	}
 	hints = append(hints, hint(labels, control.About, "About"), hint(labels, control.Back, "Exit"))
 	return controlRows(w, hints)
+}
+
+// labelWidth treats empty library names as an empty carousel slot.
+func labelWidth(im *image.RGBA) int {
+	if im == nil {
+		return 0
+	}
+	return im.Bounds().Dx()
 }

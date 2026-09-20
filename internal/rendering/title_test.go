@@ -13,17 +13,29 @@ func TestRootHeadingTruncatesBeforeClock(t *testing.T) {
 	for _, width := range []int{320, 640} {
 		for _, height := range []int{240, 288, 480} {
 			long := strings.Repeat("Wide title ", 20)
-			want := string([]rune(long)[:(width-108)/16-3]) + "..."
+			var first []byte
 			for _, seconds := range []float64{0, 2, 20} {
 				got, expected := ui.New(width, height), ui.New(width, height)
 				scene := Scene{Root: true, Title: &long, Now: time.Unix(100, 0)}
 				p := screenPainter{canvas: got, width: width, height: height, safeY: safeY(width, height), scene: scene, animation: Animation{TitleSeconds: seconds}}
 				p.header(scene.title(), p.safeY+4)
 				p.canvas = expected
-				p.scene.Root = false
-				p.header(want, p.safeY+4)
-				if !bytes.Equal(got.Pixels, expected.Pixels) {
-					t.Fatalf("heading overflowed or scrolled at %dx%d, time %v", width, height, seconds)
+				p.clock()
+				if first == nil {
+					first = bytes.Clone(got.Pixels)
+				} else if !bytes.Equal(got.Pixels, first) {
+					t.Fatalf("root heading scrolled at %dx%d, time %v", width, height, seconds)
+				}
+				for y := range height {
+					for x := range width {
+						if x >= 24 && x < width-84 {
+							continue
+						}
+						i := (y*width + x) * 4
+						if !bytes.Equal(got.Pixels[i:i+4], expected.Pixels[i:i+4]) {
+							t.Fatal("heading drew outside its safe column")
+						}
+					}
 				}
 			}
 		}

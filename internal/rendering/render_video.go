@@ -28,6 +28,10 @@ func renderVideoOverlay(w, h int, p PlaybackPresentation, now time.Time) []byte 
 
 func renderVideoOverlayOn(c *ui.Canvas, p PlaybackPresentation, now time.Time, labels control.Labels, captions *caption.Renderer) []byte {
 	w, h := c.Width, c.Height
+	if c.Typeface == nil {
+		cache := &sceneCache{}
+		c.Typeface = cache.typeface(w, h)
+	}
 	if p.Tracks != nil {
 		drawTrackMenu(c, p.Tracks, labels)
 		return c.Pixels

@@ -152,7 +152,7 @@ Keep the launcher's two-core CPU affinity. Preserve MPlayer's dropped-frame time
 
 ## Artwork, settings, and sound
 
-[`selectionLoader`](../internal/browser/selection_loader.go) owns metadata freshness and selection cancellation. Counts load independently of images. [`artwork.Loader`](../internal/artwork/artwork_loader.go) owns bounded image requests and decoded memory. Account-scoped `DiskCache` and `MosaicCache` share private file mechanics while retaining separate formats, budgets, and freshness rules.
+[`selectionLoader`](../internal/browser/selection_loader.go) owns metadata freshness and selection cancellation. [`libraryCountState`](../internal/browser/library_counts.go) schedules up to three count requests independently of selection changes and shares their results across both home views. [`artwork.Loader`](../internal/artwork/artwork_loader.go) owns bounded image requests and decoded memory. Account-scoped `DiskCache` and `MosaicCache` share private file mechanics while retaining separate formats, budgets, and freshness rules.
 
 Disk reads, invalidation, and pruning stay on workers. Cache hits do not rewrite files. Concurrent processes do not coordinate their cache inventories. See [cache behavior](GO_BROWSING.md#persistent-artwork-cache).
 
@@ -181,7 +181,7 @@ go test ./internal/ui -run '^$' -bench BenchmarkBackdrop -benchmem
 
 ## Text coverage
 
-Menus retain the original 8×8 Latin-1 font. `ui.Canvas.Text` uses an embedded bitmap fallback for additional punctuation, music symbols, and supported East Asian characters. Lookup allocates no memory. Unsupported menu characters appear as `?`.
+Interface text uses the caption font set through [`ui.Typeface`](../internal/ui/typeface.go). The [rendering adapter](../internal/rendering/typeface.go) measures proportional text and borrows cached, antialiased label images. The cache holds at most 128 labels and excludes position, so scrolling reuses the same pixels. Headings and list titles use a modest horizontal stroke for extra weight. About and setup use larger body text. The home carousel and root list share `homeHeader`, including the update notice and viewer identity. Navigation hints and the clock explicitly call `Canvas.BitmapText` to retain the original 8×8 font and its embedded Unicode fallback. A canvas without a typeface also uses that bitmap font.
 
 [`caption.Renderer`](../internal/caption/renderer.go) handles plain-text subtitles and closed captions for both Ghostty and MiSTer. `RasterRenderer` owns it. It resolves script-specific Noto fonts, shapes text with go-text, orders bidirectional runs, and wraps at Unicode line breaks. It draws up to three centered, outlined lines with antialiasing and accounts for tall logical CRT pixels. The output adapter still controls physical resolution. Opening playback controls moves the cached cue without reshaping it.
 

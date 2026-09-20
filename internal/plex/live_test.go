@@ -40,7 +40,7 @@ func TestLiveChannelDiscoveryAndPaging(t *testing.T) {
 			now := time.Now().Unix()
 			fmt.Fprintf(w, `{"MediaContainer":{"Metadata":[{"title":"Episode","grandparentTitle":"Current show","Media":[{"channelIdentifier":"two-two","beginsAt":%d,"endsAt":%d}]},{"title":"Past show","Media":[{"channelIdentifier":"two-two","beginsAt":1,"endsAt":2}]}]}}`, now-100, now+100)
 		case "/livetv/epg/channels":
-			fmt.Fprint(w, `{"MediaContainer":{"Channel":[{"key":"two-two","identifier":"2.2","callSign":"PBS","thumb":"https://provider-static.plex.tv/logo.png"}]}}`)
+			fmt.Fprint(w, `{"MediaContainer":{"Channel":[{"key":"two-two","identifier":"2.2","title":"PBS","callSign":"KACVDT2","thumb":"https://provider-static.plex.tv/logo.png"}]}}`)
 		case "/media/grabbers/devices/1/channels", "/media/grabbers/devices/3/channels":
 			fmt.Fprint(w, `{"MediaContainer":{"DeviceChannel":[{"identifier":"10.1","name":"News"},{"identifier":"protected","drm":true},{"identifier":"3.1","drm":true}]}}`)
 		default:

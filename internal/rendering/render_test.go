@@ -1,9 +1,13 @@
 package rendering
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
+	"mistervision/internal/input/control"
+	"mistervision/internal/ui"
+	"os"
 	"testing"
 	"time"
 
@@ -21,7 +25,7 @@ func TestCRTLayoutAndExitOverlay(t *testing.T) {
 		if (h == 240 && (sy != 12 || rows != 6)) || (h == 288 && (sy != 14 || rows != 7)) {
 			t.Fatalf("CRT geometry: height=%d margin=%d rows=%d", h, sy, rows)
 		}
-		i := ((sy+21)*640 + 20) * 4
+		i := ((sy+45)*640 + 20) * 4
 		if pixels[i] != 0x7c || pixels[i+1] != 0x37 || pixels[i+2] != 0x0d {
 			t.Fatal("selection placement or palette changed")
 		}
@@ -221,6 +225,78 @@ func TestOrganizationMetadataShowsCountsInsteadOfWatched(t *testing.T) {
 			if text, color := subtitle(item); text != tc.want || color != 0x585858 {
 				t.Errorf("%s: got %q color=%x, want %q", kind, text, color, tc.want)
 			}
+		}
+	}
+}
+
+func TestExitStripePaddingAndFullWidth(t *testing.T) {
+	for _, height := range []int{240, 288, 480} {
+		for _, labels := range []control.Labels{nil, control.KeyboardLabels(), {control.Open: "A long configured select button", control.Back: "A long configured cancel button"}} {
+			c := ui.New(640, height)
+			c.Rect(0, 0, c.Width, c.Height, 0x808080)
+			cache := &sceneCache{}
+			c.Typeface = cache.typeface(c.Width, c.Height)
+			p := screenPainter{canvas: c, width: c.Width, height: c.Height, bottom: height - 20, scene: Scene{Root: true, ExitConfirm: true, Controls: labels}}
+			p.footer(nil)
+			top, bottom := height, 0
+			for y := range height {
+				left, right := y*c.Width*4, (y*c.Width+c.Width-1)*4
+				if c.Pixels[left] == 128 {
+					continue
+				}
+				if c.Pixels[left] != c.Pixels[right] {
+					t.Fatal("stripe does not span the screen")
+				}
+				if c.Pixels[left] == 0 {
+					t.Fatal("stripe lost translucency")
+				}
+				top, bottom = min(top, y), max(bottom, y+1)
+			}
+			contentTop, contentBottom := bottom, top
+			for y := top; y < bottom; y++ {
+				shade := c.Pixels[y*c.Width*4]
+				for x := range c.Width {
+					i := (y*c.Width + x) * 4
+					if c.Pixels[i] != shade || c.Pixels[i+1] != shade || c.Pixels[i+2] != shade {
+						contentTop, contentBottom = min(contentTop, y), max(contentBottom, y+1)
+					}
+				}
+			}
+			if contentTop-top != 8 || bottom-contentBottom != 8 {
+				t.Fatalf("height %d: top padding %d, bottom padding %d", height, contentTop-top, bottom-contentBottom)
+			}
+			if dir := os.Getenv("EXIT_PREVIEW_DIR"); dir != "" && labels == nil {
+				writeSetupPreview(t, dir, fmt.Sprintf("exit-%d.png", height), c)
+			}
+		}
+	}
+}
+
+func TestSeasonEpisodeCounts(t *testing.T) {
+	for _, tc := range []struct {
+		count int
+		want  string
+	}{{0, ""}, {1, "1 episode"}, {12, "12 episodes"}} {
+		item := media.Item{Type: "Season", ChildCount: tc.count}
+		item.UserData.Played = true
+		if got, _ := subtitle(item); got != tc.want {
+			t.Errorf("season with %d episodes: %q, want %q", tc.count, got, tc.want)
+		}
+	}
+}
+
+func TestLibraryCountLabels(t *testing.T) {
+	for _, tc := range []struct {
+		collection, kind string
+		count            int
+		want             string
+	}{
+		{"movies", "", 0, "0 movies"}, {"movies", "", 1, "1 movie"}, {"tvshows", "", 3, "3 series"},
+		{"music", "", 5, "5 albums"}, {"music", "MusicArtist", 5, "5 artists"}, {"music", "MusicArtist", 1, "1 artist"},
+		{"livetv", "", 12, "12 channels"}, {"playlists", "", 2, "2 playlists"}, {"boxsets", "", 4, "4 collections"}, {"mixed", "", 7, "7 items"},
+	} {
+		if got := libraryCountText(media.Item{CollectionType: tc.collection, CountType: tc.kind}, tc.count); got != tc.want {
+			t.Errorf("got %q, want %q", got, tc.want)
 		}
 	}
 }

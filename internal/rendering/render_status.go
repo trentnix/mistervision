@@ -43,7 +43,7 @@ func (p *screenPainter) setup() {
 	heading, message := s.Title, s.Message
 	titleY := top + logoHeight + 8
 	scale := 2
-	if textWidth(heading, scale) > p.width-48 {
+	if c.MeasureText(heading, scale) > p.width-48 {
 		scale = 1
 	}
 	center(c, titleY, truncate(heading, p.width-48, scale), titleColor, scale)
@@ -58,7 +58,7 @@ func (p *screenPainter) setup() {
 	case SetupApproval:
 		setupLines(c, bodyY, message, 2)
 		center(c, bottom-62, truncate(s.Code, p.width-48, 3), 0xffffff, 3)
-		center(c, bottom-22, "Waiting for approval...", dimColor, 1)
+		center(c, bottom-22, "Waiting for approval...", 0xffffff, 1)
 		setupActivity(c, bottom-4, p.animation.Seconds)
 	case SetupConnecting:
 		setupLines(c, bodyY, message, 2)
@@ -66,7 +66,7 @@ func (p *screenPainter) setup() {
 	default:
 		setupLines(c, bodyY, message, max(1, (bottom-42-bodyY)/12))
 		if s.Path != "" {
-			center(c, bottom-34, s.PathLabel, dimColor, 1)
+			center(c, bottom-34, s.PathLabel, 0xffffff, 1)
 			setupPath(c, bottom-20, s.Path)
 		}
 	}
@@ -83,7 +83,7 @@ func setupLines(c *ui.Canvas, y int, text string, rows int) {
 				if rows == 0 {
 					return
 				}
-				center(c, y, line, 0xcccccc, 1)
+				center(c, y, line, 0xffffff, 1)
 				rows--
 				y += 12
 				line = ""
@@ -97,7 +97,7 @@ func setupLines(c *ui.Canvas, y int, text string, rows int) {
 			if rows == 0 {
 				return
 			}
-			center(c, y, truncate(line, c.Width-48, 1), 0xcccccc, 1)
+			center(c, y, truncate(line, c.Width-48, 1), 0xffffff, 1)
 			rows--
 			y += 12
 		}
@@ -121,7 +121,7 @@ func setupPath(c *ui.Canvas, y int, path string) {
 	}
 	for len(runes) > 0 {
 		n := min(width, len(runes))
-		center(c, y, string(runes[:n]), 0xcccccc, 1)
+		center(c, y, string(runes[:n]), 0xffffff, 1)
 		runes = runes[n:]
 		y += 12
 	}

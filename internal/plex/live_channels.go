@@ -113,12 +113,12 @@ func (c *Client) liveChannels(ctx context.Context) ([]media.Item, error) {
 				if detail.Identifier == "" {
 					detail = guide[mapping.LineupIdentifier]
 				}
-				name := detail.CallSign
+				name := detail.Title
 				if name == "" {
 					name = names[mapping.DeviceIdentifier].Name
 				}
 				if name == "" {
-					name = detail.Title
+					name = detail.CallSign
 				}
 				if name == "" {
 					name = "Channel " + mapping.DeviceIdentifier

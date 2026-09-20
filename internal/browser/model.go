@@ -41,9 +41,11 @@ type Request struct {
 // Model owns navigation, the music queue screen, and photo control visibility.
 // PlaybackController owns decoder state separately. Only the browser loop mutates Model.
 type Model struct {
-	Stack                       []View
-	Generation                  int
-	Rows                        int
+	Stack      []View
+	Generation int
+	Rows       int
+	// HomeRows is the root list capacity. Zero uses Rows.
+	HomeRows                    int
 	ListMode, ExitConfirm, Quit bool
 	Notice                      string
 	musicQueue                  bool
@@ -88,7 +90,7 @@ func (m *Model) Apply(req Request, page media.Page, err error) bool {
 		total := req.Start
 		v.Page.TotalRecordCount = &total
 		v.Target = v.Start + v.Selected
-		v.centerSelection(m.Rows)
+		v.centerSelection(m.rowsFor(v))
 		v.Error = ""
 		return true
 	}
@@ -107,10 +109,30 @@ func (m *Model) Apply(req Request, page media.Page, err error) bool {
 	if waiting {
 		target = v.Target
 	}
-	v.retainPage(req.Start, page, target, m.Rows)
+	v.retainPage(req.Start, page, target, m.rowsFor(v))
 	v.Error = ""
 	v.prefetchFailed = false
 	return true
+}
+
+// skipSingleSeason replaces a complete, one-season listing with its episodes.
+// Replacing the view makes Back return to the show list, including after errors.
+func (m *Model) skipSingleSeason() *Request {
+	v := m.Current()
+	if v.Location.Kind != "seasons" || v.Loading || v.Error != "" || v.Start != 0 || len(v.Page.Items) != 1 || v.More() {
+		return nil
+	}
+	season := v.Page.Items[0]
+	if season.Type != "Season" || season.ID == "" {
+		return nil
+	}
+	location := v.Location
+	location.Kind, location.ParentID = "episodes", season.ID
+	if season.SeriesID != "" {
+		location.SeriesID = season.SeriesID
+	}
+	*v = View{Title: v.Title + " / " + season.Name, Location: location}
+	return m.Load(0)
 }
 
 // More reports whether another page may follow the retained items. Without a
@@ -155,6 +177,7 @@ func (m *Model) Key(key control.Action) *Request {
 	}
 	if key == control.Select && len(m.Stack) == 1 {
 		m.ListMode = !m.ListMode
+		v.centerSelection(m.rowsFor(v))
 		return nil
 	}
 	if key == control.Back {
@@ -197,7 +220,7 @@ func (m *Model) Key(key control.Action) *Request {
 				return nil
 			}
 		} else if key == control.Next || key == control.Previous {
-			step *= max(1, m.Rows)
+			step *= max(1, m.rowsFor(v))
 		}
 		v.direction = step
 		target := max(0, v.Start+v.Selected+step)
@@ -219,7 +242,7 @@ func (m *Model) Key(key control.Action) *Request {
 		v.Target = target
 		v.Loading = false
 		v.Error = ""
-		v.centerSelection(m.Rows)
+		v.centerSelection(m.rowsFor(v))
 		return nil
 	}
 	switch key {
@@ -277,4 +300,12 @@ func (m *Model) Key(key control.Action) *Request {
 		}
 	}
 	return nil
+}
+
+// rowsFor keeps scrolling and page retention aligned with the rendered list.
+func (m *Model) rowsFor(v *View) int {
+	if v.Location.Kind == "views" && m.HomeRows > 0 {
+		return m.HomeRows
+	}
+	return m.Rows
 }

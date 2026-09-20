@@ -13,6 +13,15 @@ import (
 // rasterize draws vector outlines directly at logical pixel height. Vertical
 // scaling accounts for tall CRT pixels without changing shaping or line breaks.
 func rasterize(lines []shaping.Line, width, size int, scaleY float32) *image.NRGBA {
+	mask := rasterMask(lines, width, size, scaleY, true)
+	if mask == nil {
+		return nil
+	}
+	return outlineMask(mask, 2, max(1, int(math.Ceil(float64(2*scaleY)))))
+}
+
+// rasterMask shares glyph coverage while allowing labels to align left.
+func rasterMask(lines []shaping.Line, width, size int, scaleY float32, centered bool) *image.Alpha {
 	if len(lines) == 0 {
 		return nil
 	}
@@ -37,7 +46,10 @@ func rasterize(lines []shaping.Line, width, size int, scaleY float32) *image.NRG
 		for _, run := range line {
 			advance += float32(run.Advance) / 64
 		}
-		x := (float32(width) - advance) / 2
+		x := float32(padding)
+		if centered {
+			x = (float32(width) - advance) / 2
+		}
 		for _, run := range line {
 			scale := float32(run.Size) / 64 / float32(run.Face.Upem())
 			for _, glyph := range run.Glyphs {
@@ -67,7 +79,7 @@ func rasterize(lines []shaping.Line, width, size int, scaleY float32) *image.NRG
 		}
 	}
 	path.Draw(mask, mask.Bounds(), image.NewUniform(color.Alpha{A: 255}), image.Point{})
-	return outlineMask(mask, 2, max(1, int(math.Ceil(float64(2*scaleY)))))
+	return mask
 }
 
 // outlineMask expands glyph coverage into a black outline, then composites white

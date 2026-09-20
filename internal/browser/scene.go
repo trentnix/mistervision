@@ -17,13 +17,15 @@ func sceneFromModel(m *Model, playback rendering.PlaybackPresentation, setup ren
 		Notice:               m.Notice,
 		Setup:                setup,
 		Artwork:              selection.artwork,
-		LibraryCount:         selection.count,
 		SelectionError:       selectionError,
 		Audio:                m.MusicQueueActive(),
 		Video:                playback.Active && !playback.Audio,
 		Playback:             playback,
 		Now:                  now,
 		PhotoControlsVisible: m.PhotoControlsVisible(now),
+	}
+	if item := s.Content.Item(); s.Root && item != nil {
+		s.LibraryCount = item.LibraryCount
 	}
 	if parent, ok := m.Parent(); ok {
 		s.PhotoCount = contentFromView(&parent).Count()

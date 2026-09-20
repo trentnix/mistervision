@@ -23,11 +23,11 @@ func drawTrackMenu(c *ui.Canvas, menu *TrackMenu, labels control.Labels) {
 	c.Shade(12, sy-4, w-24, h-2*sy+12, 225)
 	tabY := sy + 4
 	for i, title := range []string{"Subtitles", "Audio", "Picture"} {
-		x := w*(2*i+1)/6 - textWidth(title, 1)/2
+		x := w*(2*i+1)/6 - c.MeasureText(title, 1)/2
 		color := uint32(dimColor)
 		if menu.Tab == i {
 			color = titleColor
-			c.Rect(x-6, tabY+12, textWidth(title, 1)+12, 2, titleColor)
+			c.Rect(x-6, tabY+12, c.MeasureText(title, 1)+12, 2, titleColor)
 		}
 		c.Text(x, tabY, title, color, w-24)
 	}

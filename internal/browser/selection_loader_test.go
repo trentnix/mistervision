@@ -35,7 +35,6 @@ func receiveSelection(t *testing.T, updates <-chan selectionUpdate, kind string)
 		select {
 		case update := <-updates:
 			if (update.kind == selectionDetails && kind == "detail") ||
-				(update.kind == selectionCount && kind == "count") ||
 				(update.kind == selectionArtwork && update.art.kind == kind) {
 				return update
 			}
@@ -134,7 +133,7 @@ func TestDetailsAndCoverArriveBeforeSlowArtwork(t *testing.T) {
 	}
 }
 
-func TestCarouselCountsAndCoversLoadIndependently(t *testing.T) {
+func TestCarouselCoversDoNotLoadCounts(t *testing.T) {
 	png := artPNG(t)
 	release := make(chan struct{})
 	var once sync.Once
@@ -180,10 +179,6 @@ func TestCarouselCountsAndCoversLoadIndependently(t *testing.T) {
 		loader.load(context.Background(), item, true, false, func(u selectionUpdate) { updates <- u })
 		close(done)
 	}()
-	update := receiveSelection(t, updates, "count")
-	if update.err != nil || update.count == nil || *update.count != 503 {
-		t.Fatalf("count: %+v", update)
-	}
 	for i := 0; i < 3; i++ {
 		select {
 		case <-started:
@@ -198,7 +193,7 @@ func TestCarouselCountsAndCoversLoadIndependently(t *testing.T) {
 	awaitSelection(t, done)
 	covers := 0
 	for len(updates) > 0 {
-		update = <-updates
+		update := <-updates
 		if update.kind == selectionArtwork && update.art.kind == "cover" && update.art.image != nil {
 			covers++
 		}
@@ -207,21 +202,21 @@ func TestCarouselCountsAndCoversLoadIndependently(t *testing.T) {
 		t.Fatalf("covers=%d concurrency=%d", covers, peak.Load())
 	}
 	snapshot := loader.snapshot(item, true)
-	if snapshot.count == nil || *snapshot.count != 503 || len(snapshot.artwork.Covers) != 12 {
+	if len(snapshot.artwork.Covers) != 12 {
 		t.Fatal("carousel cache not immediately reusable")
 	}
 	loader.load(context.Background(), item, true, false, func(selectionUpdate) {})
-	if countCalls.Load() != 1 || sampleCalls.Load() != 1 || imageCalls.Load() != 12 {
+	if countCalls.Load() != 0 || sampleCalls.Load() != 1 || imageCalls.Load() != 12 {
 		t.Fatal("warm carousel issued HTTP requests")
 	}
 	loader.libraries.remember(item.ID, func(v *cachedLibrary) { v.countUntil = time.Time{} })
 	loader.load(context.Background(), item, true, false, func(selectionUpdate) {})
-	if countCalls.Load() != 2 || sampleCalls.Load() != 1 || imageCalls.Load() != 12 {
+	if countCalls.Load() != 0 || sampleCalls.Load() != 1 || imageCalls.Load() != 12 {
 		t.Fatal("expired count refreshed sample or images")
 	}
 	loader.libraries.remember(item.ID, func(v *cachedLibrary) { v.itemsUntil = time.Time{} })
 	loader.load(context.Background(), item, true, false, func(selectionUpdate) {})
-	if countCalls.Load() != 2 || sampleCalls.Load() != 2 || imageCalls.Load() != 12 {
+	if countCalls.Load() != 0 || sampleCalls.Load() != 2 || imageCalls.Load() != 12 {
 		t.Fatal("expired sample refreshed count or images")
 	}
 }
@@ -267,33 +262,32 @@ func TestCarouselCoversDoNotWaitForSlowCount(t *testing.T) {
 		w.Write(png)
 	}))
 	defer server.Close()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	loader := newSelectionLoader(jellyfin.NewClient(jellyfin.Config{Server: server.URL}, jellyfin.Session{}), 640, 240, selectionCaches{})
-	updates := make(chan selectionUpdate, 8)
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		loader.load(ctx, media.Item{ID: "movies", CollectionType: "movies"}, true, false, func(u selectionUpdate) { updates <- u })
-	}()
+	s := testSession(t)
+	s.client = jellyfin.NewClient(jellyfin.Config{Server: server.URL}, jellyfin.Session{})
+	s.selection.loader = newSelectionLoader(s.client, 640, 240, selectionCaches{})
+	s.model.Current().Page.Items = []media.Item{{ID: "movies", CollectionType: "movies"}}
+	defer func() { s.selection.cancel(); s.counts.reset() }()
+	s.loadSelection()
 	select {
 	case <-countStarted:
 	case <-time.After(3 * time.Second):
 		t.Fatal("count request did not start")
 	}
-	update := receiveSelection(t, updates, "cover")
-	if update.err != nil || update.art.image == nil {
-		t.Fatal("cover waited for count or failed", update.err)
+	deadline := time.After(3 * time.Second)
+	for len(s.selection.current.artwork.Covers) == 0 || s.selection.current.artwork.Covers[0] == nil {
+		select {
+		case result := <-s.events:
+			result.apply(s)
+		case <-deadline:
+			t.Fatal("cover waited for count")
+		}
 	}
-	select {
-	case <-done:
-		t.Fatal("selection finished with count still pending")
-	default:
+	if !s.counts.pending["movies"] {
+		t.Fatal("count finished unexpectedly")
 	}
-	cancel()
-	awaitSelection(t, done)
-	if loader.snapshot(media.Item{ID: "movies"}, true).artwork.Covers[0] == nil {
-		t.Fatal("canceling metadata discarded completed cover")
+	s.selection.cancel()
+	if s.selection.loader.snapshot(media.Item{ID: "movies"}, true).artwork.Covers[0] == nil {
+		t.Fatal("canceling selection discarded completed cover")
 	}
 }
 

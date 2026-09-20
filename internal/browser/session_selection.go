@@ -21,6 +21,7 @@ type selectionState struct {
 // reuses current work. A new selection publishes cached metadata and images immediately
 // and rejects later updates from the previous selection by generation.
 func (s *browserSession) loadSelection() {
+	s.loadLibraryCounts()
 	item := s.model.Current().Item()
 	key := ""
 	root := len(s.model.Stack) == 1
@@ -83,8 +84,6 @@ func (s *browserSession) handleSelection(r selectionResult) bool {
 		switch r.update.kind {
 		case selectionDetails:
 			s.selection.err = messageDetailsFailed
-		case selectionCount:
-			s.selection.err = messageCountFailed
 		default:
 			s.selection.err = messagePhotoFailed
 		}
@@ -92,8 +91,6 @@ func (s *browserSession) handleSelection(r selectionResult) bool {
 		switch r.update.kind {
 		case selectionArtwork:
 			applyArtwork(&s.selection.current.artwork, r.update.art)
-		case selectionCount:
-			s.selection.current.count = r.update.count
 		case selectionDetails:
 			if s.model.Current().Detail != nil {
 				s.model.Current().Detail = r.update.detail

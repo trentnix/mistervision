@@ -32,7 +32,7 @@ func (p *screenPainter) connectionChoices() {
 	for i := start; i < min(len(choices), start+count); i++ {
 		choice := choices[i]
 		y := top + (i-start)*rowHeight
-		color := uint32(0xcccccc)
+		color := uint32(0xffffff)
 		if i == selected {
 			c.Rect(24, y-3, p.width-48, rowHeight-2, 0x283446)
 			color = titleColor
@@ -42,7 +42,7 @@ func (p *screenPainter) connectionChoices() {
 			name += " (active)"
 		}
 		c.Text(32, y, truncate(name, p.width-64, 1), color, p.width-64)
-		c.Text(32, y+12, truncate(choice.Description, p.width-64, 1), dimColor, p.width-64)
+		c.Text(32, y+12, truncate(choice.Description, p.width-64, 1), 0xffffff, p.width-64)
 	}
 	if a.ConnectionMessage != "" {
 		setupLines(c, bottom-24, a.ConnectionMessage, 2)

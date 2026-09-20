@@ -5,11 +5,9 @@ import (
 	"mistervision/internal/rendering"
 )
 
-// selectionData is the selected item's presentation data. Library counts remain
-// separate from images. The browser loop applies progressive results here.
+// selectionData holds selected artwork. Library counts belong to home items.
 type selectionData struct {
 	artwork rendering.Artwork
-	count   *int
 }
 
 // selectionUpdateKind distinguishes metadata from decoded image results.
@@ -18,7 +16,6 @@ type selectionUpdateKind uint8
 const (
 	selectionArtwork selectionUpdateKind = iota
 	selectionDetails
-	selectionCount
 )
 
 // selectionUpdate carries one progressive result. Only the payload named by
@@ -28,6 +25,5 @@ type selectionUpdate struct {
 	kind   selectionUpdateKind
 	art    artUpdate
 	detail *media.Item
-	count  *int
 	err    error
 }

@@ -27,9 +27,10 @@ func NewRenderer() *RasterRenderer { return &RasterRenderer{} }
 // The caller must present or copy both pixel slices before calling Render again.
 func (r *RasterRenderer) Render(w, h int, s Scene) videoout.Frame {
 	r.prepare(w, h)
-	anim := r.animation.advance(s, VisibleRows(w, h))
+	anim := r.animation.advance(s, s.listRows(w, h))
 	f := videoout.Frame{UI: renderSceneWithMusic(r.canvas, &r.cache, s, anim, &r.music), Video: s.Video}
 	if s.Video {
+		r.overlay.Typeface = r.canvas.Typeface
 		clear(r.overlay.Pixels)
 		f.Overlay = renderVideoOverlayOn(r.overlay, s.Playback, s.Now, s.Controls, &r.captions)
 		drawMessage(r.overlay, s.Message, s.Now)

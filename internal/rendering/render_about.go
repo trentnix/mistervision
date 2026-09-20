@@ -25,17 +25,24 @@ func (p *screenPainter) about() {
 	hints := aboutHints(a, p.scene.Controls, p.scene.Setup.Kind == SetupHidden, false)
 	rows := controlRows(p.width, hints)
 	lines := messageLines(a.Status(), p.width-48, 6)
-	statusY := controlsTop(p.bottom, rows) - 18 - max(0, len(lines)-1)*10
+	// Reserve all update actions and two status lines so a check cannot resize
+	// the logo when its controls disappear or the available release changes.
+	layoutState := a
+	layoutState.Checking = false
+	layoutState.Release.Available = true
+	reservedRows := controlRows(p.width, aboutHints(layoutState, p.scene.Controls, p.scene.Setup.Kind == SetupHidden, false))
+	statusY := controlsTop(p.bottom, reservedRows) - 18 - max(1, len(lines)-1)*10
 	baseY := statusY
 	if a.Profile != nil {
 		baseY -= 14
 	}
 	// Keep a useful logo area above the heading. Narrow screens also need
 	// wrapped attribution, so use a small side-by-side logo and identity block.
-	compact := baseY-86 < p.safeY+36 || textWidth(aboutLicense, 1) > p.width-48
+	compact := baseY-86 < p.safeY+36 || p.canvas.MeasureText(aboutLicense, 1) > p.width-48
 	if compact {
 		rows = controlRows(p.width, aboutHints(a, p.scene.Controls, p.scene.Setup.Kind == SetupHidden, true))
-		statusY = controlsTop(p.bottom, rows) - 18 - max(0, len(lines)-1)*10
+		reservedRows = controlRows(p.width, aboutHints(layoutState, p.scene.Controls, p.scene.Setup.Kind == SetupHidden, true))
+		statusY = controlsTop(p.bottom, reservedRows) - 18 - max(1, len(lines)-1)*10
 		baseY = statusY
 		if a.Profile != nil {
 			baseY -= 14
@@ -44,14 +51,14 @@ func (p *screenPainter) about() {
 	p.cache.about(p.canvas, baseY, compact)
 	if a.Profile != nil && (!compact || baseY >= p.safeY+32) {
 		name := truncate(a.Profile.Name, p.width-48-profileLabelInset, 1)
-		drawProfileLabel(p.canvas, (p.width-textWidth(name, 1)-profileLabelInset)/2, statusY-14, name, a.Profile.Avatar, titleColor)
+		drawProfileLabel(p.canvas, (p.width-p.canvas.MeasureText(name, 1)-profileLabelInset)/2, statusY-14, name, a.Profile.Avatar, titleColor)
 	}
 	if compact {
-		p.canvas.Text(104, p.safeY+16, truncate("Version "+a.Build.String(), p.width-128, 1), dimColor, p.width-24)
+		p.canvas.Text(104, p.safeY+16, truncate("Version "+a.Build.String(), p.width-128, 1), 0xffffff, p.width-24)
 	} else {
-		center(p.canvas, baseY-62, truncate("Version "+a.Build.String(), p.width-48, 1), dimColor, 1)
+		center(p.canvas, baseY-62, truncate("Version "+a.Build.String(), p.width-48, 1), 0xffffff, 1)
 	}
-	color := uint32(0xc0c0c0)
+	color := uint32(0xffffff)
 	if a.Release.Available && !a.Checking && a.Message == "" && a.AccountMessage == "" {
 		color = titleColor
 	}
@@ -84,12 +91,10 @@ func aboutHints(a AboutPresentation, labels control.Labels, setupHidden, compact
 		}
 		hints = append(hints, hint(labels, control.Next, label))
 	}
-	if a.Release.Available && !a.Checking {
+	if a.Release.Available {
 		hints = append(hints, hint(labels, control.Open, releaseLabel))
 	}
-	if !a.Checking {
-		hints = append(hints, hint(labels, control.Select, updateLabel))
-	}
+	hints = append(hints, hint(labels, control.Select, updateLabel))
 	hints = append(hints, hint(labels, control.Back, "Back"))
 	return hints
 }
@@ -114,7 +119,7 @@ func (s *sceneCache) about(c *ui.Canvas, statusY int, compact bool) {
 			y := top + 28
 			if y+len(credits)*10 <= statusY-2 {
 				for _, line := range credits {
-					center(dst, y, line, dimColor, 1)
+					center(dst, y, line, 0xffffff, 1)
 					y += 10
 				}
 			}
@@ -123,9 +128,9 @@ func (s *sceneCache) about(c *ui.Canvas, statusY int, compact bool) {
 		titleY := statusY - 86
 		dst.Image(branding.Logo(), 24, top, dst.Width-48, max(1, titleY-top-8))
 		center(dst, titleY, "MiSTerVision", titleColor, 2)
-		center(dst, statusY-44, "Trent Nix", 0xc0c0c0, 1)
-		center(dst, statusY-32, "Based on MiSTerFin by Pudding Studio", dimColor, 1)
-		center(dst, statusY-20, aboutLicense, dimColor, 1)
+		center(dst, statusY-44, "Trent Nix", 0xffffff, 1)
+		center(dst, statusY-32, "Based on MiSTerFin by Pudding Studio", 0xffffff, 1)
+		center(dst, statusY-20, aboutLicense, 0xffffff, 1)
 	}
 	if s == nil {
 		draw(c)
@@ -133,6 +138,7 @@ func (s *sceneCache) about(c *ui.Canvas, statusY int, compact bool) {
 	}
 	if s.aboutBase == nil || s.aboutBase.Width != c.Width || s.aboutBase.Height != c.Height || s.aboutStatusY != statusY || s.aboutCompact != compact {
 		s.aboutBase = ui.New(c.Width, c.Height)
+		s.aboutBase.Typeface = c.Typeface
 		s.aboutStatusY = statusY
 		s.aboutCompact = compact
 		draw(s.aboutBase)
@@ -150,10 +156,10 @@ func (p *screenPainter) releaseNotes() {
 	rows, statusY, top, count := layout.controls, layout.statusY, layout.top, layout.rows
 	start := min(a.Scroll, max(0, len(a.Notes)-count))
 	for index := start; index < min(len(a.Notes), start+count); index++ {
-		c.Text(24, top+(index-start)*12, a.Notes[index], 0xcccccc, p.width-24)
+		c.Text(24, top+(index-start)*12, a.Notes[index], 0xffffff, p.width-24)
 	}
 	if len(a.Notes) > count {
-		center(c, statusY-12, fmt.Sprintf("%d-%d of %d", start+1, min(start+count, len(a.Notes)), len(a.Notes)), dimColor, 1)
+		center(c, statusY-12, fmt.Sprintf("%d-%d of %d", start+1, min(start+count, len(a.Notes)), len(a.Notes)), 0xffffff, 1)
 	}
 	for i, line := range messageLines(a.Status(), p.width-48, 6) {
 		center(c, statusY+i*10, line, titleColor, 1)

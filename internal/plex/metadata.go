@@ -138,7 +138,8 @@ func (m metadata) item() media.Item {
 		item.UserData.PlaybackPositionTicks = max(0, m.ViewOffset) * 10000
 		item.UserData.Played = m.ViewCount > 0 && m.ViewOffset == 0
 	}
-	if item.Type == "Playlist" {
+	// Season leaves are episodes. Plex does not include childCount for seasons.
+	if item.Type == "Playlist" || item.Type == "Season" {
 		item.ChildCount = m.LeafCount
 	}
 	if m.LastViewedAt > 0 {

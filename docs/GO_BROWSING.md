@@ -2,6 +2,16 @@
 
 Use the [MiSTer launcher](GO_BUILD.md#install-on-mister) or [development harness](../tools/ghostty/README.md). The home carousel shows server library names and a combined Continue Watching card. Tab/SELECT switches between the carousel and root library list.
 
+Interface text uses the same Noto fonts as captions. List titles are bold, and About, connection choices, and account prompts use larger white body text. Navigation hints and the clock retain the bitmap font. Home and library lists share title and subtext sizes and roomy row spacing. The home List view shows one fewer row to leave room for the update notice and viewer information. Subtext is indented. Two-line selections have equal visible padding above the title and below the subtext. The home carousel and root List view share the title, update notice, and active viewer in the same positions.
+
+Each home-list row shows its library count as results arrive. Both home views share one count cache and up to three concurrent requests, prioritized for the selected library and visible rows. Selection changes and switching views do not cancel count requests. Successful counts stay fresh for one minute. Failed requests retain the previous count and wait one minute before another background attempt. Explicit Retry can refresh sooner.
+
+Count requests do not fetch artwork. Music totals represent albums on Jellyfin and artists on Plex. Live TV totals count channels.
+
+Library lists reserve a 215-pixel side column for artwork or guide information. Artwork is centered between the header and button hints, with its aspect ratio preserved. Plex channel names prefer guide titles such as ABC or Grit, then fall back to tuner names and call letters.
+
+Season lists show episode counts when the server supplies them. A show with exactly one available season opens its episode list directly. Back returns to the show list. Shows with multiple seasons, including a separate Specials season, keep the season picker.
+
 ## Setup and sign-in
 
 Connection settings normally come from `settings.json`. Invalid JSON connection settings stop startup with a field-level error. Restart after correcting them.
@@ -65,7 +75,7 @@ For Jellyfin, movies and music videos use filtered recursive lists. Music retain
 
 Details show available artwork, overview, year, rating, runtime, and resume/watched state. Open starts or resumes video. SELECT/Tab restarts an unwatched resumable video from the beginning. See [playback controls](GO_PLAYBACK.md#playback-controls).
 
-Menu text supports Latin-1 and selected additional characters. Subtitles use a broader Unicode font set. See [text coverage](GO_RENDERING.md#text-coverage). Search is not implemented.
+Interface text and subtitles share a broad Unicode font set. Navigation hints and the clock retain the bitmap font and its more limited fallback. See [text coverage](GO_RENDERING.md#text-coverage). Search is not implemented.
 
 ## Live TV listings
 
@@ -107,9 +117,9 @@ Photos open full screen with preserved proportions. Left/Right moves through pho
 
 Start or F1 opens and closes About while browsing. Back also closes it. About is unavailable during media playback and loading a media item. It remains available during setup. Press Down for Connections, then choose an existing connection, Jellyfin discovery, or Plex setup. See [multiple connections](GO_CONFIGURATION.md#multiple-connections).
 
-For Jellyfin Quick Connect users and Plex Home, Up opens **Switch profile** when another viewer is available. With only one saved Jellyfin user, Up opens **Add user**. Plex omits the action when only one profile exists. Back from the picker returns to About. The active viewer’s avatar and name appear on About and the carousel. See [profile and PIN behavior](GO_PLEX.md#plex-home-profiles). About also shows the logo, installed version, Trent Nix’s credit, the original MiSTerFin credit to Pudding Studio, and the [license](../LICENSE).
+For Jellyfin Quick Connect users and Plex Home, Up opens **Switch profile** when another viewer is available. With only one saved Jellyfin user, Up opens **Add user**. Plex omits the action when only one profile exists. Back from the picker returns to About. The active viewer’s avatar and name appear on About, the home carousel, and the root List view. See [profile and PIN behavior](GO_PLEX.md#plex-home-profiles). About also shows the logo, installed version, Trent Nix’s credit, the original MiSTerFin credit to Pudding Studio, and the [license](../LICENSE).
 
-The client checks this repository's latest public stable release once per launch. Select/Tab or R checks again after the preceding request finishes. Stable `vMAJOR.MINOR.PATCH` versions are compared numerically. Development builds can offer a public release without claiming it is newer than the checkout. Builds use the version described in the [build guide](GO_BUILD.md#go-client).
+The client checks this repository's latest public stable release once per launch. Select/Tab or R checks again after the preceding request finishes. “Checking for updates...” stays visible for at least one second. Navigation hints remain visible during the check, and the logo and identity block stay in place. Stable `vMAJOR.MINOR.PATCH` versions are compared numerically. Development builds can offer a public release without claiming it is newer than the checkout. Builds use the version described in the [build guide](GO_BUILD.md#go-client).
 
 No GitHub credentials are sent. A missing or inaccessible release displays “No public release available.” Network, rate-limit, and invalid-response failures display “Could not check for updates.” Neither means the installation is current. If an update is offered, Open shows its release notes. Up/Down scrolls the notes. Open again starts installation on a standard MiSTer installation. Desktop and custom installations show a manual-installation message.
 

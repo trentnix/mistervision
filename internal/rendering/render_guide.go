@@ -6,8 +6,6 @@ import (
 	"mistervision/internal/media"
 )
 
-const channelGuideWidth = 215
-
 // channelGuide uses the list's artwork column for a compact now/next schedule.
 // Times follow the device's local zone. Missing listings never add an extra step
 // before playback or replace the channel list with an error screen.
@@ -17,7 +15,7 @@ func (p *screenPainter) channelGuide() {
 		return
 	}
 	current, next := media.CurrentNext(p.scene.Guide[item.ID], p.scene.Now)
-	x, y, width := p.width-24-channelGuideWidth, p.safeY+25, channelGuideWidth
+	x, y, width := p.width-24-listSideWidth, p.safeY+25, listSideWidth
 	c := p.canvas
 	if current == nil && next == nil {
 		return
@@ -30,12 +28,14 @@ func (p *screenPainter) channelGuide() {
 			return
 		}
 		c.Text(x, y, label, titleColor, x+width)
-		lines := messageLines(program.Title, width, 2)
-		for line, text := range lines {
-			c.Text(x, y+13+line*11, text, 0xffffff, x+width)
+		title := p.primaryText(program.Title, width, 18, 2, 0xffffff)
+		scheduleY := y + 13
+		if title != nil {
+			c.Blit(title, x, y+11, title.Bounds().Dx(), title.Bounds().Dy())
+			scheduleY = y + 11 + title.Bounds().Dy() + 2
 		}
 		times := program.Start.In(time.Local).Format("15:04") + " - " + program.End.In(time.Local).Format("15:04")
-		c.Text(x, y+15+len(lines)*11, times, dimColor, x+width)
+		c.Text(x, scheduleY, times, dimColor, x+width)
 		y += 64
 	}
 	draw("Now", current)

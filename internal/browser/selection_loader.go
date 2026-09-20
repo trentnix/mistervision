@@ -13,7 +13,6 @@ import (
 // selectionCatalog supplies only the metadata used by selection workers.
 type selectionCatalog interface {
 	Details(context.Context, string) (media.Item, error)
-	LibraryCount(context.Context, media.Item) (*int, error)
 	Mosaic(context.Context, media.Item) (media.Page, error)
 }
 
@@ -64,7 +63,7 @@ func newSelectionLoader(client selectionSource, photoWidth, photoHeight int, cac
 
 // load delivers results independently and waits for its workers before returning.
 // emit may run concurrently and must return promptly. The caller rejects stale
-// selections. Metadata, counts, and photos start immediately. Detail images
+// selections. Metadata and photos start immediately. Detail images
 // follow fresh metadata. List and carousel images wait for debounce. Three image
 // requests run across all loads sharing this loader.
 func (l *selectionLoader) load(ctx context.Context, item media.Item, root, detail bool, emit func(selectionUpdate)) {
@@ -120,7 +119,7 @@ func selectionDelay(ctx context.Context) bool {
 
 // snapshot assembles immediately available selection data without network I/O.
 // It omits expired metadata but keeps reusable images. The caller owns the cover
-// slice. Images and count values remain immutable after publication.
+// slice. Images remain immutable after publication.
 func (l *selectionLoader) snapshot(item media.Item, root bool) selectionData {
 	if !root {
 		return selectionData{artwork: rendering.Artwork{
@@ -132,9 +131,6 @@ func (l *selectionLoader) snapshot(item media.Item, root bool) selectionData {
 	}
 	lib := l.libraries.cached(item.ID)
 	data := selectionData{}
-	if time.Now().Before(lib.countUntil) {
-		data.count = lib.count
-	}
 	if !l.customBackground && time.Now().Before(lib.itemsUntil) {
 		data.artwork.Covers = make([]image.Image, len(lib.items))
 		for i, item := range lib.items {

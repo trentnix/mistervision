@@ -81,7 +81,7 @@ func TestPhotoErrorClearsOnNavigationAndCannotReturn(t *testing.T) {
 }
 
 func TestArtworkFallbackPreservesOtherErrors(t *testing.T) {
-	for _, kind := range []selectionUpdateKind{selectionDetails, selectionCount} {
+	for _, kind := range []selectionUpdateKind{selectionDetails} {
 		s := testSession(t)
 		s.handleSelection(selectionResult{update: selectionUpdate{kind: kind, err: errors.New("failed")}})
 		previous := s.selection.err

@@ -7,7 +7,7 @@ Start with the [project README](../README.md) for installation and everyday use.
 | [Build and install](GO_BUILD.md) | Go and MPlayer builds, release bundles, installation, local tests, and CI. |
 | [Configuration](GO_CONFIGURATION.md) | Saved server connections, settings, title, background, navigation sounds, defaults, and migration. |
 | [Display](GO_DISPLAY.md) | Progressive and interlaced output, supported core, recovery, and tested hardware. |
-| [Browsing](GO_BROWSING.md) | Sign-in, Continue Watching, lists, photos, About, and artwork caches. |
+| [Browsing](GO_BROWSING.md) | Sign-in, Continue Watching, library counts, Live TV guide information, photos, About, and artwork caches. |
 | [Plex](GO_PLEX.md) | Discovery, account linking, Home viewers and PINs, supported libraries, streaming, and Live TV. |
 | [Screenshots](SCREENSHOTS.md) | Current browsing and setup screens, plus instructions for regenerating previews. |
 | [Playback](GO_PLAYBACK.md) | Players, controls, seeking, subtitles, audio tracks, picture modes, and Live TV. |

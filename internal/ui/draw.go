@@ -12,7 +12,9 @@ import (
 type Canvas struct {
 	Width, Height int
 	Pixels        []byte
-	transparent   bool
+	// Typeface supplies optional proportional text. Nil uses the bitmap font.
+	Typeface    Typeface
+	transparent bool
 }
 
 // New allocates a black BGRX canvas. Dimensions must be positive and their
@@ -42,15 +44,36 @@ func (c *Canvas) Rect(x, y, w, h int, color uint32) {
 	}
 }
 
-// Text draws one line with 8x8 glyphs and an embedded Unicode fallback. maxWidth is the absolute right edge,
-// not a character count or width relative to x. Unsupported runes become question marks.
+// Text draws a line using the configured typeface. maxWidth is the absolute
+// right edge, not a width relative to x. A nil typeface uses bitmap glyphs.
 func (c *Canvas) Text(x, y int, s string, color uint32, maxWidth int) {
 	c.TextScaled(x, y, s, color, maxWidth, 1)
 }
 
-// TextScaled draws Text at a positive integer scale. It stops before the first
-// glyph that exceeds maxWidth or the canvas right edge, and ignores later lines.
+// TextScaled draws text at a positive scale, clipped to the available width.
 func (c *Canvas) TextScaled(x, y int, s string, color uint32, maxWidth, scale int) {
+	if scale <= 0 {
+		return
+	}
+	if c.Typeface != nil {
+		im, offset := c.Typeface.Rasterize(s, min(c.Width, maxWidth)-x, scale, color)
+		c.Overlay(im, x, y+offset)
+		return
+	}
+	c.BitmapTextScaled(x, y, s, color, maxWidth, scale)
+}
+
+// BitmapText draws the original 8x8 font regardless of the configured typeface.
+// Navigation hints use this explicit path to retain their familiar appearance.
+func (c *Canvas) BitmapText(x, y int, s string, color uint32, maxWidth int) {
+	c.BitmapTextScaled(x, y, s, color, maxWidth, 1)
+}
+
+// BitmapTextScaled draws bitmap glyphs with embedded Unicode fallback.
+func (c *Canvas) BitmapTextScaled(x, y int, s string, color uint32, maxWidth, scale int) {
+	if scale <= 0 {
+		return
+	}
 	for _, r := range s {
 		if isVariationSelector(r) {
 			continue
@@ -78,7 +101,7 @@ func (c *Canvas) TextScaled(x, y int, s string, color uint32, maxWidth, scale in
 func (c *Canvas) Wrap(x, y, width, lines int, s string, color uint32) {
 	var line string
 	for _, word := range strings.Fields(s) {
-		if TextWidth(line+word) > width && line != "" {
+		if c.MeasureText(line+word, 1) > width && line != "" {
 			c.Text(x, y, line, color, x+width)
 			y += 10
 			lines--

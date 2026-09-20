@@ -2,6 +2,7 @@ package rendering
 
 import (
 	"fmt"
+	"image"
 
 	"mistervision/internal/input/control"
 	"mistervision/internal/musicviz"
@@ -17,6 +18,33 @@ func safeY(w, h int) int { return int(24*float64(h*4)/float64(w*3) + 0.5) }
 // Navigation must use this capacity when centering a selection or retaining pages.
 func VisibleRows(w, h int) int { return max(1, (h-2*safeY(w, h)-32)/30) }
 
+// HomeVisibleRows reserves one row for the home update and profile information.
+// Home lists keep library typography instead of compressing every row to fit.
+func HomeVisibleRows(w, h int) int { return max(1, VisibleRows(w, h)-1) }
+
+func (s Scene) listRows(w, h int) int {
+	if s.Root {
+		return HomeVisibleRows(w, h)
+	}
+	return VisibleRows(w, h)
+}
+
+// homeHeader keeps identity and update status in the same place in both home views.
+func (p *screenPainter) homeHeader() {
+	c, w, sy := p.canvas, p.width, p.safeY
+	p.header(p.scene.title(), sy)
+	if p.scene.About.Release.Available {
+		label := p.primaryText("Update available", w/2-32, 16, 1, titleColor)
+		if label != nil {
+			c.Blit(label, 24, sy+15, label.Bounds().Dx(), label.Bounds().Dy())
+		}
+	}
+	if profile := p.scene.About.Profile; profile != nil {
+		name := truncate(profile.Name, w/2-32-profileLabelInset, 1)
+		drawProfileLabel(c, w-24-c.MeasureText(name, 1)-profileLabelInset, sy+24, name, profile.Avatar, dimColor)
+	}
+}
+
 func textWidth(s string, scale int) int { return ui.TextWidth(s) * scale }
 
 func truncate(s string, width, scale int) string {
@@ -24,7 +52,7 @@ func truncate(s string, width, scale int) string {
 }
 
 func center(c *ui.Canvas, y int, s string, color uint32, scale int) {
-	c.TextScaled((c.Width-textWidth(s, scale))/2, y, s, color, c.Width, scale)
+	c.TextScaled((c.Width-c.MeasureText(s, scale))/2, y, s, color, c.Width, scale)
 }
 
 func runtime(ticks int64) string {
@@ -49,35 +77,36 @@ type screenPainter struct {
 
 // clock paints the shared local-time display in the top safe area.
 func (p *screenPainter) clock() {
-	p.canvas.Text(p.width-72, p.safeY+4, p.scene.Now.Format("15:04"), dimColor, p.width-32)
+	p.canvas.BitmapText(p.width-72, p.safeY+4, p.scene.Now.Format("15:04"), dimColor, p.width-32)
 }
 
 // header truncates the root heading and scrolls longer library or item titles.
 // Both stay inside the safe area reserved beside the clock.
 func (p *screenPainter) header(title string, titleY int) {
-	c, w, h, sy, anim := p.canvas, p.width, p.height, titleY, p.animation
-
-	end := w - 84
+	end := p.width - 84
+	width := end - 24
+	limit := 4096 // Bound raster storage for unusually long scrolling headings.
 	if p.scene.Root {
-		title = truncate(title, end-24, 2)
+		limit = width
 	}
-	x := 24
-	if textWidth(title, 2) > end-x {
-		x -= int(anim.TitleSeconds*15) % (textWidth(title, 2) + 40)
-	}
-	// Clip the marquee to the title's safe area, including its repeated copy.
-	layer := ui.New(w, 16)
-	layer.TextScaled(x, 0, title, titleColor, end, 2)
-	if x < 24 {
-		layer.TextScaled(x+textWidth(title, 2)+40, 0, title, titleColor, end, 2)
-	}
-	for y := sy; y < min(h, sy+16); y++ {
-		for x := 24; x < end; x++ {
-			i := (y*w + x) * 4
-			j := ((y-sy)*w + x) * 4
-			if layer.Pixels[j]|layer.Pixels[j+1]|layer.Pixels[j+2] != 0 {
-				copy(c.Pixels[i:i+3], layer.Pixels[j:j+3])
+	titleImage := p.headingText(title, limit, 28, 1, titleColor)
+	if titleImage != nil {
+		x := 24
+		advance := titleImage.Bounds().Dx()
+		if !p.scene.Root && advance > width {
+			x -= int(p.animation.TitleSeconds*15) % (advance + 40)
+		}
+		draw := func(x int) {
+			left, right := max(24, x), min(end, x+advance)
+			if left >= right {
+				return
 			}
+			crop := titleImage.SubImage(image.Rect(left-x, 0, right-x, titleImage.Bounds().Dy()))
+			p.canvas.Blit(crop, left, titleY-3, right-left, crop.Bounds().Dy())
+		}
+		draw(x)
+		if x < 24 {
+			draw(x + advance + 40)
 		}
 	}
 	p.clock()
@@ -96,30 +125,42 @@ func (p *screenPainter) footer(controls [][]controlHint) {
 	}
 	messageWidth := w - 48
 	v := &s.Content
-	if v.Detail == nil && (!s.Root || s.ListMode) && v.Page.TotalRecordCount != nil && *v.Page.TotalRecordCount > VisibleRows(w, h) {
+	if v.Detail == nil && (!s.Root || s.ListMode) && v.Page.TotalRecordCount != nil && *v.Page.TotalRecordCount > s.listRows(w, h) {
 		count := v.Count()
-		countWidth := textWidth(count, 1)
+		countWidth := c.MeasureText(count, 1)
 		c.Text(w-24-countWidth, messageY, count, dimColor, w-24)
 		messageWidth -= countWidth + 16
 	}
 	message := p.footerMessage()
 	if message != "" {
-		if textWidth(message, 1) > messageWidth {
+		if c.MeasureText(message, 1) > messageWidth {
 			// Longer explanations wrap above the controls instead of losing
 			// their recovery instructions to footer truncation.
 			lines := messageLines(message, w-88, 6)
 			drawNotice(c, "", message, max(p.safeY, messageY-len(lines)*10-24), 6)
 		} else {
-			c.Text(24+(messageWidth-textWidth(message, 1))/2, messageY, message, 0xff6060, w-24)
+			c.Text(24+(messageWidth-c.MeasureText(message, 1))/2, messageY, message, 0xff6060, w-24)
 		}
 	}
 	if s.ExitConfirm {
 		rows := controlRows(w, []controlHint{hint(s.Controls, control.Open, "Exit"), hint(s.Controls, control.Back, "Cancel")})
-		height := 28 + max(1, len(rows))*controlRowHeight
+		// Use visible glyph bounds so font padding cannot unbalance the stripe.
+		title, _ := c.Typeface.Rasterize("Exit?", w-48, 2, titleColor)
+		var ink image.Rectangle
+		for y := range title.Rect.Dy() {
+			for x := range title.Rect.Dx() {
+				if title.Pix[y*title.Stride+x*4+3] != 0 {
+					ink = ink.Union(image.Rect(x, y, x+1, y+1))
+				}
+			}
+		}
+		const padding, gap, badgeHeight = 8, 8, 14
+		controlsHeight := badgeHeight + max(0, len(rows)-1)*controlRowHeight
+		height := padding*2 + ink.Dy() + gap + controlsHeight
 		top := (h - height) / 2
-		c.Rect(12, top, w-24, height, 0x101010)
-		center(c, top+6, "Exit?", titleColor, 2)
-		drawControls(c, top+30+max(0, len(rows)-1)*controlRowHeight+controlBottomInset, rows)
+		c.Shade(0, top, w, height, 210)
+		c.Overlay(title.SubImage(ink).(*image.NRGBA), (w-ink.Dx())/2, top+padding)
+		drawControls(c, top+height-padding-badgeHeight+3+controlBottomInset, rows)
 	} else if s.Notice != "" {
 		drawNotice(c, "", s.Notice, -1, 6)
 	}
@@ -131,7 +172,7 @@ func (p *screenPainter) footerMessage() string {
 	if v.Error != "" {
 		return v.Error
 	}
-	if v.Loading || (v.Fetching && v.Scroll+VisibleRows(p.width, p.height) > len(v.Page.Items)) {
+	if v.Loading || (v.Fetching && v.Scroll+p.scene.listRows(p.width, p.height) > len(v.Page.Items)) {
 		return "Loading..."
 	}
 	return p.scene.SelectionError

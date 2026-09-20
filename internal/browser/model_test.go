@@ -130,3 +130,57 @@ func TestScreenJumpAndBackwardPageBoundary(t *testing.T) {
 		t.Fatalf("backward crossing: %+v", v)
 	}
 }
+
+func TestSingleSeasonOpensEpisodesAndBackRestoresShows(t *testing.T) {
+	m := New()
+	m.Current().Location = media.Location{Kind: "items", Collection: "tvshows"}
+	m.Current().Page.Items = []media.Item{{ID: "other", Type: "Series"}, {ID: "show", Name: "Show", Type: "Series"}}
+	m.Current().Selected = 1
+	seasons := m.Key(control.Open)
+	total := 1
+	m.Apply(*seasons, media.Page{Items: []media.Item{{ID: "season", Name: "Season 1", Type: "Season", SeriesID: "show"}}, TotalRecordCount: &total}, nil)
+	episodes := m.skipSingleSeason()
+	if episodes == nil || episodes.Location.Kind != "episodes" || episodes.Location.ParentID != "season" || episodes.Location.SeriesID != "show" || len(m.Stack) != 2 {
+		t.Fatalf("single season did not replace its view: request=%+v stack=%+v", episodes, m.Stack)
+	}
+	m.Apply(*episodes, media.Page{}, errors.New("offline"))
+	retry := m.Key(control.Retry)
+	if retry.Location != episodes.Location {
+		t.Fatal("retry returned to the hidden season list")
+	}
+	m.Key(control.Back)
+	if len(m.Stack) != 1 || m.Current().Selected != 1 || m.Current().Item().ID != "show" {
+		t.Fatal("Back lost the original show selection")
+	}
+	if m.Apply(*retry, media.Page{Items: []media.Item{{ID: "late", Type: "Episode"}}}, nil) {
+		t.Fatal("late episodes changed the show list")
+	}
+}
+
+func TestSingleSeasonRequiresCompleteSuccessfulSeasonListing(t *testing.T) {
+	two := 2
+	season := media.Item{ID: "season", Name: "Season 1", Type: "Season"}
+	for _, tc := range []struct {
+		name string
+		view View
+		want bool
+	}{
+		{"one season", View{Page: media.Page{Items: []media.Item{season}}}, true},
+		{"no seasons", View{}, false},
+		{"two seasons", View{Page: media.Page{Items: []media.Item{season, season}}}, false},
+		{"partial listing", View{Page: media.Page{Items: []media.Item{season}, TotalRecordCount: &two}}, false},
+		{"failed refresh", View{Page: media.Page{Items: []media.Item{season}}, Error: "failed"}, false},
+		{"still loading", View{Page: media.Page{Items: []media.Item{season}}, Loading: true}, false},
+		{"later page", View{Page: media.Page{Items: []media.Item{season}}, Start: 64}, false},
+		{"not a season", View{Page: media.Page{Items: []media.Item{{ID: "episode", Type: "Episode"}}}}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := New()
+			tc.view.Location = media.Location{Kind: "seasons", SeriesID: "show"}
+			m.Stack = append(m.Stack, tc.view)
+			if got := m.skipSingleSeason(); (got != nil) != tc.want {
+				t.Fatalf("request=%+v want redirect=%v", got, tc.want)
+			}
+		})
+	}
+}

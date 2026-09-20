@@ -133,13 +133,13 @@ func TestPendingContinueDoesNotPublishZeroCount(t *testing.T) {
 	s := testSession(t)
 	s.selection.loader = newSelectionLoader(nil, 640, 240, selectionCaches{})
 	s.seedHomeArtwork()
-	if s.selection.loader.libraries.cached(continueID).count != nil {
+	if s.homeLibraries(media.Page{}).Items[0].LibraryCount != nil {
 		t.Fatal("pending feed was presented as an empty feed")
 	}
 	s.home.loaded = true
 	s.home.items = []media.Item{homeEpisode("episode", "next")}
 	s.seedHomeArtwork()
-	count := s.selection.loader.libraries.cached(continueID).count
+	count := s.homeLibraries(media.Page{}).Items[0].LibraryCount
 	if count == nil || *count != 1 {
 		t.Fatal("completed feed count was not published")
 	}

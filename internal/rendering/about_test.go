@@ -1,6 +1,7 @@
 package rendering
 
 import (
+	"bytes"
 	"fmt"
 	"mistervision/internal/connection"
 	"mistervision/internal/release"
@@ -121,7 +122,7 @@ func screenContainsText(c *ui.Canvas, text string) bool {
 func screenContainsScaledText(c *ui.Canvas, text string, scale int) bool {
 	glyphs := ui.New(ui.TextWidth(text)*scale, 8*scale)
 	glyphs.TextScaled(0, 0, text, 0xffffff, glyphs.Width, scale)
-	for _, color := range []uint32{titleColor, dimColor, 0xc0c0c0, 0xd0d0d0} {
+	for _, color := range []uint32{titleColor, dimColor, 0xffffff, 0xc0c0c0, 0xd0d0d0} {
 		for y := 0; y <= c.Height-glyphs.Height; y++ {
 			for x := 0; x <= c.Width-glyphs.Width; x++ {
 				matches := true
@@ -142,7 +143,7 @@ func screenContainsScaledText(c *ui.Canvas, text string, scale int) bool {
 			}
 		}
 	}
-	return false
+	return screenContainsFaceText(c, text, scale)
 }
 
 func TestAboutProfileActionMatchesAvailableChoices(t *testing.T) {
@@ -173,8 +174,117 @@ func TestAboutDisplaysAccountFailureDuringReleaseCheck(t *testing.T) {
 		}}
 		canvas := ui.New(w, h)
 		renderScene(canvas, &sceneCache{}, scene, Animation{})
-		if !screenContainsText(canvas, connection.SignInStorageTitle) || !screenContainsText(canvas, "then retry.") || screenContainsText(canvas, "Checking for updates...") {
-			t.Fatalf("account error was hidden at %dx%d", w, h)
+		for _, line := range messageLines(scene.About.AccountMessage, w-48, 6) {
+			if !screenContainsText(canvas, line) {
+				t.Fatalf("account error line %q was hidden at %dx%d", line, w, h)
+			}
+		}
+		if screenContainsText(canvas, "Checking for updates...") {
+			t.Fatal("release check replaced the account error")
+		}
+	}
+}
+
+// screenContainsFaceText matches antialiased glyphs over the setup/About backdrop.
+func screenContainsFaceText(c *ui.Canvas, text string, scale int) bool {
+	if c.Typeface == nil {
+		return false
+	}
+	for _, ink := range []uint32{titleColor, dimColor, 0xffffff, 0xc0c0c0, 0xd0d0d0} {
+		im, _ := c.Typeface.Rasterize(text, 4096, scale, ink)
+		if im == nil {
+			continue
+		}
+		type sample struct {
+			x, y    int
+			b, g, r byte
+		}
+		var samples []sample
+		minX, minY := im.Bounds().Dx(), im.Bounds().Dy()
+		maxX, maxY := 0, 0
+		for y := range im.Bounds().Dy() {
+			for x := range im.Bounds().Dx() {
+				i := y*im.Stride + x*4
+				a := int(im.Pix[i+3])
+				if a == 0 {
+					continue
+				}
+				blend := func(v byte, bg int) byte { return byte((int(v)*a + bg*(255-a) + 127) / 255) }
+				samples = append(samples, sample{x, y, blend(im.Pix[i+2], 0x13), blend(im.Pix[i+1], 0x0d), blend(im.Pix[i], 0x0b)})
+				minX, minY = min(minX, x), min(minY, y)
+				maxX, maxY = max(maxX, x), max(maxY, y)
+			}
+		}
+		if len(samples) == 0 {
+			continue
+		}
+		for i := range samples {
+			samples[i].x -= minX
+			samples[i].y -= minY
+		}
+		for y := 0; y < c.Height-(maxY-minY); y++ {
+			for x := 0; x < c.Width-(maxX-minX); x++ {
+				matches := true
+				for _, s := range samples {
+					i := ((y+s.y)*c.Width + x + s.x) * 4
+					if c.Pixels[i] != s.b || c.Pixels[i+1] != s.g || c.Pixels[i+2] != s.r {
+						matches = false
+						break
+					}
+				}
+				if matches {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// Update checks may change actions and status text, but not the identity block.
+func TestAboutUpdateCheckKeepsIdentityLayout(t *testing.T) {
+	for _, size := range [][2]int{{320, 240}, {640, 240}, {640, 288}, {640, 480}} {
+		for _, labels := range []control.Labels{nil, control.KeyboardLabels()} {
+			for _, withAccount := range []bool{false, true} {
+				scene := Scene{Controls: labels, About: AboutPresentation{Visible: true, Checked: true}}
+				if withAccount {
+					scene.About.Profile = &connection.Profile{Name: "Test viewer"}
+					scene.About.ProfileAction = connection.ProfileChoose
+					scene.About.ForgetLabel = "Forget user"
+					scene.About.Connections = []connection.Choice{{ID: "plex", Name: "Plex"}}
+				}
+				cache := &sceneCache{}
+				canvas := ui.New(size[0], size[1])
+				renderScene(canvas, cache, scene, Animation{})
+				identity := bytes.Clone(cache.aboutBase.Pixels)
+				for _, state := range []string{"checking", "available", "checking again", "failed", "current"} {
+					scene.About.Checking = state == "checking" || state == "checking again"
+					scene.About.Release.Available = state == "available" || state == "checking again"
+					scene.About.Release.Latest = "v2.0.0"
+					scene.About.Message = ""
+					if state == "failed" {
+						scene.About.Message = "Could not check for updates. Try again."
+					}
+					renderScene(canvas, cache, scene, Animation{})
+					if !bytes.Equal(identity, cache.aboutBase.Pixels) {
+						t.Fatalf("%dx%d account=%v state=%s: update check moved the logo or attribution", size[0], size[1], withAccount, state)
+					}
+				}
+			}
+		}
+	}
+}
+
+func TestAboutHintsStayVisibleDuringUpdateCheck(t *testing.T) {
+	for _, compact := range []bool{false, true} {
+		for _, available := range []bool{false, true} {
+			a := AboutPresentation{Release: release.Status{Available: available}, ProfileAction: connection.ProfileChoose,
+				Connections: []connection.Choice{{ID: "plex"}}, ForgetLabel: "Forget user"}
+			before := aboutHints(a, control.KeyboardLabels(), true, compact)
+			a.Checking = true
+			if got := aboutHints(a, control.KeyboardLabels(), true, compact); !reflect.DeepEqual(got, before) {
+				t.Fatalf("update check changed navigation hints: %v -> %v", before, got)
+			}
 		}
 	}
 }
