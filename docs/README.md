@@ -14,6 +14,7 @@ Start with the [project README](../README.md) for installation and everyday use.
 | [Input](GO_INPUT.md) | Controller profiles, axes, labels, and held-button behavior. |
 | [Music](GO_MUSIC.md) | Queues, shuffle, meters, and custom visual backgrounds. |
 | [Remote control](GO_REMOTE.md) | Jellyfin commands, queue behavior, and the control interface. |
+| [Gap analysis](GAP_ANALYSIS.md) | Shared Jellyfin/Plex gaps, provider-specific limits, and intentional exclusions. |
 | [Diagnostics](GO_DIAGNOSTICS.md) | Logging, recovery events, privacy, and troubleshooting. |
 | [Architecture](GO_RENDERING.md) | Application ownership, shared rendering, output backends, and decoder interfaces. |
 | [Third-party notices](THIRD_PARTY.md) | Attribution, licenses, and external components. |
