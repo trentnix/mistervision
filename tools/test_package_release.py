@@ -2,6 +2,7 @@
 
 import hashlib
 import io
+import json
 from pathlib import Path
 import subprocess
 import tarfile
@@ -21,6 +22,14 @@ class ReleaseTest(unittest.TestCase):
         self.write(".gitignore", b"build/\njellyfin.conf\nsettings.json\nstate/\n")
         for name in ("tools/mistervision.sh", "tools/release-install.txt", "jellyfin.conf.example", "settings.example.json", "LICENSE", "docs/licenses/coder-websocket.txt", "docs/licenses/fusion-pixel.txt", "docs/licenses/noto.txt", "docs/licenses/go-text.txt", "docs/licenses/go-extensions.txt"):
             self.write(name, name.encode())
+        self.write("tools/mistervision.sh", b"#!/bin/bash\nMISTERVISION_INITIAL_INTERLACED=0 app\n")
+        self.write("docs/licenses/interlaced-menu.txt", b"core notice")
+        core = {"InterlacedMenu.rbf": b"test core", "Menu_MiSTer-source.tar.gz": b"test source"}
+        self.write("tools/interlaced-core.json", json.dumps({"files": {
+            name: {"sha256": release.sha256(data), "url": "https://example.invalid/" + name}
+            for name, data in core.items()}}).encode())
+        for name, data in core.items():
+            self.write("build/interlaced-core/" + name, data)
         self.write("docs/THIRD_PARTY.md", b"[license](../LICENSE) [external](https://example.org)\n")
         archive = io.BytesIO()
         with tarfile.open(fileobj=archive, mode="w:xz") as source:
@@ -62,7 +71,7 @@ class ReleaseTest(unittest.TestCase):
 
     def test_payload_preserves_settings_and_has_correct_hashes_and_modes(self):
         self.package()
-        with zipfile.ZipFile(self.output / "mistervision-v0.1.0-mister.zip") as archive:
+        with zipfile.ZipFile(self.output / "mistervision-v0.1.0-progressive.zip") as archive:
             names = archive.namelist()
             self.assertIn("mistervision/jellyfin.conf.example", names)
             self.assertIn("mistervision/settings.example.json", names)
@@ -160,6 +169,32 @@ class ReleaseTest(unittest.TestCase):
         self.assertEqual([call.args[0][1] for call in run.call_args_list], ["arm", "native-player", "release-manifest"])
         self.assertTrue(all("VERSION=v0.1.0" in call.args[0] for call in run.call_args_list))
         self.assertTrue((self.output / "SHA256SUMS").is_file())
+
+    def test_both_presets_bundle_same_core_without_active_settings(self):
+        self.package()
+        snapshots = []
+        for preset, flag in (("progressive", b"0"), ("interlaced", b"1")):
+            with zipfile.ZipFile(self.output / f"mistervision-v0.1.0-{preset}.zip") as archive:
+                files = {name: archive.read(name) for name in archive.namelist()}
+                self.assertNotIn("mistervision/settings.json", files)
+                self.assertEqual(files["mistervision/InterlacedMenu.rbf"], b"test core")
+                launcher = files.pop("Scripts/MiSTerVision.sh")
+                self.assertIn(b"MISTERVISION_INITIAL_INTERLACED=" + flag, launcher)
+                files.pop("SHA256SUMS")
+                snapshots.append(files)
+        self.assertEqual(*snapshots)
+        self.assertFalse((self.output / "mistervision-v0.1.0-mister.zip").exists())
+        with tarfile.open(self.output / "mistervision-v0.1.0-source.tar.gz") as archive:
+            self.assertEqual(archive.extractfile("mistervision-v0.1.0/third_party/Menu_MiSTer-source.tar.gz").read(), b"test source")
+
+    def test_corrupt_core_or_source_is_rejected(self):
+        for name in ("InterlacedMenu.rbf", "Menu_MiSTer-source.tar.gz"):
+            path = self.root / "build/interlaced-core" / name
+            original = path.read_bytes()
+            path.write_bytes(b"corrupt")
+            with self.assertRaisesRegex(ValueError, "interlaced component checksum mismatch"):
+                self.package()
+            path.write_bytes(original)
 
 
 if __name__ == "__main__":

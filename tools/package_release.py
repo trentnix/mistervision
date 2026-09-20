@@ -4,6 +4,7 @@ import argparse
 import gzip
 import hashlib
 import io
+import json
 import os
 from pathlib import Path
 import re
@@ -12,6 +13,29 @@ import tarfile
 import tempfile
 import time
 import zipfile
+
+def interlaced_files(root, download=False):
+    """Read pinned core and source bytes, downloading only during release builds."""
+    manifest = json.loads((root / "tools/interlaced-core.json").read_text())
+    cache = root / "build/interlaced-core"
+    cache.mkdir(parents=True, exist_ok=True)
+    result = {}
+    for name, spec in manifest["files"].items():
+        path = cache / name
+        if not path.exists() and download:
+            with tempfile.TemporaryDirectory(dir=cache) as temporary:
+                candidate = Path(temporary) / name
+                subprocess.check_call(["curl", "--fail", "--location", "--silent", "--show-error",
+                                       "--retry", "3", "--max-time", "180", spec["url"], "-o", str(candidate)])
+                if sha256(candidate.read_bytes()) != spec["sha256"]:
+                    raise ValueError(f"interlaced component checksum mismatch: {name}")
+                os.replace(candidate, path)
+        data = path.read_bytes()
+        if sha256(data) != spec["sha256"]:
+            raise ValueError(f"interlaced component checksum mismatch: {name}")
+        result[name] = data
+    return result
+
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION_PATTERN = r"v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
@@ -67,7 +91,7 @@ def player_source(root):
     return archive, licenses
 
 
-def source_bundle(root, path, version, epoch, upstream):
+def source_bundle(root, path, version, epoch, upstream, core_source):
     """Include committed project source and the exact upstream player archive."""
     prefix = f"mistervision-{version}/"
     committed = git(root, "archive", "--format=tar", f"--prefix={prefix}", "HEAD")
@@ -76,19 +100,25 @@ def source_bundle(root, path, version, epoch, upstream):
             with tarfile.open(fileobj=io.BytesIO(committed)) as source:
                 for member in source:
                     output.addfile(member, source.extractfile(member) if member.isfile() else None)
-            member = tarfile.TarInfo(prefix + "docker/MPlayer-source.tar.xz")
-            member.size = len(upstream)
-            member.mtime = epoch
-            member.mode = 0o644
-            output.addfile(member, io.BytesIO(upstream))
+            for name, data in (("docker/MPlayer-source.tar.xz", upstream),
+                               ("third_party/Menu_MiSTer-source.tar.gz", core_source)):
+                member = tarfile.TarInfo(prefix + name)
+                member.size = len(data)
+                member.mtime = epoch
+                member.mode = 0o644
+                output.addfile(member, io.BytesIO(data))
 
 
 def write_bundle(root, version, revision, output):
     """Package freshly built files without copying active configuration or state."""
     epoch = int(git(root, "show", "-s", "--format=%ct", "HEAD"))
     upstream, licenses = player_source(root)
+    core = interlaced_files(root)
     payload = {
         "Scripts/MiSTerVision.sh": (root / "tools/mistervision.sh").read_bytes(),
+        "mistervision/InterlacedMenu.rbf": core["InterlacedMenu.rbf"],
+        "mistervision/licenses/interlaced-menu.txt": (root / "docs/licenses/interlaced-menu.txt").read_bytes(),
+        "mistervision/licenses/interlaced-GPL-2.0.txt": licenses["mistervision/licenses/mplayer/ffmpeg/COPYING.GPLv2"],
         "mistervision/mistervision": arm_executable(root / "build/mistervision-arm"),
         "mistervision/mplayer-arm": arm_executable(root / "build/mistervision-mplayer-arm"),
         "mistervision/jellyfin.conf.example": (root / "jellyfin.conf.example").read_bytes(),
@@ -118,22 +148,36 @@ def write_bundle(root, version, revision, output):
     payload["mistervision/THIRD_PARTY.md"] = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", source_link, notices).encode()
     metadata = (root / "build/release-manifest.txt").read_bytes()
     payload["mistervision/BUILD.txt"] = f"Version: {version}\nRevision: {revision}\n\n".encode() + metadata
+    paths = []
+    for preset in ("progressive", "interlaced"):
+        files = dict(payload)
+        if preset == "interlaced":
+            launcher = files["Scripts/MiSTerVision.sh"]
+            if launcher.count(b"MISTERVISION_INITIAL_INTERLACED=0") != 1:
+                raise ValueError("launcher must declare exactly one installation preset")
+            files["Scripts/MiSTerVision.sh"] = launcher.replace(b"MISTERVISION_INITIAL_INTERLACED=0", b"MISTERVISION_INITIAL_INTERLACED=1")
+        path = output / f"mistervision-{version}-{preset}.zip"
+        write_zip(path, files, epoch)
+        paths.append(path)
+    source_path = output / f"mistervision-{version}-source.tar.gz"
+    source_bundle(root, source_path, version, epoch, upstream, core["Menu_MiSTer-source.tar.gz"])
+    paths.append(source_path)
+    (output / "SHA256SUMS").write_text("".join(f"{sha256(path.read_bytes())}  {path.name}\n" for path in paths))
+
+
+def write_zip(path, payload, epoch):
+    """Write reproducible file metadata and a complete inner checksum manifest."""
+    payload = dict(payload)
     payload["SHA256SUMS"] = "".join(f"{sha256(data)}  {name}\n" for name, data in sorted(payload.items())).encode()
     executable = {"Scripts/MiSTerVision.sh", "mistervision/mistervision", "mistervision/mplayer-arm"}
-    zip_path = output / f"mistervision-{version}-mister.zip"
-    # ZIP timestamps begin in 1980. Fix timestamps and modes so packaging the
-    # same inputs does not change the archive checksum.
     stamp = time.gmtime(max(epoch, 315532800))[:6]
-    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for name, data in sorted(payload.items()):
             info = zipfile.ZipInfo(name, stamp)
             info.create_system = 3
             info.external_attr = (0o100755 if name in executable else 0o100644) << 16
             info.compress_type = zipfile.ZIP_DEFLATED
             archive.writestr(info, data)
-    source_path = output / f"mistervision-{version}-source.tar.gz"
-    source_bundle(root, source_path, version, epoch, upstream)
-    (output / "SHA256SUMS").write_text("".join(f"{sha256(path.read_bytes())}  {path.name}\n" for path in (zip_path, source_path)))
 
 
 def build_release(root, version, go):
@@ -142,6 +186,7 @@ def build_release(root, version, go):
     destination = root / "build/releases" / version
     if destination.exists():
         raise ValueError(f"release output already exists: {destination}")
+    interlaced_files(root, download=True)
     for target in ("arm", "native-player", "release-manifest"):
         subprocess.check_call(["make", target, f"VERSION={version}", f"GO={go}"], cwd=root)
     if checkout(root, version) != revision:

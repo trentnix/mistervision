@@ -124,7 +124,7 @@ func TestBuildLabel(t *testing.T) {
 
 func TestReleaseIncludesBoundedNotesAndMatchingAssets(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, `{"tag_name":"v0.2.0","body":%q,"assets":[{"name":"mistervision-v0.2.0-mister.zip"},{"name":"SHA256SUMS"}]}`, strings.Repeat("x", 9000))
+		fmt.Fprintf(w, `{"tag_name":"v0.2.0","body":%q,"assets":[{"name":"mistervision-v0.2.0-progressive.zip"},{"name":"SHA256SUMS"}]}`, strings.Repeat("x", 9000))
 	}))
 	defer server.Close()
 	status, err := check(context.Background(), server.Client(), server.URL, "v0.1.0")
@@ -152,6 +152,23 @@ func TestReleaseSummarySelection(t *testing.T) {
 			status, err := check(context.Background(), server.Client(), server.URL, "v0.1.0")
 			if err != nil || !status.Available || status.Notes != tc.want {
 				t.Fatalf("notes: %q, available %v, error %v", status.Notes, status.Available, err)
+			}
+		})
+	}
+}
+
+// Only the new progressive archive is an automatic-update candidate. The legacy
+// name cannot carry the core, and the interlaced preset is for fresh installs.
+func TestInstallationArchiveSelection(t *testing.T) {
+	for _, suffix := range []string{"mister", "progressive", "interlaced"} {
+		t.Run(suffix, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				fmt.Fprintf(w, `{"tag_name":"v1.4.1","assets":[{"name":"mistervision-v1.4.1-%s.zip"},{"name":"SHA256SUMS"}]}`, suffix)
+			}))
+			defer server.Close()
+			got, err := check(t.Context(), server.Client(), server.URL, "v1.4.0")
+			if err != nil || !got.Available || got.HasBundle != (suffix == "progressive") {
+				t.Fatalf("unexpected bundle: %+v %v", got, err)
 			}
 		})
 	}

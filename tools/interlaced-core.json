@@ -1,0 +1,14 @@
+{
+  "version": "v0.0.1",
+  "revision": "7c51999ac103e53fa89c85fa6766a970e912d128",
+  "files": {
+    "InterlacedMenu.rbf": {
+      "url": "https://github.com/iwalton3/Menu_MiSTer/releases/download/v0.0.1/InterlacedMenu.rbf",
+      "sha256": "0158e0338a00441271f38be0703c22253d53ea39b60a1a96b7ec964bedae8999"
+    },
+    "Menu_MiSTer-source.tar.gz": {
+      "url": "https://codeload.github.com/iwalton3/Menu_MiSTer/tar.gz/7c51999ac103e53fa89c85fa6766a970e912d128",
+      "sha256": "fb0905c81f20a437219f7ed86742ec30774731eefa50e22e61663a4b2331f555"
+    }
+  }
+}

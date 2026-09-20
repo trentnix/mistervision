@@ -29,7 +29,7 @@ func allowed(name string) bool {
 	switch name {
 	case "Scripts/MiSTerVision.sh", "INSTALL.txt", "SHA256SUMS":
 		return true
-	case "mistervision/mistervision", "mistervision/mplayer-arm", "mistervision/VERSION", "mistervision/UPDATE_FORMAT", "mistervision/BUILD.txt", "mistervision/LICENSE", "mistervision/THIRD_PARTY.md", "mistervision/jellyfin.conf.example", "mistervision/settings.example.json":
+	case "mistervision/InterlacedMenu.rbf", "mistervision/mistervision", "mistervision/mplayer-arm", "mistervision/VERSION", "mistervision/UPDATE_FORMAT", "mistervision/BUILD.txt", "mistervision/LICENSE", "mistervision/THIRD_PARTY.md", "mistervision/jellyfin.conf.example", "mistervision/settings.example.json":
 		return true
 	}
 	return strings.HasPrefix(name, "mistervision/licenses/")
@@ -117,7 +117,7 @@ func (i *Installer) unpack(ctx context.Context, stage, archive, version string) 
 	if len(sums) != len(files)-1 {
 		return nil, errors.New("release file checksums do not match the archive")
 	}
-	for _, name := range []string{"mistervision/mistervision", "mistervision/mplayer-arm", "Scripts/MiSTerVision.sh", "mistervision/LICENSE", "mistervision/THIRD_PARTY.md", "mistervision/BUILD.txt"} {
+	for _, name := range []string{"mistervision/InterlacedMenu.rbf", "mistervision/mistervision", "mistervision/mplayer-arm", "Scripts/MiSTerVision.sh", "mistervision/LICENSE", "mistervision/THIRD_PARTY.md", "mistervision/BUILD.txt"} {
 		if files[name] == nil {
 			return nil, errors.New("required release file is missing")
 		}

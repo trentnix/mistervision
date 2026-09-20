@@ -59,7 +59,7 @@ func (i *Installer) download(ctx context.Context, stage string, status release.S
 			resultErr = errors.Join(updateapi.ErrDownload, resultErr)
 		}
 	}()
-	name := "mistervision-" + status.Latest + "-mister.zip"
+	name := release.BundleName(status.Latest)
 	base := "https://github.com/trentnix/mistervision/releases/download/" + status.Latest + "/"
 	resp, err := i.response(ctx, base+"SHA256SUMS")
 	if err != nil {

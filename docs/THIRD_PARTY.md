@@ -4,6 +4,8 @@ MiSTerFin-derived application code remains under [CC BY-NC 4.0](../LICENSE). The
 
 ## Bundled code
 
+- **[Izzie Walton's interlaced Menu core v0.0.1](https://github.com/iwalton3/Menu_MiSTer/releases/tag/v0.0.1)** — included unmodified starting with v1.4.1. The top-level Menu source is Copyright (C) 2017–2020 Sorgelig, GPL-2.0-or-later. Individual source files retain their notices. Releases include the GPL text and [core notice](licenses/interlaced-menu.txt), plus the complete pinned source in `third_party/Menu_MiSTer-source.tar.gz` in the source bundle. See [display setup](GO_DISPLAY.md).
+
 - **Go runtime and standard library** — the Go Authors, BSD-style license. Release bundles include the license from the compiler used to build the client as `licenses/go-LICENSE`.
 
 - **[coder/websocket](https://github.com/coder/websocket) v1.8.15** — Coder, ISC license. The Go executable uses this library for Jellyfin remote control over WebSocket, including HTTPS. Its [copyright and permission notice](licenses/coder-websocket.txt) applies to this component.
@@ -21,7 +23,7 @@ Release bundles include the application license, the Go license, the coder/webso
 ## External components
 
 - **[Main_MiSTer](https://github.com/MiSTer-devel/Main_MiSTer)** provides the MiSTer environment and enables framebuffer output when launching from the Scripts menu.
-- **[Izzie Walton's interlaced Menu core](https://github.com/iwalton3/Menu_MiSTer/releases/tag/v0.0.1)** supplies optional interlaced output and retains its own license. See [display setup](GO_DISPLAY.md). Zaparoo integration is deferred and is not required for this mode.
+
 - Desktop playback uses externally installed FFmpeg tools and, for inline video, libmpv. Those components retain their own licenses and are not included in the Go executable.
 
 ## Original C application

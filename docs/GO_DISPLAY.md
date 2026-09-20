@@ -4,13 +4,13 @@ The default keeps MiSTer's current display, normally 240p for NTSC or 288p for P
 
 ## Enable or disable interlaced output
 
-Install the matching [Go client and MPlayer](GO_BUILD.md), then place [InterlacedMenu.rbf v0.0.1](https://github.com/iwalton3/Menu_MiSTer/releases/tag/v0.0.1) beside `settings.json`, normally in `/media/fat/mistervision`. The supported core must have this SHA-256:
+Starting with v1.4.1, both [installation packages](GO_BUILD.md#release-bundles) include the matching client, player, and [InterlacedMenu.rbf v0.0.1](https://github.com/iwalton3/Menu_MiSTer/releases/tag/v0.0.1). Choose the interlaced ZIP for a new installation to enable interlacing without editing settings. Existing installations retain their configuration. Source builds must still place the pinned core beside `settings.json`, normally in `/media/fat/mistervision`. The supported core has this SHA-256:
 
 ```text
 0158e0338a00441271f38be0703c22253d53ea39b60a1a96b7ec964bedae8999
 ```
 
-Set the `display` section in `settings.json`:
+To change an existing installation, set the `display` section in `settings.json`:
 
 ```json
 {

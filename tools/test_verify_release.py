@@ -22,7 +22,7 @@ class VerificationTests(unittest.TestCase):
 
     def test_corrupt_asset_fails(self):
         f = self.fixture
-        with (f.output / 'mistervision-v0.1.0-mister.zip').open('ab') as archive:
+        with (f.output / 'mistervision-v0.1.0-progressive.zip').open('ab') as archive:
             archive.write(b'corrupted')
         with self.assertRaisesRegex(ValueError, 'checksum mismatch'):
             verify(f.output, 'v0.1.0', f.revision, f.root)
