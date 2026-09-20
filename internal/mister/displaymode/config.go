@@ -15,7 +15,7 @@ import (
 )
 
 // Config selects the native output at startup. The default preserves the
-// current display. Interlaced requires the separately installed community core.
+// current display. Interlaced uses the community core included in release installations.
 type Config struct {
 	// Interlaced loads the supported standalone core for this application run.
 	Interlaced bool `json:"interlaced"`

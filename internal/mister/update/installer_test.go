@@ -32,8 +32,9 @@ func testARM() []byte {
 func testPayload() map[string][]byte {
 	return map[string][]byte{
 		"mistervision/mistervision": testARM(), "mistervision/mplayer-arm": testARM(),
-		"Scripts/MiSTerVision.sh": []byte("#!/bin/sh\n"),
-		"mistervision/VERSION":    []byte("v0.2.0\n"), "mistervision/UPDATE_FORMAT": []byte("1\n"),
+		"Scripts/MiSTerVision.sh":         []byte("#!/bin/sh\n"),
+		"mistervision/InterlacedMenu.rbf": []byte("test core"),
+		"mistervision/VERSION":            []byte("v0.2.0\n"), "mistervision/UPDATE_FORMAT": []byte("1\n"),
 		"mistervision/BUILD.txt": []byte("build"), "mistervision/LICENSE": []byte("license"),
 		"mistervision/THIRD_PARTY.md": []byte("notices"), "mistervision/licenses/new.txt": []byte("new notice"),
 		"mistervision/settings.example.json": []byte("{}"),
@@ -93,6 +94,7 @@ func testInstallerVersion(t *testing.T, archive []byte, version string) (*Instal
 	launcher := filepath.Join(dir, "Scripts", "MiSTerVision.sh")
 	original := map[string][]byte{
 		filepath.Join(app, "mistervision"):          []byte("old client"),
+		filepath.Join(app, "InterlacedMenu.rbf"):    []byte("old core"),
 		filepath.Join(app, "mplayer-arm"):           []byte("old player"),
 		launcher:                                    []byte("old launcher"),
 		filepath.Join(app, "VERSION"):               []byte("v0.1.0\n"),
@@ -114,7 +116,7 @@ func testInstallerVersion(t *testing.T, archive []byte, version string) (*Instal
 			t.Error("credentials sent to release server")
 		}
 		if strings.HasSuffix(r.URL.Path, "/SHA256SUMS") {
-			fmt.Fprintf(w, "%x  mistervision-%s-mister.zip\n", sha256.Sum256(archive), version)
+			fmt.Fprintf(w, "%x  mistervision-%s-progressive.zip\n", sha256.Sum256(archive), version)
 		} else {
 			w.Write(archive)
 		}
@@ -251,7 +253,7 @@ func TestCancellationDuringReplacementRollsBack(t *testing.T) {
 }
 
 func TestInvalidArchivesLeaveInstallationUntouched(t *testing.T) {
-	for _, kind := range []string{"legacy", "format", "version", "missing-player", "host-player", "traversal", "active-config", "checksum"} {
+	for _, kind := range []string{"legacy", "format", "version", "missing-player", "missing-core", "host-player", "traversal", "active-config", "checksum"} {
 		t.Run(kind, func(t *testing.T) {
 			payload := testPayload()
 			switch kind {
@@ -261,6 +263,8 @@ func TestInvalidArchivesLeaveInstallationUntouched(t *testing.T) {
 				payload["mistervision/UPDATE_FORMAT"] = []byte("2\n")
 			case "version":
 				payload["mistervision/VERSION"] = []byte("v9.0.0\n")
+			case "missing-core":
+				delete(payload, "mistervision/InterlacedMenu.rbf")
 			case "missing-player":
 				delete(payload, "mistervision/mplayer-arm")
 			case "host-player":
@@ -293,7 +297,7 @@ func TestChecksumFailureAndCanceledDownload(t *testing.T) {
 				if cancel {
 					return nil, context.Canceled
 				}
-				return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(strings.Repeat("0", 64) + "  mistervision-v0.2.0-mister.zip\n")), Header: make(http.Header)}, nil
+				return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(strings.Repeat("0", 64) + "  mistervision-v0.2.0-progressive.zip\n")), Header: make(http.Header)}, nil
 			})
 			err := i.Install(context.Background(), available(), nil)
 			if !errors.Is(err, updateapi.ErrDownload) {

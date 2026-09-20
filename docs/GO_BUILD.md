@@ -16,7 +16,7 @@ The outputs are `build/mistervision` and `build/mistervision-arm`. The ARM targe
 Development builds show `dev`, the Git revision, and a modified marker when available. Jellyfin and Plex requests report the same version label, without the revision suffix. Set `VERSION` for a stable release label:
 
 ```sh
-make arm VERSION=v1.4.0
+make arm VERSION=v1.4.1
 ```
 
 ## MPlayer
@@ -38,24 +38,25 @@ The native build also exports `build/mistervision-mplayer-source.tar.xz`, the ve
 From a clean Git checkout, build a release with:
 
 ```sh
-make release VERSION=v1.4.0
+make release VERSION=v1.4.1
 ```
 
-This command rebuilds both ARM executables, records their metadata and checksums, and packages them under `build/releases/v1.4.0/`. It requires the same Go, Zig, Python, and Docker tools as the individual builds. Stable `vMAJOR.MINOR.PATCH` versions are required. Dirty checkouts, untracked source files, invalid binaries, source checksum mismatches, and existing output directories stop the build. Failed builds do not publish a partial bundle.
+This command rebuilds both ARM executables, records their metadata and checksums, and packages them under `build/releases/v1.4.1/`. It requires the same Go, Zig, Python, and Docker tools as the individual builds. Stable `vMAJOR.MINOR.PATCH` versions are required. Dirty checkouts, untracked source files, invalid binaries, source checksum mismatches, and existing output directories stop the build. Failed builds do not publish a partial bundle.
 
 | Artifact | Contents |
 | --- | --- |
-| `mistervision-v1.4.0-mister.zip` | SD card layout with both binaries, Scripts launcher, configuration examples, installation instructions, version/build metadata, component notices, and checksums. |
-| `mistervision-v1.4.0-source.tar.gz` | Committed project source plus the exact upstream MPlayer archive. Patches and build recipes remain under `docker/`. |
+| `mistervision-v1.4.1-progressive.zip` | Both binaries, interlaced core, launcher with a progressive first-install preset, examples, notices, metadata, and checksums. Also used for automatic updates. |
+| `mistervision-v1.4.1-interlaced.zip` | The same files with an interlaced first-install preset in the launcher. |
+| `mistervision-v1.4.1-source.tar.gz` | Committed project source plus the exact upstream MPlayer and interlaced Menu source archives. Patches and build recipes remain under `docker/`. |
 | `SHA256SUMS` | Checksums for both downloadable archives. |
 
-The ZIP contains only example configuration files. It contains no active `jellyfin.conf`, `settings.json`, sign-in, preferences, or caches. Read its `INSTALL.txt` before copying files. The optional interlaced core remains a separate download.
+The ZIP contains only example configuration files. It contains no active `jellyfin.conf`, `settings.json`, sign-in, preferences, or caches. Read its `INSTALL.txt` before copying files. Both ZIPs include the pinned interlaced core. The first-launch preset creates `settings.json` only if no current or legacy configuration exists. Neither reinstalling nor updating replaces active settings. `tools/interlaced-core.json` pins the upstream core and complete source archive. Release builds download missing components, verify their hashes, and fail on corrupt cached files.
 
 To rebuild MPlayer from the source bundle, run `make native-player` in its extracted project directory. Docker uses the included upstream archive and still verifies its checksum. The base image and compiler packages need network access or a local Docker cache.
 
 `make release-manifest` can run after separate `make arm` and `make native-player` builds. It writes `build/release-manifest.txt`, which records Go metadata, MPlayer source/compiler details, and both executable checksums. Packaging includes that record as `mistervision/BUILD.txt`, with the release version and source revision. Packaging the same inputs produces identical archives. This does not promise identical compiler output across toolchain or environment changes.
 
-The [release workflow](../.github/workflows/release.yml) runs when a version tag is pushed. It can also run manually with that tag selected as the workflow ref. It builds the bundle and creates a GitHub draft release with generated notes and all three assets. It refuses to overwrite an existing release. After creating the draft, it downloads the three assets, verifies their contents and source revision, and exercises installation and interrupted-update recovery in temporary storage. A verification failure leaves the release unpublished as a draft.
+The [release workflow](../.github/workflows/release.yml) runs when a version tag is pushed. It can also run manually with that tag selected as the workflow ref. It builds the bundle and creates a GitHub draft release with generated notes and all four assets. It refuses to overwrite an existing release. After creating the draft, it downloads the four assets, verifies their contents and source revision, and exercises installation and interrupted-update recovery in temporary storage. A verification failure leaves the release unpublished as a draft.
 
 Before publishing, review the notes, require successful Go validation and downloaded-asset verification, and test the paired binaries on MiSTer. Publishing requires a manual action on GitHub. Draft or private releases are unavailable to the application's unauthenticated checker.
 
@@ -93,13 +94,15 @@ Environment overrides now start with `MISTERVISION_`, for example `MISTERVISION_
 
 ## Application updates
 
+MiSTerVision v1.4.0 and earlier require a one-time manual installation of v1.4.1 or later. These clients still show the available release and its notes, but the renamed ZIPs suppress the incompatible Install action. Their existing status line says “No installation bundle is available.” The release summary must explain the manual upgrade and point to the release page. Keep publishing the new archive names in later releases so older clients cannot offer an incompatible download.
+
 In About, select **View release**, review the notes, then select **Install**. Automatic installation requires the client at `/media/fat/mistervision/mistervision` and the configured player at `/media/fat/mistervision/mplayer-arm`. The standard Scripts launcher is updated with the pair. Custom installations and desktop development retain manual installation.
 
 For manual upgrades, use the latest release ZIP. Keep the existing settings and state files. Do not copy example configuration over active configuration.
 
 Downloads use verified HTTPS from this repository's GitHub release assets without credentials. The installer verifies the outer SHA-256 checksum, every bundled file, the release version, transaction format, and ARM executable headers. File counts and sizes are bounded. Checksums detect damaged downloads. They are not signatures independent of GitHub.
 
-The SD card must have room for the download, staged files, rollback copies, and a temporary replacement file. The installer downloads, validates, and backs up everything before changing installed files. Storage or validation failures leave the installation intact. Settings, credentials, preferences, artwork caches, and the separately installed 480i core are excluded from replacement.
+The SD card must have room for the download, staged files, rollback copies, and a temporary replacement file. The installer downloads, validates, and backs up everything before changing installed files. Storage or validation failures leave the installation intact. Settings, credentials, preferences, and artwork caches are excluded from replacement. The bundled core participates in the same verified installation and rollback as the binaries. The progressive update launcher cannot change a saved interlaced setting.
 
 Update failures distinguish download, verification, and storage problems and explain what to try next. If a release requires manual installation, Install is disabled for that release and the page directs you to its ZIP. Cancellation and recoverable failures confirm that the existing installation was kept.
 
@@ -197,16 +200,16 @@ The comparison omits timing deltas if the recorded environment differs. Matching
 With Go and an authenticated GitHub CLI, download and verify a draft or published release:
 
 ```sh
-make verify-release VERSION=v1.4.0
+make verify-release VERSION=v1.4.1
 ```
 
-The local Git checkout must contain the release tag. Verification checks both archive hashes, every bundled checksum, executable permissions and ARM headers, version and revision metadata, the source archive against that Git revision, and the upstream player source checksum. It then installs the real ZIP through the production updater into temporary storage and tests interrupted replacement and repeat recovery while preserving fixture settings and sign-in files. The test never executes the installed ARM binaries on the host. Checksums are integrity checks, not independent signatures.
+The local Git checkout must contain the release tag. Verification checks all three archive hashes, every bundled checksum, executable permissions and ARM headers, version and revision metadata, the source archive against that Git revision, and the pinned player and interlaced-core source checksums. It then installs the real ZIP through the production updater into temporary storage and tests interrupted replacement and repeat recovery while preserving fixture settings and sign-in files. The test never executes the installed ARM binaries on the host. Checksums are integrity checks, not independent signatures.
 
 To verify existing downloads and optionally execute the packaged pair on a MiSTer:
 
 ```sh
-python3 tools/verify_release.py v1.4.0 \
-  --directory /tmp/mistervision-v1.4.0-release \
+python3 tools/verify_release.py v1.4.1 \
+  --directory /tmp/mistervision-v1.4.1-release \
   --mister root@192.168.1.42 \
   --identity /home/trent/.ssh/misterfin_crt_development
 ```

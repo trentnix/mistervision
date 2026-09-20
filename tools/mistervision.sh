@@ -47,7 +47,9 @@ taskset -p 3 "$$" >/dev/null
 # The 480i supervisor leaves normal menu return to finish(), but still restores
 # hardware itself after a failure. Older launchers retain supervisor restoration.
 status=0
-MISTERVISION_LAUNCHER=1 MISTERVISION_AUTO_RESTART=1 "$binary" -browse \
+# The release preset only seeds settings for a new installation. Existing
+# settings and legacy configuration take precedence, including during updates.
+MISTERVISION_INITIAL_INTERLACED=0 MISTERVISION_LAUNCHER=1 MISTERVISION_AUTO_RESTART=1 "$binary" -browse \
     -config /media/fat/mistervision/jellyfin.conf \
     -state-dir /media/fat/mistervision/state \
     -player "$player" || status=$?

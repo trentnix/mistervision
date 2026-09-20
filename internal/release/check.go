@@ -84,7 +84,7 @@ func check(ctx context.Context, client *http.Client, endpoint, installed string)
 	}
 	archive, sums := false, false
 	for _, asset := range result.Assets {
-		archive = archive || asset.Name == "mistervision-"+result.Tag+"-mister.zip"
+		archive = archive || asset.Name == BundleName(result.Tag)
 		sums = sums || asset.Name == "SHA256SUMS"
 	}
 	return Status{Latest: result.Tag, Available: newer(result.Tag, installed), Notes: screenNotes(result.Body), HasBundle: archive && sums}, nil
@@ -118,3 +118,8 @@ func screenNotes(body string) string {
 	}
 	return string(notes)
 }
+
+// BundleName identifies the progressive installation archive used for updates.
+// Both presets contain the same binaries. Existing settings always win.
+// The new name prevents older updaters from accepting the bundled FPGA core.
+func BundleName(version string) string { return "mistervision-" + version + "-progressive.zip" }

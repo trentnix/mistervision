@@ -14,13 +14,16 @@ My goal is a great media experience on CRTs. I test and use MiSTerVision on a Mi
 
 ## Run on MiSTer
 
-Existing MiSTerVision installations can update through About. Build from source to try changes that have not been released.
+Starting with v1.4.1, releases include the interlaced core and two installation presets. Upgrading from v1.4.0 or earlier requires one manual installation. Later updates work through About and preserve settings. Build from source to try changes that have not been released.
 
-For a new installation, download `mistervision-vX.Y.Z-mister.zip` from the [latest release](https://github.com/trentnix/mistervision/releases/latest). Extract the ZIP and copy these files to the SD card. Keep the launcher filename free of spaces. Make the launcher and both binaries executable if your filesystem requires it. If upgrading an existing installation manually, exit the application first and keep your configuration and state files.
+For a new installation, choose `mistervision-vX.Y.Z-progressive.zip` (normally 240p) or `mistervision-vX.Y.Z-interlaced.zip` (normally 480i) from the [releases](https://github.com/trentnix/mistervision/releases). Both contain the same application and interlaced core. The selected preset creates `settings.json` on first launch only if no current or legacy configuration exists. Existing installations keep their display mode regardless of the ZIP chosen.
+
+Extract the ZIP and copy these files to the SD card. Keep the launcher filename free of spaces. Make the launcher and both binaries executable if your filesystem requires it. If upgrading an existing installation manually, exit the application first and keep your configuration and state files.
 
 | File | Destination |
 | --- | --- |
 | `mistervision/mistervision` | `/media/fat/mistervision/mistervision` |
+| `mistervision/InterlacedMenu.rbf` | `/media/fat/mistervision/InterlacedMenu.rbf` |
 | `mistervision/mplayer-arm` | `/media/fat/mistervision/mplayer-arm` |
 | `Scripts/MiSTerVision.sh` | `/media/fat/Scripts/MiSTerVision.sh` |
 
@@ -93,11 +96,10 @@ Automatic updates require the standard installation paths above. Desktop and cus
 
 The default uses MiSTer’s current display mode, normally 240p for NTSC or 288p for PAL. Interlaced output is optional: 480i for NTSC or 576i for PAL. I have tested 240p and 480i. Someone with PAL hardware will need to validate 288p and 576i output.
 
-To enable interlaced output:
+For a fresh installation, choose the interlaced ZIP and launch the app. No configuration edit or separate core download is needed. To change an existing installation:
 
 1. Exit MiSTerVision. Install the matching client and MPlayer builds described above.
-2. Download the supported **InterlacedMenu.rbf v0.0.1** from the [display guide](docs/GO_DISPLAY.md#enable-or-disable-interlaced-output). Place it at `/media/fat/mistervision/InterlacedMenu.rbf`.
-3. Set the `display` section in `/media/fat/mistervision/settings.json`:
+2. Set the `display` section in `/media/fat/mistervision/settings.json`:
 
 ```json
 {

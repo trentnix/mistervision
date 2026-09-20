@@ -53,8 +53,13 @@ jobs:
           GH_REPO: ${{ github.repository }}
           VERSION: ${{ github.ref_name }}
         run: |
-          gh release create "$VERSION" --verify-tag --draft --title "MiSTerVision $VERSION" --generate-notes \
-            "build/releases/$VERSION/mistervision-$VERSION-mister.zip" \
+          notes=(--generate-notes)
+          if [ -f "docs/releases/$VERSION.md" ]; then
+            notes=(--notes-file "docs/releases/$VERSION.md")
+          fi
+          gh release create "$VERSION" --verify-tag --draft --title "MiSTerVision $VERSION" "${notes[@]}" \
+            "build/releases/$VERSION/mistervision-$VERSION-progressive.zip" \
+            "build/releases/$VERSION/mistervision-$VERSION-interlaced.zip" \
             "build/releases/$VERSION/mistervision-$VERSION-source.tar.gz" \
             "build/releases/$VERSION/SHA256SUMS"
       - name: Verify downloaded draft assets and updater recovery
