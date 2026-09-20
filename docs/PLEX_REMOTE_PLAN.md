@@ -1,6 +1,6 @@
 # Plex remote control
 
-**Status: parked on `feat/plex-companion-prototype`, not ready to merge or release.** The user filed the Plex server-proxy CORS report. Resume when Plex responds or a supported connection path is found. First repeat normal-browser pause, seek, resume, and timeline checks without diagnostic header or preference changes. The remaining checkpoints below still apply.
+**Status: parked on `feat/plex-companion-prototype`, not ready to merge or release.** Tracking issue: [Plex server-proxy CORS report](https://forums.plex.tv/t/companion-timeline-stays-stale-pms-proxy-does-not-expose-x-plex-client-identifier/943091). Resume when Plex responds or a supported connection path is found. First repeat normal-browser pause, seek, resume, and timeline checks without diagnostic header or preference changes. The remaining checkpoints below still apply.
 
 The first milestone adds a shared playback-state boundary and an isolated Plex Companion compatibility probe. The Plex Web compatibility checkpoint passed on MiSTer. Authenticated video control is now integrated with active Plex sessions. Automated validation passes. Plex Web movie and episode playback now works on MiSTer. Paused seeks pass device and Web tests. Default cross-origin Plex Web connections still have a timeline limitation in the server proxy. The separate probe still does not read saved accounts, play media, or change settings.
 
@@ -70,6 +70,22 @@ Full Go suites with and without cgo, targeted race tests, lint, and host/ARM bui
 ### Direct connection follow-up
 
 An isolated browser could poll MiSTer directly and read its identifier, but Plex Web `4.160.0` routes LAN players from `/clients` through PMS. Runtime model checks and an inert GDM registration test found no supported advertisement field that enables a direct connection. Sonos uses a separate cloud-provider path. The diagnostic receiver was removed, and installed playback was not changed. See the [direct connection findings](GO_REMOTE.md#direct-connection-investigation). The cross-origin Web timeline blocker remains open.
+
+### Developer documentation review
+
+Plex's [official PMS API reference](https://developer.plex.tv/pms/) exposes OpenAPI version `1.2.3`. The reviewed specification contains 207 paths and documents `POST /:/timeline` for playback reporting to PMS. It does not list `/clients`, `/player/timeline/poll`, or Companion CORS handling. The [archived Companion guide](https://github.com/plexinc/plex-media-player/wiki/Remote-control-API) still explicitly requires exposing the receiver identifier and describes direct player connections. Neither reference supplies a verified fix for the observed Web proxy behavior.
+
+A [Music Assistant discovery report](https://github.com/music-assistant/support/issues/5782) describes successful Plexamp iOS control after registering a player with plex.tv and publishing its local connection URI. This is a third-party experiment, not Plex's documented browser workaround. The isolated registration test below did not produce a direct Plex Web connection. The inspected Web version selects LAN players from PMS and cloud players from the separate companions service. The current prototype remains parked.
+
+The archived [Arcanemagus Plex API wiki](https://github.com/Arcanemagus/plex-api/wiki) documents player commands and account device connection addresses, but does not explain how a receiver can make Plex Web choose a direct connection. Its linked [Python PlexAPI client documentation](https://python-plexapi.readthedocs.io/en/latest/modules/client.html) supports direct and server-proxied requests. That choice belongs to the controller implementation and does not establish a Plex Web configuration option. The wiki review found no new workaround.
+
+### Account registration experiment
+
+A temporary, non-playing receiver was linked through plex.tv/link with its own identity and `client,player,pubsub-player` registration. Plex accepted publication of its local HTTP connection with HTTP 200, and `/devices.xml` contained the matching address. Publication was checked using both the numeric device ID and the client identifier. The legacy and v2 resources responses did not list the player. A separate saved controller credential for the same account confirmed its absence from v2 resources. The Plexamp discovery result reported by Music Assistant was not reproduced, and Plexamp itself was not tested.
+
+In an isolated Plex Web `4.160.0` session, account registration alone did not add the receiver to the player selector. Enabling GDM for the same identity made it appear in PMS's `/clients` list and Web's selector. Selecting it sent timeline polls through PMS, not directly to the published address. This browser session selected an HTTP PMS connection and received HTTP 200 with a matching identifier. It did not reproduce the usual browser's HTTPS proxy route or establish a fix for that route. No media was played.
+
+Cleanup removed the exact diagnostic device from plex.tv, withdrew its GDM advertisement, closed the test browser and receiver, and deleted its temporary credential file. Independent checks confirmed that both the cloud device and LAN player entries were gone and the installed MiSTer receiver remained available. No production registration, application, or configuration was changed.
 
 ## Remaining checkpoints
 
