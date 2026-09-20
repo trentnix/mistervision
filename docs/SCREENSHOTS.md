@@ -64,7 +64,7 @@ About keeps its logo, identity block, and navigation hints steady while checking
 
 ## Announcement images
 
-The [v1.4.0 announcement images](images/announcements/v1.4.0/README.md) include Akira and Hackers during playback, with and without controls, and Kids TV Shows with Dungeons & Dragons selected.
+The [v1.4.0 announcement images](images/announcements/v1.4.0/README.md) include the Akira, Hackers, and Dungeons & Dragons episode launch screens, plus Kids TV Shows with Dungeons & Dragons selected and the Plex Live TV channel guide.
 
 ## Refreshing previews
 
