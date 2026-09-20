@@ -67,6 +67,14 @@ Details show available artwork, overview, year, rating, runtime, and resume/watc
 
 Menu text supports Latin-1 and selected additional characters. Subtitles use a broader Unicode font set. See [text coverage](GO_RENDERING.md#text-coverage). Search is not implemented.
 
+## Live TV listings
+
+Channel lists show the current program beneath each channel when guide data is available. The selected channel's side panel shows its logo when available, followed by the current and next programs with time ranges in the device's local time zone. The panel stays blank when no listings are available. Selecting a channel starts playback immediately. Back returns to the channel list.
+
+Schedules load separately from channels through the optional `media.ProgramGuide` interface. Jellyfin and Plex adapters translate their own channel identifiers and schedule data. The browser requests a six-hour window for the loaded channel page, refreshes once a minute, and cancels work after leaving the list. The most recent channel page stays cached in memory for the active connection and user. Page changes retain listings for channels still loaded. Returning shows valid cached listings immediately and always requests a fresh schedule, even within the one-minute interval. Successful responses replace the cache, including corrected or removed listings. A failed refresh keeps cached listings, but expired programs are never shown as current. Authentication changes discard the cache. Current/next selection advances with the clock without waiting for a refresh.
+
+A server must have guide listings configured. Missing or failed listings leave channels playable. Failures record a `browser.guide` diagnostic event without a blocking error banner. Full schedule grids, favorite-channel editing, DVR scheduling, and timeshifting are not implemented.
+
 ## Continue Watching
 
 The first card, labeled Continue, combines resumable videos and the next unwatched episode of series in progress. For Jellyfin, each series appears once. Its most recently played resumable episode takes precedence over Next Up. Recent playback orders dated entries first. Undated series retain Jellyfin's Next Up order.

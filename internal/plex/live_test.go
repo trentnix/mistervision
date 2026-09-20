@@ -59,7 +59,7 @@ func TestLiveChannelDiscoveryAndPaging(t *testing.T) {
 		t.Fatalf("channel order/names: %+v", page.Items)
 	}
 	detail, err := c.PlaybackDetails(t.Context(), page.Items[0].ID)
-	if err != nil || detail.Type != "TvChannel" || detail.ImageTags["Primary"] == "" || detail.CurrentProgram.Name != "Current show" {
+	if err != nil || detail.Type != "TvChannel" || detail.ImageTags["Primary"] == "" {
 		t.Fatalf("channel detail: %+v, %v", detail, err)
 	}
 	last, err := c.List(t.Context(), media.Location{Kind: "livetv"}, 2, 2)

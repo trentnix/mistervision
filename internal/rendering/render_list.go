@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"mistervision/internal/input/control"
+	"mistervision/internal/media"
 	"mistervision/internal/ui"
 )
 
@@ -17,6 +18,10 @@ func (p *screenPainter) list() [][]controlHint {
 	anim := p.animation
 	v := &p.scene.Content
 	s := p.scene
+	live := v.Item() != nil && media.IsLive(*v.Item())
+	if live {
+		art.Primary = nil
+	}
 	var hints []controlHint
 	if v.Item() != nil {
 		hints = append(hints, hint(s.Controls, control.Open, "Select"))
@@ -55,7 +60,9 @@ func (p *screenPainter) list() [][]controlHint {
 	})
 	p.header(s.title(), p.safeY)
 	width := w - 48
-	if art.Primary != nil {
+	if live {
+		width = w - 48 - channelGuideWidth - 10
+	} else if art.Primary != nil {
 		width = w - 24 - 175 - 10 - 24
 	}
 	// Borrow a vertical slice of the frame to clip moving rows without an
@@ -81,6 +88,17 @@ func (p *screenPainter) list() [][]controlHint {
 		}
 		list.Text(24, y, truncate(itemTitle(item), width, 1), color, 24+width)
 		s, col := subtitle(item)
+		if live {
+			col = 0x999999
+			if index == v.Selected {
+				col = 0xcccccc
+			}
+			current, _ := media.CurrentNext(p.scene.Guide[item.ID], p.scene.Now)
+			s = "No guide information"
+			if current != nil {
+				s = current.Title
+			}
+		}
 		if v.Continue {
 			s, col = continueSubtitle(item), titleColor
 		}
@@ -88,6 +106,9 @@ func (p *screenPainter) list() [][]controlHint {
 	}
 	if len(v.Page.Items) == 0 && !v.Loading && v.Error == "" {
 		center(c, h/2, "Nothing here", dimColor, 1)
+	}
+	if live {
+		p.channelGuide()
 	}
 	return controls
 }

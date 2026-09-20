@@ -7,9 +7,7 @@ import (
 	"errors"
 	"net/url"
 	"slices"
-	"strconv"
 	"strings"
-	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -29,11 +27,29 @@ type dvr struct {
 	Devices []struct {
 		ID       identifier `json:"key"`
 		State    string
-		Mappings []struct {
-			ChannelKey, DeviceIdentifier, LineupIdentifier string
-			Enabled                                        identifier
-		} `json:"ChannelMapping"`
+		Mappings []channelMapping `json:"ChannelMapping"`
 	} `json:"Device"`
+}
+
+// channelMapping shares channel identity rules between browsing and guide lookup.
+type channelMapping struct {
+	ChannelKey, DeviceIdentifier, LineupIdentifier string
+	Enabled                                        identifier
+}
+
+func (m channelMapping) enabled() bool {
+	return m.Enabled == "1" || m.Enabled == "true"
+}
+
+// key keeps catalog IDs and guide lookups consistent when Plex omits a field.
+func (m channelMapping) key() string {
+	if m.ChannelKey != "" {
+		return m.ChannelKey
+	}
+	if m.LineupIdentifier != "" {
+		return m.LineupIdentifier
+	}
+	return m.DeviceIdentifier
 }
 
 type guideChannel struct{ Key, Identifier, Title, CallSign, Thumb string }
@@ -42,9 +58,8 @@ type deviceChannel struct {
 	DRM              bool
 }
 
-// liveChannels reads enabled mappings and enriches them with optional guide and
-// tuner names. A missing guide still leaves numbered channels usable.
-func (c *Client) liveChannels(ctx context.Context) ([]media.Item, error) {
+// dvrs reads the tuner mappings used by both the channel catalog and guide.
+func (c *Client) dvrs(ctx context.Context) ([]dvr, error) {
 	var response struct {
 		Container *struct {
 			DVRs []dvr `json:"Dvr"`
@@ -56,14 +71,23 @@ func (c *Client) liveChannels(ctx context.Context) ([]media.Item, error) {
 	if response.Container == nil {
 		return nil, errors.New("missing Plex DVR container")
 	}
+	return response.Container.DVRs, nil
+}
+
+// liveChannels reads enabled mappings and enriches them with optional guide and
+// tuner names. A missing guide still leaves numbered channels usable.
+func (c *Client) liveChannels(ctx context.Context) ([]media.Item, error) {
+	dvrs, err := c.dvrs(ctx)
+	if err != nil {
+		return nil, err
+	}
 	var items []media.Item
 	seen := make(map[string]bool)
-	for _, dvr := range response.Container.DVRs {
+	for _, dvr := range dvrs {
 		if !validID(string(dvr.ID)) {
 			return nil, errors.New("invalid Plex DVR ID")
 		}
 		guide := c.channelGuide(ctx, dvr.Lineup)
-		programs := c.currentPrograms(ctx, dvr.EPGIdentifier)
 		for _, device := range dvr.Devices {
 			if device.State == "disabled" {
 				continue
@@ -73,16 +97,10 @@ func (c *Client) liveChannels(ctx context.Context) ([]media.Item, error) {
 			}
 			names := c.deviceChannels(ctx, string(device.ID))
 			for _, mapping := range device.Mappings {
-				if mapping.Enabled != "1" && mapping.Enabled != "true" {
+				if !mapping.enabled() {
 					continue
 				}
-				key := mapping.ChannelKey
-				if key == "" {
-					key = mapping.LineupIdentifier
-				}
-				if key == "" {
-					key = mapping.DeviceIdentifier
-				}
+				key := mapping.key()
 				if !liveSegment(key) {
 					return nil, errors.New("invalid Plex channel ID")
 				}
@@ -109,7 +127,6 @@ func (c *Client) liveChannels(ctx context.Context) ([]media.Item, error) {
 				if item.Number == "" {
 					item.Number = mapping.LineupIdentifier
 				}
-				item.CurrentProgram.Name = programs[mapping.ChannelKey]
 				if detail.Thumb != "" {
 					item.ImageTags["Primary"] = detail.Thumb
 				}
@@ -141,44 +158,6 @@ func (c *Client) channelGuide(ctx context.Context, lineup string) map[string]gui
 	}
 	for _, ch := range response.Container.Channels {
 		result[ch.Key], result[ch.Identifier] = ch, ch
-	}
-	return result
-}
-
-// currentPrograms adds now-playing titles without making guide availability a
-// requirement for tuning. Plex's grid filters apply to each airing's time range.
-func (c *Client) currentPrograms(ctx context.Context, provider string) map[string]string {
-	result := make(map[string]string)
-	name, id, ok := strings.Cut(provider, ":")
-	if !ok || !validID(id) || (name != "tv.plex.providers.epg.cloud" && name != "tv.plex.providers.epg.xmltv" && name != "tv.plex.providers.epg.custom") {
-		return result
-	}
-	now := time.Now().Unix()
-	q := url.Values{"type": {"1,4"}, "beginsAt<": {strconv.FormatInt(now, 10)}, "endsAt>": {strconv.FormatInt(now, 10)}, "X-Plex-Container-Size": {"2000"}}
-	var response struct {
-		Container struct {
-			Metadata []struct {
-				Title, GrandparentTitle string
-				Media                   []struct {
-					ChannelIdentifier string
-					BeginsAt, EndsAt  int64
-				}
-			}
-		} `json:"MediaContainer"`
-	}
-	if c.json(ctx, "/"+provider+"/grid", q, &response) != nil {
-		return result
-	}
-	for _, item := range response.Container.Metadata {
-		title := item.GrandparentTitle
-		if title == "" {
-			title = item.Title
-		}
-		for _, airing := range item.Media {
-			if airing.BeginsAt <= now && airing.EndsAt > now {
-				result[airing.ChannelIdentifier] = title
-			}
-		}
 	}
 	return result
 }

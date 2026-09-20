@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"mistervision/internal/input/control"
+	"mistervision/internal/media"
 	"mistervision/internal/musicviz"
 )
 
@@ -32,6 +33,8 @@ type Scene struct {
 	SelectionError string
 	PhotoCount     string
 	Artwork        Artwork
+	// Guide borrows the current channel page schedule. Nil means unavailable.
+	Guide          map[string][]media.Program
 	LibraryCount   *int
 	LibraryLoading bool // The selected home card is waiting for its initial feed.
 

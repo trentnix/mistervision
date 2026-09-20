@@ -36,6 +36,7 @@ type browserSession struct {
 	about            rendering.AboutPresentation
 	connection       connectionManager
 	requests         requestState
+	guide            guideState
 	home             homeState
 	selection        selectionState
 	media            mediaNavigation
@@ -97,6 +98,7 @@ func newBrowserSession(ctx context.Context, config Config, player playback.Confi
 // cannot block shutdown while the event loop is no longer receiving results.
 func (s *browserSession) close() {
 	s.ticker.Stop()
+	s.guide.reset()
 	s.update.close()
 	s.connection.close()
 	s.stopRemote()

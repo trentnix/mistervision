@@ -11,6 +11,7 @@ import (
 // draw owns frame pacing and the paused-overlay refresh check.
 func (s *browserSession) draw() error {
 	now := time.Now()
+	s.refreshGuide(now)
 	scene := sceneFromModel(s.model, s.controller.Snapshot(now), s.setup, s.selection.current, s.selection.err, now)
 	if item := scene.Content.Item(); scene.Root && item != nil && item.ID == continueID {
 		scene.LibraryLoading = !s.home.loaded
@@ -20,6 +21,9 @@ func (s *browserSession) draw() error {
 	if len(s.startupNotices) > 0 && !now.Before(s.message.Until) && scene.Setup.Kind == rendering.SetupHidden && !s.about.Visible && scene.Content.Detail == nil && !scene.Content.Loading && scene.Content.Error == "" {
 		s.message = browserMessage{MessagePresentation: rendering.MessagePresentation{Header: "Settings", Text: s.startupNotices[0], Until: now.Add(4 * time.Second)}}
 		s.startupNotices = s.startupNotices[1:]
+	}
+	if s.guide.active {
+		scene.Guide = s.guide.programs
 	}
 	scene.Title = s.config.Title
 	scene.Background = s.config.Background

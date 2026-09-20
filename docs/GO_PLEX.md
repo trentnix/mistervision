@@ -103,7 +103,7 @@ A Live TV carousel card appears when the linked account can access enabled chann
 
 When a tuned channel exposes selectable audio alternatives, Select/Tab → Audio lists them with Plex’s labels. Changing audio briefly reloads at the live edge while keeping picture mode and the captions setting. Plex resolves each choice against the new session’s stream IDs before conversion. The choice applies to the current playback and is not saved in the client. Plex may remember the per-user selection.
 
-Channels come from enabled DVR mappings, with duplicate tuner mappings removed and channel numbers sorted naturally. Protected channels are omitted when the tuner identifies them. Guide names, logos, and current program titles are optional. Without a guide, the list uses tuner names or channel numbers. A full schedule grid, recording controls, and Plex's free online Live TV service are not included.
+Channels come from enabled DVR mappings, with duplicate tuner mappings removed and channel numbers sorted naturally. Protected channels are omitted when the tuner identifies them. Guide names and logos are optional. Current and next programs load in the background through the [shared channel-list guide](GO_BROWSING.md#live-tv-listings). Without a guide, the list uses tuner names or channel numbers. A full schedule grid, recording controls, and Plex's free online Live TV service are not included.
 
 Tuning uses the shared `media.LiveTV` interface. Tuner startup has a 30-second deadline. Ordinary metadata requests have a 15-second timeout. Diagnostics identify tune requests without logging private channel or consumer IDs.
 
