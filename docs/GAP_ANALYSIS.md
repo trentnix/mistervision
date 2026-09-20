@@ -1,10 +1,14 @@
 # Jellyfin and Plex gap analysis
 
-This document compares MiSTerVision with other Jellyfin and Plex clients. It records missing features, current limitations, and intentional exclusions without assigning priorities or committing to implementation. Reviewed September 19, 2026 against the current source and provider documentation. MiSTerVision targets personal media on a consumer CRT. Both providers are first-class backends. Matching every feature of either ecosystem is not the goal.
+This document compares MiSTerVision with other Jellyfin and Plex clients. It records missing features, current limitations, and intentional exclusions without assigning priorities or committing to implementation. Implementation status reviewed September 20, 2026 against v1.4.0. Provider comparisons retain the September 19 documentation review. MiSTerVision targets personal media on a consumer CRT. Both providers are first-class backends. Matching every feature of either ecosystem is not the goal.
 
 ## Current baseline
 
 Both providers support discovery, saved connections, user switching, Continue Watching, movie and episode playback, resume, seeking, audio and subtitle selection, picture modes, music, photos, collections, and playlists. Plex Home includes avatars, PINs, and sign-out. Plex tuner Live TV includes captions and alternate audio when available. Album and playlist playback can advance through entries. Playlist support does not include an editor.
+
+Both providers now supply current and next Live TV programs through the shared channel-list guide. Valid cached listings appear immediately on return while the server refreshes them. Channel logos and friendly Plex guide names appear when available. See [Live TV listings](GO_BROWSING.md#live-tv-listings).
+
+The v1.4.0 interface uses the caption font set for clearer Unicode text, shares library counts and viewer/update information across both home views, and aligns list typography and selection padding. Single-season shows open directly to episodes, and season lists show episode counts when supplied. These are implemented behaviors, not remaining gaps.
 
 Jellyfin remote control is supported. Plex Companion video control exists only on the parked `feat/plex-companion-prototype` branch. It is not a released capability or a prerequisite for unrelated improvements. See the [Plex remote plan](https://github.com/trentnix/mistervision/blob/feat/plex-companion-prototype/docs/PLEX_REMOTE_PLAN.md) and [forum report](https://forums.plex.tv/t/companion-timeline-stays-stale-pms-proxy-does-not-expose-x-plex-client-identifier/943091).
 
@@ -25,8 +29,8 @@ Other Jellyfin and Plex clients offer the capabilities below. Availability varie
 | Source-version selection | A chooser for alternate encodes or versions. Source metadata already exists internally. | Both providers represent multiple sources. Plex multi-file movies are a separate unsupported case. |
 | Trailers and extras | A dedicated extras browser and trailer playback flow. | Jellyfin exposes local extras. Plex can also supply subscription-dependent online extras. |
 | Playback speed | Faster/slower playback controls. | Requires decoder capabilities as well as shared controls. |
-| Live TV guide and DVR | Schedule browsing, favorite-channel controls, and recording scheduling. Current channel playback already works. | Both backends need guide and recording operations. Existing recordings can play from ordinary libraries. |
-| Music discovery and lyrics | Lyrics display and related-track mixes. | Jellyfin Instant Mix and Plexamp radio/sonic features are different services. Whole-library shuffle is already implemented. |
+| Live TV schedule grid and DVR | A full schedule grid, browsing beyond the current/next display, favorite-channel controls, and recording scheduling. The channel-list guide is implemented. | Both adapters implement `media.ProgramGuide`. DVR operations need separate capabilities. Existing recordings can play from ordinary libraries. |
+| Music discovery and lyrics | Lyrics display and related-track mixes. | Jellyfin Instant Mix works through remote commands but has no local action. Plexamp radio/sonic features are different services. Whole-library shuffle is already implemented. |
 | Offline media | Downloaded media and offline browsing. Artwork caching does not provide offline playback. | Available in selected clients in each ecosystem, not every client. |
 | Original-video playback | A Direct Play option for video. Both current adapters prepare CRT-sized transcodes. | Decoder and output constraints determine feasibility. Native HD/HDR output is outside the CRT goal. |
 
@@ -37,7 +41,7 @@ Plex documents [library controls](https://support.plex.tv/articles/200392126-usi
 ## Jellyfin-specific gaps and limits
 
 - **SyncPlay:** MiSTerVision can receive ordinary Jellyfin remote commands, but cannot join a synchronized multi-client viewing group. SyncPlay adds clock coordination and group buffering behavior. It is a separate feature, not a missing remote-control button. See [SyncPlay operations](https://typescript-sdk.jellyfin.org/classes/generated-client.SyncPlayApi.html).
-- **Favorites and Instant Mix:** Both exist in Jellyfin's client UI. MiSTerVision neither manages favorites nor requests Instant Mix. These are useful candidates for shared browsing/music controls with optional provider capabilities.
+- **Favorites and local Instant Mix controls:** MiSTerVision has no favorites management or local Instant Mix action. Jellyfin remote `PlayInstantMix` commands already resolve a server-generated mix and start the shared queue. A local action can reuse that path.
 - **Sign-in alternatives:** Saved Quick Connect users work. A general username/password entry flow is not implemented. An on-screen server-address editor is also missing for both providers. These are optional setup additions, not unfinished user switching.
 - **Live TV alternate audio:** MiSTerVision does not expose it for Jellyfin. Earlier testing found the desired alternate stream unavailable through the negotiated Jellyfin path. The user accepted that limitation. Do not promise a client-only fix or treat it as a reason to modify Jellyfin.
 - **Books, comics, and audiobooks:** Intentionally excluded from the carousel under the current CRT scope. They are not planned parity work.
@@ -65,13 +69,13 @@ Live TV timeshifting is absent from both MiSTerVision adapters. Plex provides a 
 
 Shared UX belongs in the browser and renderer. Provider-specific requests belong in adapters behind small capability interfaces. Optional capabilities must allow one provider to expose a feature without forcing an inaccurate equivalent on the other. SyncPlay is distinct from ordinary remote control, and favorites are distinct from cloud watchlists. These boundaries describe how an addition could fit, not a commitment to build it.
 
-## Live TV guide approach
+## Live TV guide status
 
-The agreed starting point is to enrich the existing channel list with current-program titles. The selected channel can show its program time range and next program. Selecting a channel must continue to start playback immediately. Missing guide data must leave the channel list usable.
+The first guide increment shipped in v1.4.0. Channel rows show current-program titles. The information panel shows a channel logo and current/next programs with local times. Selecting a channel starts playback directly. Missing guide data leaves the panel blank and does not block tuning.
 
-Jellyfin and Plex adapters would supply shared program records through an optional guide interface alongside `media.LiveTV`. Requests would cover a bounded time window. Channel identifiers, schedule formats, and server requests stay in the adapters. The browser and renderer share the presentation. Schedule data must already be available on the server.
+Both adapters implement the optional `media.ProgramGuide` interface. The browser requests a bounded six-hour window, refreshes once a minute while browsing, and refreshes on every return to the list while retaining valid cached data. Provider identifiers and requests stay inside the adapters. The UI and cache behavior are shared.
 
-A full schedule grid, channel favorites, DVR scheduling, and timeshifting are separate additions. This approach does not assign a delivery date or priority to other gaps.
+Plex guide information has been tested with the maintainer’s server on MiSTer. Jellyfin has automated adapter coverage, but its guide display still needs validation against a Jellyfin server with populated listings. A full schedule grid, channel favorites, DVR scheduling, and timeshifting remain separate gaps.
 
 ## Status and scope
 
