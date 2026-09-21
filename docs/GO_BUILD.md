@@ -48,7 +48,9 @@ This command rebuilds both ARM executables, records their metadata and checksums
 | `mistervision-v1.4.1-progressive.zip` | Both binaries, interlaced core, launcher with a progressive first-install preset, examples, notices, metadata, and checksums. Also used for automatic updates. |
 | `mistervision-v1.4.1-interlaced.zip` | The same files with an interlaced first-install preset in the launcher. |
 | `mistervision-v1.4.1-source.tar.gz` | Committed project source plus the exact upstream MPlayer and interlaced Menu source archives. Patches and build recipes remain under `docker/`. |
-| `SHA256SUMS` | Checksums for both downloadable archives. |
+| `SHA256SUMS` | Checksums for the two ZIPs and source archive. |
+
+Recommend the progressive ZIP for a first installation. It retains the current display mode and includes the interlaced core. The interlaced ZIP is an optional first-launch preset for compatible CRT setups, not a different build. Keep it disabled for ordinary HDMI monitors. See [display setup](GO_DISPLAY.md#choose-an-output).
 
 The ZIP contains only example configuration files. It contains no active `jellyfin.conf`, `settings.json`, sign-in, preferences, or caches. Read its `INSTALL.txt` before copying files. Both ZIPs include the pinned interlaced core. The first-launch preset creates `settings.json` only if no current or legacy configuration exists. Neither reinstalling nor updating replaces active settings. `tools/interlaced-core.json` pins the upstream core and complete source archive. Release builds download missing components, verify their hashes, and fail on corrupt cached files.
 
@@ -60,7 +62,7 @@ The [release workflow](../.github/workflows/release.yml) runs when a version tag
 
 Before publishing, review the notes, require successful Go validation and downloaded-asset verification, and test the paired binaries on MiSTer. Publishing requires a manual action on GitHub. Draft or private releases are unavailable to the application's unauthenticated checker.
 
-The [latest release](https://github.com/trentnix/mistervision/releases/latest) provides both archives and their checksums. Bundles include `mistervision/UPDATE_FORMAT` with transaction format `1`. The updater rejects older or incompatible formats before replacing any files.
+The [latest release](https://github.com/trentnix/mistervision/releases/latest) provides both installation ZIPs, the source archive, and their checksums. Bundles include `mistervision/UPDATE_FORMAT` with transaction format `1`. The updater rejects older or incompatible formats before replacing any files.
 
 ## Install on MiSTer
 
