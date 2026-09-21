@@ -11,7 +11,8 @@ import (
 type browsingTypeface struct {
 	cache      *primaryTextCache
 	scaleY     float32
-	bodyHeight int // Logical body font height. Zero uses the standard seven pixels.
+	bodyHeight int  // Logical body font height. Zero uses the standard seven pixels.
+	bold       bool // Apply heading weight without increasing the text size.
 }
 
 func (f *browsingTypeface) key(text string, width, scale int, color uint32) primaryTextKey {
@@ -22,11 +23,15 @@ func (f *browsingTypeface) key(text string, width, scale int, color uint32) prim
 	}
 	size := max(8, int(float32(height)/f.scaleY+0.5))
 	return primaryTextKey{text: text, width: width, size: size, lines: 1,
-		color: color, scaleY: f.scaleY, bold: scale > 1}
+		color: color, scaleY: f.scaleY, bold: f.bold || scale > 1}
 }
 
 func (f *browsingTypeface) Measure(text string, scale int) int {
-	return labelWidth(f.cache.image(f.key(text, 4096, scale, 0xffffff)))
+	im := f.cache.image(f.key(text, 4096, scale, 0xffffff))
+	if im == nil {
+		return 0
+	}
+	return im.Bounds().Dx()
 }
 
 func (f *browsingTypeface) Rasterize(text string, width, scale int, color uint32) (*image.NRGBA, int) {
@@ -42,3 +47,11 @@ func (s *sceneCache) typeface(w, h int) ui.Typeface {
 }
 
 var _ ui.Typeface = (*browsingTypeface)(nil)
+
+func (f *browsingTypeface) RasterizeDense(text string, width, scale int, color uint32, sx, sy float64) (image.Image, int) {
+	im := f.cache.denseImage(f.key(text, width, scale, color), sx, sy)
+	if im == nil {
+		return nil, -3 * scale
+	}
+	return im, -3 * scale
+}

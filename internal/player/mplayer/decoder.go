@@ -2,7 +2,6 @@
 package mplayer
 
 import (
-	"errors"
 	"fmt"
 	"io"
 
@@ -19,6 +18,8 @@ type Decoder struct {
 	Device string
 	// Width and Height are physical output dimensions. Validate checks supported modes.
 	Width, Height int
+	// DisplayAspect is the screen width/height ratio. Zero retains the legacy 4:3 fit.
+	DisplayAspect float64
 	// Picture selects the initial video fit.
 	Picture player.PictureMode
 
@@ -56,6 +57,9 @@ func (d Decoder) Args(item media.Item, source string) []string {
 	}
 	dar := player.DisplayAspectRatio(item)
 	filter := fmt.Sprintf("mistervision=%d:%d:%.9f:%d", d.Width, d.Height, dar, d.Picture)
+	if d.DisplayAspect > 0 {
+		filter += fmt.Sprintf(":%.9f", d.DisplayAspect)
+	}
 
 	// Match the C player's audio-clock correction. Recorded video smooths ALSA
 	// delay measurements. Live TV reacts sooner to broadcast timing changes.
@@ -120,11 +124,15 @@ func (d Decoder) SetPicture(c player.Control, mode player.PictureMode, request i
 	return err
 }
 
-// Validate requires a 640-pixel framebuffer with 240, 288, 480, or 576 lines.
+// Validate bounds native video allocations. Startup applies the configured
+// framebuffer ceiling before launch. Audio does not use fbdev.
 // It does not open the framebuffer or verify the installed player.
 func (d Decoder) Validate(item media.Item) error {
-	if d.Width != 640 || (d.Height != 240 && d.Height != 288 && d.Height != 480 && d.Height != 576) {
-		return errors.New("MiSTer playback currently requires a 640-pixel PAL or NTSC framebuffer")
+	if item.Type == "Audio" {
+		return nil
+	}
+	if d.Width < 120 || d.Width > 1920 || d.Height < 120 || d.Height > 1080 || d.Width%2 != 0 || d.Height%2 != 0 {
+		return &player.UnsupportedDisplayError{Width: d.Width, Height: d.Height}
 	}
 	return nil
 }

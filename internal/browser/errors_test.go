@@ -10,6 +10,7 @@ import (
 	"mistervision/internal/jellyfin"
 	"mistervision/internal/media"
 	"mistervision/internal/playback"
+	"mistervision/internal/player"
 	"mistervision/internal/plex"
 )
 
@@ -63,6 +64,7 @@ func TestPlaybackFailureCategories(t *testing.T) {
 		err          error
 		header, body string
 	}{
+		{&player.UnsupportedDisplayError{Width: 1920, Height: 1080}, "Unsupported display mode", "1920x1080 framebuffer"},
 		{playback.ErrNotStarted, "Playback didn't start", "could not start"},
 		{playback.ErrInterrupted, "Playback interrupted", "stopped unexpectedly"},
 		{playback.ErrProgress, "Progress update failed", "resume position"},

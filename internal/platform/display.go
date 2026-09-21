@@ -27,4 +27,6 @@ type Display interface {
 // Output names an optional raw frame dump and is only valid in headless mode.
 type Options struct {
 	Device, Headless, Output string
+	// AspectRatio is auto, 4:3, or 16:9. Empty selects auto.
+	AspectRatio string
 }

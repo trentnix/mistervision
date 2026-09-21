@@ -67,6 +67,8 @@ flowchart TD
     Headless --> Terminal["ghostty_harness.py: terminal upload"]
 ```
 
+`RasterRenderer` keeps logical layout dimensions separate from the browsing raster. `ui.Canvas` maps drawing coordinates onto the raster, and the font renderer draws outlines at that density without changing line breaks or visible rows. `platform.RasterPresenter` supplies the preferred browsing raster and accepts sized frames. Native CRT rasters and video overlays keep their existing resolution.
+
 `RasterRenderer` owns `animationState`, `sceneCache`, and reusable frame buffers. Those are supporting state inside the shared renderer. The output split occurs after drawing. During video, each output combines the shared overlay with its decoder's picture as described below.
 
 | Boundary | Contract |
@@ -75,11 +77,12 @@ flowchart TD
 | [`rendering.Scene`](../internal/rendering/scene.go) / [`Content`](../internal/rendering/content.go) | Copied presentation state and borrowed immutable content. No navigation history or request policy. |
 | [`videoout.Output`](../internal/videoout/output.go) | Geometry, cadence, presentation, decoder acquisition/release, clearing, and backend cleanup. |
 | [`platform.Presenter`](../internal/platform/display.go) | Synchronous presentation of exactly one logical BGRX frame. |
+| [`platform.RasterPresenter`](../internal/platform/raster.go) | Optional sized browsing frames and preferred raster dimensions. Layout stays logical. |
 | `platform.Display` | Presenter plus resource ownership through idempotent `Close`. |
 
 The browser must present or copy a renderer's frame before its next render call. Renderers must not mutate or retain borrowed content slices or detail pointers. Immutable artwork can be retained for caching. Outputs must consume pixels before `Present` returns or copy them. The application closes outputs before closing their underlying display.
 
-`videoout.Frame.UI` is a full BGRX frame. `Overlay` is straight-alpha BGRA. `Video` remains true during loading and seeking, even before a decoder owns the display. For browsing, photos, and music, outputs present UI directly. For video, they apply the overlay through their own composition path.
+`videoout.Frame.UI` is a full BGRX frame. `UIWidth` and `UIHeight` describe its raster size. Zero values retain the logical-size contract. `Overlay` is straight-alpha BGRA. `Video` remains true during loading and seeking, even before a decoder owns the display. For browsing, photos, and music, outputs present UI directly. For video, they apply the overlay through their own composition path.
 
 ## Output implementations
 

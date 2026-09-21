@@ -69,47 +69,40 @@ def tar_contents(archive):
 def verify(directory, version, revision, repo=ROOT):
     """Verify installation and source archives against checksums and source at the expected Git revision."""
     require(re.fullmatch(VERSION, version), 'invalid release version')
-    names = {f'mistervision-{version}-{preset}.zip' for preset in ('progressive', 'interlaced')} | {f'mistervision-{version}-source.tar.gz'}
+    names = {f'mistervision-{version}-progressive.zip', f'mistervision-{version}-source.tar.gz'}
     outer = checksums((directory / 'SHA256SUMS').read_bytes())
-    require(set(outer) == names, 'release must contain checksums for exactly the three archives')
+    require(set(outer) == names, 'release must contain checksums for exactly the two archives')
     for name, expected in outer.items():
         path = directory / name
         require(path.stat().st_size <= MAX_EXPANDED, 'archive exceeds size limit')
         with path.open('rb') as source:
             require(hashlib.file_digest(source, 'sha256').hexdigest() == expected, f'checksum mismatch: {name}')
-    for preset in ('progressive', 'interlaced'):
-        with zipfile.ZipFile(directory / f'mistervision-{version}-{preset}.zip') as archive:
-            entries = archive.infolist()
-            require(len(entries) <= 128 and sum(e.file_size for e in entries) <= 128 << 20, 'ZIP exceeds limits')
-            require(len({e.filename for e in entries}) == len(entries), 'duplicate ZIP entry')
-            for entry in entries:
-                require(safe_name(entry.filename) and stat.S_ISREG(entry.external_attr >> 16), 'unsafe ZIP entry')
-            sums = checksums(archive.read('SHA256SUMS'))
-            require(set(sums) == set(archive.namelist()) - {'SHA256SUMS'}, 'incomplete ZIP checksums')
-            for name, expected in sums.items():
-                require(digest(archive.read(name)) == expected, f'bundled checksum mismatch: {name}')
-            require(archive.read('mistervision/VERSION') == (version + '\n').encode(), 'version mismatch')
-            require(archive.read('mistervision/UPDATE_FORMAT') == b'1\n', 'unsupported updater format')
-            build = archive.read('mistervision/BUILD.txt').decode()
-            require(build.startswith(f'Version: {version}\nRevision: {revision}\n'), 'build revision mismatch')
-            for name in ('mistervision/mistervision', 'mistervision/mplayer-arm'):
-                data = archive.read(name)
-                require(len(data) >= 52 and data[:6] == b'\x7fELF\x01\x01'
-                        and data[18:20] == b'\x28\x00' and data[16:18] in (b'\x02\x00', b'\x03\x00'), 'invalid ARM executable')
-            for name in ('mistervision/mistervision', 'mistervision/mplayer-arm', 'Scripts/MiSTerVision.sh'):
-                require((archive.getinfo(name).external_attr >> 16) & 0o777 == 0o755, 'missing executable permissions')
-            manifest = json.loads(subprocess.check_output(['git', 'show', f'{revision}:tools/interlaced-core.json'], cwd=repo))
-            require(digest(archive.read('mistervision/InterlacedMenu.rbf')) == manifest['files']['InterlacedMenu.rbf']['sha256'], 'interlaced core checksum mismatch')
-            launcher = archive.read('Scripts/MiSTerVision.sh')
-            marker = b'MISTERVISION_INITIAL_INTERLACED=' + (b'1' if preset == 'interlaced' else b'0')
-            require(launcher.count(marker) == 1, 'incorrect installation preset')
-            contents = {name: archive.read(name) for name in sums if name != 'Scripts/MiSTerVision.sh'}
-            if preset == 'progressive':
-                common = contents
-                progressive_launcher = launcher
-            else:
-                require(contents == common, 'installation packages differ beyond their preset')
-                require(launcher.replace(b'MISTERVISION_INITIAL_INTERLACED=1', b'MISTERVISION_INITIAL_INTERLACED=0') == progressive_launcher, 'installation launchers differ beyond their preset')
+    with zipfile.ZipFile(directory / f'mistervision-{version}-progressive.zip') as archive:
+        entries = archive.infolist()
+        require(len(entries) <= 128 and sum(e.file_size for e in entries) <= 128 << 20, 'ZIP exceeds limits')
+        require(len({e.filename for e in entries}) == len(entries), 'duplicate ZIP entry')
+        for entry in entries:
+            require(safe_name(entry.filename) and stat.S_ISREG(entry.external_attr >> 16), 'unsafe ZIP entry')
+        sums = checksums(archive.read('SHA256SUMS'))
+        require(set(sums) == set(archive.namelist()) - {'SHA256SUMS'}, 'incomplete ZIP checksums')
+        for name, expected in sums.items():
+            require(digest(archive.read(name)) == expected, f'bundled checksum mismatch: {name}')
+        require(archive.read('mistervision/VERSION') == (version + '\n').encode(), 'version mismatch')
+        require(archive.read('mistervision/UPDATE_FORMAT') == b'1\n', 'unsupported updater format')
+        build = archive.read('mistervision/BUILD.txt').decode()
+        require(build.startswith(f'Version: {version}\nRevision: {revision}\n'), 'build revision mismatch')
+        for name in ('mistervision/mistervision', 'mistervision/mplayer-arm'):
+            data = archive.read(name)
+            require(len(data) >= 52 and data[:6] == b'\x7fELF\x01\x01'
+                    and data[18:20] == b'\x28\x00' and data[16:18] in (b'\x02\x00', b'\x03\x00'), 'invalid ARM executable')
+        for name in ('mistervision/mistervision', 'mistervision/mplayer-arm', 'Scripts/MiSTerVision.sh'):
+            require((archive.getinfo(name).external_attr >> 16) & 0o777 == 0o755, 'missing executable permissions')
+        manifest = json.loads(subprocess.check_output(['git', 'show', f'{revision}:tools/interlaced-core.json'], cwd=repo))
+        require(digest(archive.read('mistervision/InterlacedMenu.rbf')) == manifest['files']['InterlacedMenu.rbf']['sha256'], 'interlaced core checksum mismatch')
+        launcher = archive.read('Scripts/MiSTerVision.sh')
+        require(launcher.count(b'MISTERVISION_INITIAL_INTERLACED=0') == 1
+                and b'MISTERVISION_INITIAL_INTERLACED=1' not in launcher,
+                'launcher must default to non-interlaced output')
     prefix = f'mistervision-{version}/'
     committed = subprocess.check_output(['git', 'archive', '--format=tar', f'--prefix={prefix}', revision], cwd=repo)
     with tarfile.open(fileobj=io.BytesIO(committed)) as archive:
@@ -184,7 +177,6 @@ def main():
                 subprocess.run(['gh', 'release', 'download', args.version, '--repo', 'trentnix/mistervision',
                                 '--dir', str(directory), '--pattern', 'SHA256SUMS', '--pattern',
                                 f'mistervision-{args.version}-progressive.zip', '--pattern',
-                                f'mistervision-{args.version}-interlaced.zip', '--pattern',
                                 f'mistervision-{args.version}-source.tar.gz'], check=True, timeout=180)
             verify(directory, args.version, revision)
             env = dict(os.environ, MISTERVISION_VERIFY_ARCHIVE=str(directory / f'mistervision-{args.version}-progressive.zip'))

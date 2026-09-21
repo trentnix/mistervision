@@ -58,6 +58,6 @@ func TestSceneCacheMatchesFreshFrames(t *testing.T) {
 
 // Supply explicit animation coordinates to compare cached and uncached pixels.
 func renderCached(r *RasterRenderer, w, h int, m Scene, setup SetupPresentation, art Artwork, artError string, anim Animation, now time.Time) []byte {
-	r.prepare(w, h)
+	r.prepare(w, h, w, h)
 	return renderScene(r.canvas, &r.cache, testScene(m, PlaybackPresentation{}, setup, art, artError, now), anim)
 }

@@ -70,8 +70,9 @@ def display_cells(
     rows: int,
     pixel_width: int = 0,
     pixel_height: int = 0,
+    aspect: float = DISPLAY_ASPECT,
 ) -> tuple[int, int]:
-    """Fit MiSTerVision's non-square pixels into a physical 4:3 rectangle."""
+    """Fit the output into its display aspect ratio, including non-square CRT pixels."""
     columns = max(columns, 1)
     rows = max(rows, 1)
 
@@ -84,14 +85,14 @@ def display_cells(
         cell_height = 2.0
 
     width_at_full_columns = columns * cell_width
-    image_height_pixels = width_at_full_columns / DISPLAY_ASPECT
+    image_height_pixels = width_at_full_columns / aspect
     fitted_rows = max(1, round(image_height_pixels / cell_height))
 
     if fitted_rows <= rows:
         return columns, fitted_rows
 
     height_at_full_rows = rows * cell_height
-    image_width_pixels = height_at_full_rows * DISPLAY_ASPECT
+    image_width_pixels = height_at_full_rows * aspect
     fitted_columns = max(1, round(image_width_pixels / cell_width))
     return min(fitted_columns, columns), rows
 
@@ -230,6 +231,7 @@ class GhosttyPresenter:
             rows,
             pixel_width,
             pixel_height,
+            framebuffer_aspect(self.width, self.height),
         )
         rgb = bgrx_to_rgb(frame, self.width, self.height)
 
@@ -248,11 +250,30 @@ def next_frame_deadline(previous: float, now: float, interval: float) -> float:
     return deadline
 
 
+def framebuffer_size(value: str) -> tuple[int, int]:
+    """Parse a bounded physical framebuffer size for the native headless adapter."""
+    try:
+        width, height = (int(part) for part in value.split("x"))
+    except ValueError:
+        raise argparse.ArgumentTypeError("framebuffer must be WIDTHxHEIGHT") from None
+    if not (1 <= width <= 8192 and 1 <= height <= 8192 and width * height * 4 <= 128 * 1024 * 1024):
+        raise argparse.ArgumentTypeError("framebuffer exceeds the adapter's size limits")
+    return width, height
+
+
+def framebuffer_aspect(width: int, height: int) -> float:
+    """CRT rasters use 4:3 display pixels. Other previews use square pixels."""
+    if width == 640 and height in (240, 288, 480, 576):
+        return DISPLAY_ASPECT
+    return width / height
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Navigate MiSTerVision inside Ghostty using the desktop harness."
     )
     mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--framebuffer", type=framebuffer_size, help="physical framebuffer size, for example 640x480 or 1920x1080")
     mode.add_argument("--ntsc", action="store_true", help="use the 640x240 layout")
     mode.add_argument("--pal", action="store_true", help="use the 640x288 layout (default)")
     parser.add_argument(
@@ -266,6 +287,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="compatibility flag (Go is always used)",
     )
+    parser.add_argument("--mister-display-check", action="store_true", help="reproduce native MiSTer playback geometry checks (requires --inline-video)")
     parser.add_argument("--inline-video", action="store_true", help="play video inside Ghostty using libmpv (requires --browse)")
     parser.add_argument("--browse", action="store_true", help="browse the configured media server with the Go client")
     parser.add_argument("--demo", action="store_true", help="browse a local mock server with the Go client")
@@ -290,6 +312,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help="run even when TERM does not identify Ghostty",
     )
     args = parser.parse_args(argv)
+    if args.mister_display_check and not args.inline_video:
+        parser.error("--mister-display-check requires --inline-video")
     if args.fps is None:
         args.fps = VIDEO_FPS if args.inline_video else DEFAULT_FPS
     if args.inline_video and (not args.browse or args.demo):
@@ -378,8 +402,7 @@ def run(args: argparse.Namespace) -> int:
         print(f"MiSTerVision host binary not found: {binary}", file=sys.stderr)
         return 2
 
-    width = 640
-    height = 240 if args.ntsc else 288
+    width, height = args.framebuffer or (640, 240 if args.ntsc else 288)
     frame_size = width * height * 4
     frame_interval = 1.0 / args.fps
     args.log.parent.mkdir(parents=True, exist_ok=True)
@@ -405,6 +428,8 @@ def run(args: argparse.Namespace) -> int:
                 command += ["-browse", "-audio-player", str(Path(__file__).with_name("video_player.py").resolve())]
                 if args.inline_video:
                     command += ["-terminal-player", str(Path(__file__).with_name("video_player.py").resolve())]
+                if args.mister_display_check:
+                    command.append("-mister-display-check")
                 config, state_dir = args.config, args.state_dir
                 if args.demo:
                     config = start_demo(Path(temp_dir), cleanup)

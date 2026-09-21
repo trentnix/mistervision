@@ -22,7 +22,10 @@
     "image": ""
   },
   "display": {
-    "interlaced": false
+    "interlaced": false,
+    "aspect_ratio": "auto",
+    "framebuffer_max_width": 640,
+    "framebuffer_max_height": 480
   },
   "input": {
     "profiles": []

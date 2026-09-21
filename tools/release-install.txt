@@ -1,29 +1,47 @@
 MiSTerVision
 
+Start here
+
+Use the single application package for a first installation. It keeps MiSTer's current display mode and includes the core needed for optional interlaced output. Start with working display settings and the default framebuffer limits. You do not need a connection file for local server discovery.
+
 Install through update_all or Downloader
 
-Register the MiSTerVision database using its INI file to install and update through update_all or Downloader.
+1. Download the database registration ZIP from https://github.com/theypsilon/MultiDatabases_MiSTer/tree/main/mister-vision.
+2. Extract downloader_MultiDatabases_mister-vision.ini to /media/fat. Do not replace downloader.ini.
+3. Exit MiSTerVision if it is running, then run update_all or MiSTer Downloader.
 
-Download the database registration ZIP from https://github.com/theypsilon/MultiDatabases_MiSTer/tree/main/mister-vision and extract its INI file to /media/fat. Exit MiSTerVision and run update_all or MiSTer Downloader. This installs the progressive preset, including the interlaced core, and preserves existing settings and sign-in.
+The database installs the application package and preserves existing settings and sign-in. Use the same updater for later releases. About shows release information and directs registered installations to the external updater. To return to built-in updates, remove the registration and restart.
 
-Use the same external updater for later releases. About still checks releases and shows notes, but a recognized MiSTerVision database registration replaces Install with external-update guidance. To return to built-in updates, remove that registration and restart. Do not run an external updater while MiSTerVision is open.
+Manual installation
 
-Manual installation on MiSTer
+1. Download the application ZIP and extract it on your computer.
+2. If MiSTerVision is running, exit it. Keep a backup before upgrading.
+3. Copy Scripts/MiSTerVision.sh to /media/fat/Scripts/ and the contents of mistervision/ to /media/fat/mistervision/. Copy the application and matching MPlayer together. Keep the launcher filename free of spaces.
+4. Preserve existing configuration and state. The archive contains examples but no active settings, credentials, saved state, or caches. Make the launcher and binaries executable if your filesystem requires it.
 
-1. Exit MiSTerVision. Keep a copy of the installed binaries before upgrading.
-2. Choose the progressive ZIP (normally 240p) or interlaced ZIP (normally 480i) for a new installation. Both include the same binaries and core. Extract the ZIP on your computer. Copy Scripts/MiSTerVision.sh to /media/fat/Scripts/ and the contents of mistervision/ to /media/fat/mistervision/ on the SD card.
-3. For local Jellyfin discovery, leave connection settings absent and select a server when the app starts. For Plex discovery, open About, choose Connections, then choose Plex and link your account. For an explicit Jellyfin or Plex address, copy settings.example.json to settings.json in /media/fat/mistervision/ and set server.provider and server.url. Use provider "jellyfin" with port 8096 or "plex" with port 32400, unless your server uses another port.
-4. Keep existing settings and saved state when upgrading. Existing jellyfin.conf remains supported when settings.json has no server section. See the configuration guide in the source bundle or online: https://github.com/trentnix/mistervision/blob/main/docs/GO_CONFIGURATION.md
-5. Make the launcher and both binaries executable if the filesystem requires it.
-6. Launch MiSTerVision from MiSTer's Scripts menu. Approve Jellyfin Quick Connect in a signed-in Jellyfin client, or enter the Plex code at plex.tv/link. For Plex Home, choose a viewer and enter their PIN if requested. Open About to switch viewers or connections later.
+Check your display
 
-When moving from MiSTerFin CRT, exit the old application and back up its directory. Copy its settings, state, caches, optional InterlacedMenu.rbf, and custom assets into /media/fat/mistervision before installing this bundle. Update absolute paths in settings and remove the old Scripts entry after verification. Do not copy old binaries over the new pair. MiSTerFin CRT v1.0.x cannot install this renamed bundle through About.
+MiSTerVision uses the Linux framebuffer. It does not provide independent CRT and HDMI pictures. Choose one output setup before launching.
 
-The archive contains no active settings, credentials, saved state, or caches. Copying its files preserves those files in an existing installation. Stop the application before replacing either binary, and always replace the pair.
+- Analog CRT: retain CRT-compatible timing. MiSTerVision needs the Linux framebuffer on the analog scaler. Adapter-specific timing and sync settings matter.
+- HDMI monitor: keep display.interlaced false and display.aspect_ratio on auto. Keep the default framebuffer limits. The hardware scaler enlarges the smaller framebuffer to the HDMI signal resolution.
+- Optional 480i: first verify browsing and playback on a compatible CRT route, then set display.interlaced true. The included InterlacedMenu.rbf loads automatically. Do not use this mode for an ordinary HDMI monitor.
 
-First installation requires database registration or a manual file copy. Upgrading from v1.4.0 or earlier also requires one installation through Downloader or a manual file copy. The older About page shows the release notes without an Install action because the archive names changed. For installations without a database registration, subsequent compatible releases can be installed from About in a standard MiSTer installation. Review the release notes and select Install. The app restarts automatically after installation. Custom launchers without restart support require reopening the app after an update. Interrupted replacements recover at startup. Keep .update-pending if recovery is needed.
+The single application ZIP retains the -progressive.zip filename for compatibility with existing updaters and Downloader. It includes the optional interlaced core. First launch creates settings.json only when no current or legacy configuration exists. Reinstalling does not change an existing display configuration. Enable interlacing through display.interlaced in settings.json.
 
-The default is progressive output, normally 240p on NTSC. The same binaries support optional 480i. Both packages include the interlaced Menu core. On first launch, the preset creates settings.json only when no current or legacy configuration exists. Existing installations keep their settings and display mode, whichever ZIP is copied. Follow docs/GO_DISPLAY.md in the source bundle, or the online display guide: https://github.com/trentnix/mistervision/blob/main/docs/GO_DISPLAY.md
+See tested adapter settings, output limits, and recovery in docs/GO_DISPLAY.md in the source bundle or https://github.com/trentnix/mistervision/blob/main/docs/GO_DISPLAY.md.
+
+Connect and play
+
+Launch MiSTerVision from Scripts. For Jellyfin, select a discovered server and approve its Quick Connect code in a signed-in client. For Plex, open About, choose Connections, then Plex. Approve the code at https://plex.tv/link, choose a viewer if offered, and select a server.
+
+For a fixed or remote address, add server.provider and server.url to settings.json, preserving other settings. Use settings.example.json as a reference. The configuration guide covers saved connections and legacy settings: https://github.com/trentnix/mistervision/blob/main/docs/GO_CONFIGURATION.md.
+
+Updates and older installations
+
+Manual installations use About -> View release -> Install. The standard launcher restarts the app after successful installation. Custom launchers without restart support require reopening it. Updates preserve settings and state. Interrupted replacements recover at startup. Keep .update-pending if recovery is needed.
+
+First installation and upgrades from v1.4.0 or earlier require Downloader or a manual file copy. Older About installers cannot install these renamed archives. When moving from MiSTerFin CRT, back up the old directory and follow https://github.com/trentnix/mistervision/blob/main/docs/GO_BUILD.md#moving-from-misterfin-crt before installing. Do not copy old binaries over the new pair.
 
 Checksums and source
 

@@ -112,7 +112,12 @@ func runBrowser(ctx context.Context, d platform.Display, o launchOptions, trace 
 		config.ConnectionID = id
 		config.Navigation = navigation[id]
 		config.Connector = catalog.connectors[catalog.selected]
-		err := browser.Run(ctx, config, player, video, rendering.NewRenderer(), feedback, keys)
+		rw, rh := platform.RasterSize(d)
+		renderer := rendering.NewRendererForRaster(rw, rh)
+		if _, ok := d.(platform.FullRasterPresenter); ok {
+			renderer.SetDisplayAspect(o.displayAspect)
+		}
+		err := browser.Run(ctx, config, player, video, renderer, feedback, keys)
 		var change *connection.Change
 		if !errors.As(err, &change) {
 			return err

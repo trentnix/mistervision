@@ -8,7 +8,7 @@ import (
 )
 
 func subtitle(i media.Item) (string, uint32) {
-	color := uint32(0x585858)
+	color := uint32(dimColor)
 	switch i.Type {
 	case "TvChannel", "LiveTvChannel":
 		if i.CurrentProgram.Name != "" {

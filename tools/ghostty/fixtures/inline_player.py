@@ -17,12 +17,12 @@ def main():
     parser = argparse.ArgumentParser()
     for name in ("controls", "status", "zoom-4-3", "captions"):
         parser.add_argument("--" + name, action="store_true")
-    for name in ("output", "width", "height"):
+    for name in ("output", "width", "height", "display-aspect"):
         parser.add_argument("--" + name)
     args = parser.parse_args()
     output = Path(args.output)
     record_picture(output, args.zoom_4_3)
-    output.write_bytes(bytes([23]) * 640 * 240 * 4)
+    output.write_bytes(bytes([23]) * int(args.width) * int(args.height) * 4)
     print("ANS_TIME_POSITION=2", flush=True)
     if args.captions:
         print("ANS_CAPTION_TEXT=" + b"Live caption text".hex(), flush=True)

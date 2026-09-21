@@ -67,7 +67,7 @@ func TestListSelectionBalancesVisibleText(t *testing.T) {
 
 func TestHomeAndLibraryRowsUseSameTypography(t *testing.T) {
 	for _, height := range []int{240, 288} {
-		p := screenPainter{width: 640, height: height, cache: &sceneCache{}}
+		p := screenPainter{canvas: ui.New(640, height), width: 640, height: height, cache: &sceneCache{}}
 		item := media.Item{Name: "Movies", Type: "Movie", RunTimeTicks: 67 * 60 * 10000000}
 		title, _ := p.listRowText(item, 300, true, false)
 		p.scene.Root = true

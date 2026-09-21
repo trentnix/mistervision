@@ -8,6 +8,7 @@ import (
 
 	"mistervision/internal/media"
 	"mistervision/internal/playback"
+	"mistervision/internal/player"
 	"mistervision/internal/rendering"
 )
 
@@ -45,7 +46,10 @@ func requestFailure(operation string, err error) string {
 // playback. A fresh attempt clears failures, but reporting warnings retain their deadline.
 func (s *browserSession) showPlaybackError(err error) {
 	header, text := titlePlaybackNotStarted, requestFailure(messageStreamFailed, err)
+	var display *player.UnsupportedDisplayError
 	switch {
+	case errors.As(err, &display):
+		header, text = titleUnsupportedDisplay, fmt.Sprintf(messageUnsupportedDisplay, display.Width, display.Height)
 	case errors.Is(err, playback.ErrPlayerUnavailable):
 		text = messagePlayerUnavailable
 	case errors.Is(err, playback.ErrTrackUnavailable):

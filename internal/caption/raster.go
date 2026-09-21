@@ -22,6 +22,10 @@ func rasterize(lines []shaping.Line, width, size int, scaleY float32) *image.NRG
 
 // rasterMask shares glyph coverage while allowing labels to align left.
 func rasterMask(lines []shaping.Line, width, size int, scaleY float32, centered bool) *image.Alpha {
+	return rasterMaskDensity(lines, width, size, scaleY, centered, 1, 1)
+}
+
+func rasterMaskDensity(lines []shaping.Line, width, size int, scaleY float32, centered bool, sx, sy float32) *image.Alpha {
 	if len(lines) == 0 {
 		return nil
 	}
@@ -38,7 +42,7 @@ func rasterMask(lines []shaping.Line, width, size int, scaleY float32, centered 
 		height += ascent + descent + 4
 	}
 	height += padding
-	mask := image.NewAlpha(image.Rect(0, 0, max(1, width), max(1, int(math.Ceil(float64(height*scaleY))))))
+	mask := image.NewAlpha(image.Rect(0, 0, max(1, int(math.Round(float64(float32(width)*sx)))), max(1, int(math.Round(math.Ceil(float64(height*scaleY))*float64(sy))))))
 	var path vector.Rasterizer
 	path.Reset(mask.Rect.Dx(), mask.Rect.Dy())
 	for index, line := range lines {
@@ -59,7 +63,7 @@ func rasterMask(lines []shaping.Line, width, size int, scaleY float32, centered 
 				for _, segment := range outline.Segments {
 					var points [3]opentype.SegmentPoint
 					for i, p := range segment.Args {
-						points[i] = opentype.SegmentPoint{X: originX + p.X*scale, Y: (originY - p.Y*scale) * scaleY}
+						points[i] = opentype.SegmentPoint{X: (originX + p.X*scale) * sx, Y: (originY - p.Y*scale) * scaleY * sy}
 					}
 					switch segment.Op {
 					case opentype.SegmentOpMoveTo:

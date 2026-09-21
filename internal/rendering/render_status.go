@@ -152,7 +152,7 @@ func (s *sceneCache) setup(c *ui.Canvas, top, height int) {
 		return
 	}
 	if s.setupBase == nil || s.setupBase.Width != c.Width || s.setupBase.Height != c.Height || s.setupLogoHeight != height {
-		s.setupBase = ui.New(c.Width, c.Height)
+		s.setupBase = c.NewLayer()
 		s.setupLogoHeight = height
 		draw(s.setupBase)
 	}

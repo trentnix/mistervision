@@ -6,6 +6,7 @@ import fcntl
 import hashlib
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import pty
@@ -29,6 +30,8 @@ BINARY = Path(os.environ.get("MISTERVISION_TEST_BINARY", str(ROOT / "build/miste
 class Scenario:
     """Explicit settings, server behavior, and player choices for one browser run."""
 
+    framebuffer: str = "640x240"
+    mister_display_check: bool = False
     settings: dict = field(default_factory=dict)
     files: dict = field(default_factory=dict)
     background_image: bool = False
@@ -247,6 +250,8 @@ class BrowserFixture(unittest.TestCase):
                 config_file.write(self.scenario.transcode_profile + "\n")
         self.frame = self.directory / "frame.raw"
         player_args = self.install_player()
+        if self.scenario.mister_display_check:
+            player_args.append("-mister-display-check")
         master, slave = pty.openpty()
         self.master = master
         self.addCleanup(os.close, master)
@@ -272,7 +277,7 @@ class BrowserFixture(unittest.TestCase):
                             "HTTPS_PROXY": "http://127.0.0.1:1", "NO_PROXY": "127.0.0.1,localhost"}
 
         self.process = subprocess.Popen(
-            [str(BINARY), "-browse", "-headless", "640x240", "-output", str(self.frame),
+            [str(BINARY), "-browse", "-headless", self.scenario.framebuffer, "-output", str(self.frame),
              "-config", str(config), "-state-dir", str(self.directory / "state")] + player_args,
             stdin=slave, stdout=self.log, stderr=self.log, preexec_fn=terminal_session,
             # Keep release checks offline. Jellyfin fixtures use loopback HTTP.
@@ -361,7 +366,7 @@ class BrowserFixture(unittest.TestCase):
             before = self.frame.stat()
             data = self.frame.read_bytes()
             after = self.frame.stat()
-            if (len(data) == 640 * 240 * 4 and before.st_size == after.st_size == len(data)
+            if (len(data) == math.prod(map(int, self.scenario.framebuffer.split("x"))) * 4 and before.st_size == after.st_size == len(data)
                     and before.st_mtime_ns == after.st_mtime_ns):
                 return data
             time.sleep(0.005)

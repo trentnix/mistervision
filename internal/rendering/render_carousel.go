@@ -1,9 +1,8 @@
 package rendering
 
 import (
-	"image"
-
 	"mistervision/internal/input/control"
+	"mistervision/internal/ui"
 )
 
 // carousel draws library names over cached artwork strips and returns its controls.
@@ -24,13 +23,13 @@ func (p *screenPainter) carousel() [][]controlHint {
 	}
 	p.homeHeader()
 	centers := make([]float64, len(v.Page.Items))
-	names := make([]*image.RGBA, len(centers))
+	names := make([]*ui.RasterImage, len(centers))
 	for i, item := range v.Page.Items {
 		color := uint32(0xffffff)
 		if i == v.Selected {
 			color = titleColor
 		}
-		names[i] = p.headingText(item.Name, 160, 30, 1, color)
+		names[i] = p.headingText(item.Name, 180, 34, 1, color)
 		if i > 0 {
 			centers[i] = centers[i-1] + float64(labelWidth(names[i-1])+labelWidth(names[i]))/2 + 74
 		}
@@ -46,11 +45,16 @@ func (p *screenPainter) carousel() [][]controlHint {
 			if name != nil {
 				c.Blit(name, x, cy-14, name.Bounds().Dx(), name.Bounds().Dy())
 			}
-			if i == v.Selected && p.scene.LibraryLoading {
-				c.Text(w/2-c.MeasureText("Loading...", 1)/2, cy+12, "Loading...", dimColor, w)
-			} else if i == v.Selected && p.scene.LibraryCount != nil {
-				count := libraryCountText(v.Page.Items[i], *p.scene.LibraryCount)
-				c.Text(w/2-c.MeasureText(count, 1)/2, cy+12, count, dimColor, w)
+			if i == v.Selected {
+				text := ""
+				if p.scene.LibraryLoading {
+					text = "Loading..."
+				} else if p.scene.LibraryCount != nil {
+					text = libraryCountText(v.Page.Items[i], *p.scene.LibraryCount)
+				}
+				if label := p.primaryText(text, w-48, 18, 1, dimColor); label != nil {
+					c.Blit(label, (w-label.Bounds().Dx())/2, cy+12, label.Bounds().Dx(), label.Bounds().Dy())
+				}
 			}
 		}
 	}
@@ -68,7 +72,7 @@ func (p *screenPainter) carousel() [][]controlHint {
 }
 
 // labelWidth treats empty library names as an empty carousel slot.
-func labelWidth(im *image.RGBA) int {
+func labelWidth(im *ui.RasterImage) int {
 	if im == nil {
 		return 0
 	}

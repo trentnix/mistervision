@@ -71,6 +71,23 @@ class LaunchOptionsTests(unittest.TestCase):
         self.assertEqual(args.binary, Path("/tmp/custom-go"))
 
 
+class FramebufferTests(unittest.TestCase):
+    def test_dimensions_and_native_check_are_explicit(self):
+        args = HARNESS.parse_args(["--browse", "--inline-video", "--framebuffer", "1920x1080", "--mister-display-check"])
+        self.assertEqual(args.framebuffer, (1920, 1080))
+        self.assertTrue(args.mister_display_check)
+        for argv in (["--framebuffer", "0x480"], ["--framebuffer", "8192x8192"], ["--framebuffer", "bad"], ["--mister-display-check"], ["--ntsc", "--framebuffer", "640x480"]):
+            with self.subTest(argv=argv), patch("sys.stderr", io.StringIO()), self.assertRaises(SystemExit):
+                HARNESS.parse_args(argv)
+
+    def test_hd_preview_preserves_widescreen_and_crt_pixel_aspect(self):
+        self.assertEqual(HARNESS.framebuffer_aspect(1920,1080), 16/9)
+        for height in (240,288,480,576):
+            self.assertEqual(HARNESS.framebuffer_aspect(640,height), 4/3)
+        self.assertEqual(HARNESS.display_cells(160,90,1920,1080,aspect=16/9), (160,90))
+        self.assertEqual(HARNESS.display_cells(160,90,1920,1080,aspect=4/3), (120,90))
+
+
 class TimingTests(unittest.TestCase):
     def test_upload_cost_does_not_slow_the_presentation_clock(self):
         deadline = 10.0

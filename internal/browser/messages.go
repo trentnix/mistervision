@@ -23,6 +23,8 @@ const (
 
 // Playback failures and nonfatal reporting warnings.
 const (
+	titleUnsupportedDisplay    = "Unsupported display mode"
+	messageUnsupportedDisplay  = "Video playback does not support this %dx%d framebuffer. Use a supported CRT display mode. See the display setup guide."
 	titlePlaybackNotStarted    = "Playback didn't start"
 	titlePlaybackInterrupted   = "Playback interrupted"
 	titleProgressFailed        = "Progress update failed"

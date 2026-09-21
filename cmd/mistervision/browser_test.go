@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"mistervision/internal/media"
 	"os"
 	"path/filepath"
 	"testing"
@@ -23,7 +25,7 @@ func TestBrowserStartupPreservesDecoderDefaults(t *testing.T) {
 	t.Setenv("MISTERVISION_FRAME_OUT", "")
 	mplayer := nativeplayer.Decoder{Width: 640, Height: 480, Device: "/dev/test-fb"}
 	ffplay := desktopplayer.Decoder{}
-	video := inlineplayer.Decoder{Script: "video.py", Output: "frame.raw.video", Width: 640, Height: 480}
+	video := inlineplayer.Decoder{Script: "video.py", Output: "frame.raw.video", Width: 640, Height: 240}
 	audio := inlineplayer.Decoder{Script: "audio.py"}
 	for _, tc := range []struct {
 		name         string
@@ -285,6 +287,37 @@ func TestTargetTimingPreservesCRTAndDefaultsOtherSizes(t *testing.T) {
 		for _, config := range []playback.Config{misterPlayback(launchOptions{}, g), desktopPlayback(launchOptions{}, g)} {
 			if config.Timing != tc.want {
 				t.Errorf("height %d: timing %+v, want %+v", tc.height, config.Timing, tc.want)
+			}
+		}
+	}
+}
+
+func TestDesktopPreviewUsesLogicalFramesAndPhysicalValidation(t *testing.T) {
+	for _, size := range []platform.Geometry{
+		{Width: 640, Height: 240, OutputWidth: 640, OutputHeight: 480},
+		{Width: 640, Height: 288, OutputWidth: 1280, OutputHeight: 720},
+		{Width: 640, Height: 288, OutputWidth: 1920, OutputHeight: 1080},
+		{Width: 640, Height: 288, OutputWidth: 3840, OutputHeight: 2160},
+	} {
+		for _, check := range []bool{false, true} {
+			config := desktopPlayback(launchOptions{terminalPlayer: "helper.py", output: "frame", misterDisplayCheck: check}, size)
+			decoder := config.VideoDecoder.WithPicture(player.PictureZoom43)
+			helper := decoder.(inlineplayer.Decoder)
+			if helper.Width != size.Width || helper.Height != size.Height {
+				t.Fatal("helper received physical geometry")
+			}
+			err := decoder.Validate(media.Item{Type: "Movie"})
+			var display *player.UnsupportedDisplayError
+			if check && size.OutputWidth > 1920 {
+				if !errors.As(err, &display) || display.Width != size.OutputWidth || display.Height != size.OutputHeight {
+					t.Fatalf("lost hardware check: %v", err)
+				}
+			} else if err != nil {
+				t.Fatal(err)
+			}
+			audio, _ := config.AudioDecoder.(player.LevelConfigurer).WithAudioLevels()
+			if err := audio.Validate(media.Item{Type: "Audio"}); err != nil {
+				t.Fatal(err)
 			}
 		}
 	}

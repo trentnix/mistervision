@@ -94,12 +94,18 @@ func Run(ctx context.Context, directory string, args []string) (err error) {
 	if err != nil {
 		return err
 	}
+	return runChild(ctx, args, ActiveEnv+"=1", ownerEnv+"="+owner)
+}
+
+// runChild gives either display supervisor the same cancellation, stream, and
+// updater-exit behavior. The caller restores hardware after this function returns.
+func runChild(ctx context.Context, args []string, environment ...string) error {
 	executable, err := os.Executable()
 	if err != nil {
 		return err
 	}
 	child := exec.CommandContext(ctx, executable, args...)
-	child.Env = append(os.Environ(), ActiveEnv+"=1", ownerEnv+"="+owner)
+	child.Env = append(os.Environ(), environment...)
 	child.Stdin, child.Stdout, child.Stderr = os.Stdin, os.Stdout, os.Stderr
 	child.Cancel = func() error { return child.Process.Signal(syscall.SIGTERM) }
 	child.WaitDelay = 5 * time.Second

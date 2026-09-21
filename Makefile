@@ -46,7 +46,7 @@ test:
 	python3 -m unittest -v tools/ghostty/test_ghostty_harness.py tools/ghostty/test_video_player.py tools/test_native_overlay.py tools/test_interlaced_console.py tools/test_native_picture.py tools/test_mplayer_timing.py tools/test_native_captions.py tools/test_package_release.py tools/test_verify_release.py tools/test_performance_report.py tools/ghostty/test_endurance_support.py
 
 test-browse: host
-	python3 -m unittest -v tools/ghostty/test_go_browse.py
+	python3 -m unittest -v tools/ghostty/test_go_browse.py tools/ghostty/test_display_geometry.py
 
 # Fast repeated playback/recovery smoke check. Longer runs use --seconds.
 test-endurance: host

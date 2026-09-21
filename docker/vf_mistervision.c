@@ -33,7 +33,7 @@
 
 struct vf_priv_s {
     int width, height, mode, have_frame;
-    double dar, pts, endpts;
+    double dar, display_aspect, pts, endpts;
     mp_image_t *source, *scaled;
     struct SwsContext *scaler[2], *converter[2];
 };
@@ -43,15 +43,22 @@ static int render(vf_instance_t *vf)
 {
     struct vf_priv_s *p = vf->priv;
     mp_image_t *src = p->source;
-    int cw = src->w, ch = src->h, left = 0, top = 0, w = p->width;
-    double par = (double)p->width * 3 / (p->height * 4);
+    int vw = p->width, vh = p->height;
+    int crt = vw == 640 && (vh == 240 || vh == 288 || vh == 480 || vh == 576);
+    if (!crt && p->display_aspect == 0) {
+        vw = p->height * 4 / 3;
+        if (vw > p->width) { vw = p->width; vh = p->width * 3 / 4; }
+    }
+    int cw = src->w, ch = src->h, left = 0, top = 0, w = vw & ~1;
+    double target = p->display_aspect > 0 ? p->display_aspect : 4.0 / 3;
+    double par = p->display_aspect > 0 || crt ? (double)vw / (vh * target) : 1.0;
     int h = ((int)(w / (p->dar * par) + 0.5)) & ~1;
     int zoom = p->mode;
     if (zoom) {
-        if (p->dar > 4.0 / 3 + 0.01) {
-            cw = ((int)(src->w * (4.0 / 3) / p->dar + 0.5)) & ~1;
-        } else if (p->dar < 4.0 / 3 - 0.01) {
-            ch = ((int)(src->h * p->dar / (4.0 / 3) + 0.5)) & ~1;
+        if (p->dar > target + 0.01) {
+            cw = ((int)(src->w * target / p->dar + 0.5)) & ~1;
+        } else if (p->dar < target - 0.01) {
+            ch = ((int)(src->h * p->dar / target + 0.5)) & ~1;
         } else {
             /* A fixed 4/3 enlargement removes common baked-in letterboxing. */
             cw = ((int)(src->w * 0.75 + 0.5)) & ~1;
@@ -63,9 +70,9 @@ static int render(vf_instance_t *vf)
         if (ch > src->h) ch = src->h & ~1;
         left = ((src->w - cw) / 2) & ~1;
         top = ((src->h - ch) / 2) & ~1;
-        h = p->height;
-    } else if (h > p->height) {
-        h = p->height;
+        h = vh & ~1;
+    } else if (h > vh) {
+        h = vh & ~1;
         w = ((int)(h * p->dar * par + 0.5)) & ~1;
     }
     if (w < 2) w = 2;
@@ -190,8 +197,10 @@ static int vf_open(vf_instance_t *vf, char *args)
 {
     struct vf_priv_s *p = calloc(1, sizeof(*p));
     if (!p) return 0;
-    if (!args || sscanf(args, "%d:%d:%lf:%d", &p->width, &p->height, &p->dar, &p->mode) != 4 ||
-        p->width != 640 || (p->height != 240 && p->height != 288 && p->height != 480 && p->height != 576) ||
+    if (!args || sscanf(args, "%d:%d:%lf:%d:%lf", &p->width, &p->height, &p->dar, &p->mode, &p->display_aspect) < 4 ||
+        p->width < 120 || p->width > 1920 || p->height < 120 || p->height > 1080 ||
+        (p->width & 1) || (p->height & 1) ||
+        !isfinite(p->display_aspect) || p->display_aspect < 0 || p->display_aspect > 10 ||
         !isfinite(p->dar) || p->dar < 0.1 || p->dar > 10 || p->mode < 0 || p->mode > 1) {
         free(p);
         return 0;

@@ -5,6 +5,7 @@ package main
 
 // Startup configuration and resource fallbacks.
 const (
+	messageDisplayCheckArguments      = "-mister-display-check requires headless browsing with -terminal-player"
 	messageSavedConnectionUnavailable = "Saved connection is unavailable. Using configured startup."
 	messageSavedConnectionUnreadable  = "Saved connection choice could not be read. Using configured startup."
 	messageDiagnosticsInvalid         = "Check diagnostics settings. Logging is off."

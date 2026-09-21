@@ -130,7 +130,7 @@ Omitted fields use defaults. Preserve other sections when editing. Explicit empt
 | `ui.show_collections`, `ui.show_playlists` | Both `true`. Empty categories stay hidden. | Restore the invalid option to `true`, with a notice and a diagnostic event. |
 | `ui.navigation_sounds` | `enabled: true`, `volume: 10`. | Disable sounds with a notice. Media volume is unchanged. |
 | `background` | Carousel mosaics and item artwork. | Restore normal artwork with a notice. |
-| [`display`](GO_DISPLAY.md) | `interlaced: false`. | Invalid settings stop startup. |
+| [`display`](GO_DISPLAY.md) | `interlaced: false`, `aspect_ratio: "auto"`, `framebuffer_max_width: 640`, `framebuffer_max_height: 480`. Limits apply to non-CRT framebuffer scaling. | Invalid settings stop startup. |
 | [`input`](GO_INPUT.md) | Built-in device bindings. | Invalid settings stop startup. |
 | [`music_visuals`](GO_MUSIC.md) | Starfield, stereo meters enabled. | Invalid settings disable backgrounds. Missing custom assets leave music playable. |
 | [`diagnostics`](GO_DIAGNOSTICS.md) | Off. Legacy `DEBUGLOG` applies only without `server`. `debug.log`, 1 MiB per file. | Disable logging and report the failure. |

@@ -50,6 +50,8 @@ Each line is JSON with a timestamp and event name in `msg`.
 | `playback.preferences-write` | A failed preferences write, retained for retry. No item identifiers or paths. |
 | `diagnostics.dropped` | Events discarded when the writer queue filled. |
 
+A `playback.end` event with `error_kind=unsupported-display` at `stage=decoder-configuration` means native video rejected the framebuffer before contacting the server for playback. Check `application.display` for physical output dimensions and the [framebuffer requirements](GO_DISPLAY.md#hdmi-framebuffer-scaling).
+
 For slow startup, compare request timing, `stream-open`, `decoder-start`, and first-frame feedback. For seeks, follow the new process-local `playback` counter. Cancellation can mean Stop, a superseded seek, or exit, rather than failure. First-frame feedback is not a measurement of light from the CRT.
 
 If picture or track choices disappear after restart, look for `playback.preferences-write` and check that the state directory is writable. A later save retries failed writes, and shutdown makes a final attempt. An unexpected sign-in prompt with `authentication.session-recovered` indicates [damaged saved sign-in](GO_CONFIGURATION.md#saved-sign-in-recovery). Do not share the backup file.

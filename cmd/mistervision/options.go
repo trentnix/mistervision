@@ -9,7 +9,9 @@ import (
 
 // launchOptions contains command-line choices before opening any resources.
 type launchOptions struct {
+	displayAspect                       float64 // Resolved screen aspect, shared by decoder and output.
 	settingsPath                        string
+	misterDisplayCheck                  bool
 	migrateSettings                     bool
 	headless, output, device            string
 	hold                                time.Duration
@@ -26,6 +28,7 @@ type launchOptions struct {
 func parseOptions(args []string) (launchOptions, error) {
 	var o launchOptions
 	flags := flag.NewFlagSet("mistervision", flag.ContinueOnError)
+	flags.BoolVar(&o.misterDisplayCheck, "mister-display-check", false, "apply native MiSTer framebuffer limits to headless inline playback")
 	flags.StringVar(&o.headless, "headless", os.Getenv("MISTERVISION_FB"), "headless output geometry, for example 640x288")
 	flags.StringVar(&o.output, "output", os.Getenv("MISTERVISION_FRAME_OUT"), "headless BGRX raw output path")
 	flags.StringVar(&o.device, "device", "/dev/fb0", "Linux framebuffer device")
@@ -58,6 +61,9 @@ func parseOptions(args []string) (launchOptions, error) {
 	}
 	if o.audioPlayer != "" && (o.headless == "" || !o.browse || o.player != "") {
 		return o, errors.New(messageAudioPlayerArguments)
+	}
+	if o.misterDisplayCheck && o.terminalPlayer == "" {
+		return o, errors.New(messageDisplayCheckArguments)
 	}
 	return o, nil
 }

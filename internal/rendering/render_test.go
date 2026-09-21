@@ -222,7 +222,7 @@ func TestOrganizationMetadataShowsCountsInsteadOfWatched(t *testing.T) {
 			// Jellyfin may supply aggregate user data even for containers.
 			item.UserData.Played = true
 			item.UserData.PlaybackPositionTicks = 10000000
-			if text, color := subtitle(item); text != tc.want || color != 0x585858 {
+			if text, color := subtitle(item); text != tc.want || color != dimColor {
 				t.Errorf("%s: got %q color=%x, want %q", kind, text, color, tc.want)
 			}
 		}
