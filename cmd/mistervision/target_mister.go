@@ -17,10 +17,12 @@ import (
 // misterTarget combines evdev input, the patched MPlayer, and native output.
 // Shared browsing and rendering receive only semantic input and finished frames.
 func misterTarget(d platform.Presenter, o launchOptions, bindings evdev.Config) browserTarget {
+	output := native.New(d, native.OverlayPath)
+	output.DisplayAspect = o.displayAspect
 	return browserTarget{openSound: alsa.Open,
 		activate: bgm.Suspend,
 		player:   misterPlayback(o, d.Geometry()),
-		output:   native.New(d, native.OverlayPath),
+		output:   output,
 		readInput: func(ctx context.Context, log *diagnostics.Log) (<-chan control.Event, <-chan struct{}, error) {
 			return evdev.Read(ctx, bindings, log)
 		},
@@ -30,6 +32,6 @@ func misterTarget(d platform.Presenter, o launchOptions, bindings evdev.Config) 
 // misterPlayback selects the patched MPlayer for audio and video using the
 // physical framebuffer dimensions supplied by the presenter.
 func misterPlayback(o launchOptions, g platform.Geometry) playback.Config {
-	decoder := mplayer.Decoder{Player: o.player, Device: o.device, Width: g.OutputWidth, Height: g.OutputHeight}
+	decoder := mplayer.Decoder{Player: o.player, Device: o.device, Width: g.OutputWidth, Height: g.OutputHeight, DisplayAspect: o.displayAspect}
 	return playback.Config{VideoDecoder: decoder, AudioDecoder: decoder, Timing: crtPlaybackTiming(g.OutputHeight)}
 }

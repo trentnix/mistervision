@@ -8,13 +8,16 @@ import (
 
 // Canvas owns a tightly packed pixel buffer. Ordinary canvases store BGRX,
 // while overlays store straight-alpha BGRA. Drawing is clipped to the canvas.
+// Width and Height are logical layout dimensions. RasterSize describes Pixels.
 // Callers must serialize drawing and must not resize Pixels or change dimensions.
 type Canvas struct {
 	Width, Height int
 	Pixels        []byte
 	// Typeface supplies optional proportional text. Nil uses the bitmap font.
-	Typeface    Typeface
-	transparent bool
+	Typeface       Typeface
+	transparent    bool
+	raster         *Canvas
+	scaleX, scaleY float64
 }
 
 // New allocates a black BGRX canvas. Dimensions must be positive and their
@@ -31,6 +34,11 @@ func NewOverlay(w, h int) *Canvas {
 
 // Rect fills the clipped rectangle with color in 0xRRGGBB format.
 func (c *Canvas) Rect(x, y, w, h int, color uint32) {
+	if c.raster != nil {
+		x, y, w, h = c.rasterBox(x, y, w, h)
+		c.raster.Rect(x, y, w, h, color)
+		return
+	}
 	for yy := max(0, y); yy < min(c.Height, y+h); yy++ {
 		for xx := max(0, x); xx < min(c.Width, x+w); xx++ {
 			i := (yy*c.Width + xx) * 4
@@ -56,6 +64,14 @@ func (c *Canvas) TextScaled(x, y int, s string, color uint32, maxWidth, scale in
 		return
 	}
 	if c.Typeface != nil {
+		if face, ok := c.Typeface.(DenseTypeface); ok && c.raster != nil {
+			sx, sy := c.Density()
+			im, offset := face.RasterizeDense(s, min(c.Width, maxWidth)-x, scale, color, sx, sy)
+			if im != nil {
+				c.Blit(im, x, y+offset, im.Bounds().Dx(), im.Bounds().Dy())
+			}
+			return
+		}
 		im, offset := c.Typeface.Rasterize(s, min(c.Width, maxWidth)-x, scale, color)
 		c.Overlay(im, x, y+offset)
 		return
@@ -141,6 +157,17 @@ func (c *Canvas) Blit(im image.Image, x, y, w, h int) {
 	if im == nil || w <= 0 || h <= 0 {
 		return
 	}
+	if c.raster != nil {
+		if dense, ok := im.(*RasterImage); ok {
+			im = dense.Source
+		}
+		x, y, w, h = c.rasterBox(x, y, w, h)
+		c.raster.Blit(im, x, y, w, h)
+		return
+	}
+	if dense, ok := im.(*RasterImage); ok {
+		im = dense.RGBA
+	}
 	if rgba, ok := im.(*image.RGBA); ok {
 		c.blitRGBA(rgba, x, y, w, h)
 		return
@@ -160,6 +187,11 @@ func (c *Canvas) Blit(im image.Image, x, y, w, h int) {
 // Shade adds black over the clipped rectangle. alpha must be between 0
 // (unchanged) and 255 (black). Overlay canvases also accumulate coverage.
 func (c *Canvas) Shade(x, y, w, h, alpha int) {
+	if c.raster != nil {
+		x, y, w, h = c.rasterBox(x, y, w, h)
+		c.raster.Shade(x, y, w, h, alpha)
+		return
+	}
 	if !c.transparent {
 		// Reuse the same channel transform instead of dividing every pixel on ARM.
 		var shaded [256]byte

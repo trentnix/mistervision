@@ -147,9 +147,26 @@ vscale_mode=0
 vscale_border=0
 ```
 
-`video_mode=0` selects 720p60. Use `video_mode=6` for 1080p60. Replace any existing custom `[Menu]` timing when switching. This example leaves analog output on the core’s native path, which does not display MiSTerVision’s framebuffer. Do not enable the analog scaler with these HD timings on a standard-definition CRT or the Custard.
+`video_mode=0` selects 720p60. Use `video_mode=8` for 1080p60. Replace any existing custom `[Menu]` timing when switching. This example leaves analog output on the core’s native path, which does not display MiSTerVision’s framebuffer. Do not enable the analog scaler with these HD timings on a standard-definition CRT or the Custard.
 
-The development build reduces a non-CRT framebuffer and lets MiSTer’s FPGA scaler enlarge the picture without changing HDMI timing. The default render limit is 640×480. Both tested HDMI modes use a 640×360 framebuffer with a centered 4:3 picture. Higher limits are configurable but require more CPU and memory bandwidth. The defaults have been tested at 720p and 1080p through an HDMI-to-DVI adapter. See [framebuffer settings and test scope](docs/GO_DISPLAY.md#hdmi-framebuffer-scaling).
+The development build reduces a non-CRT framebuffer and lets MiSTer’s FPGA scaler enlarge the picture without changing HDMI timing. The default render limit is 640×480. Both tested HDMI modes use a 640×360 framebuffer. Browsing stays centered at 4:3. Text and artwork use the available browsing raster without changing menu layout or visible rows. With the new automatic aspect setting, video uses the full widescreen output without stretching the source. Higher limits are configurable but require more CPU and memory bandwidth for browsing and playback. The application does not yet switch to a smaller framebuffer when video starts. The defaults have been tested at 720p and 1080p through an HDMI-to-DVI adapter. See [framebuffer settings and test scope](docs/GO_DISPLAY.md#hdmi-framebuffer-scaling).
+
+### Display aspect ratio
+
+`display.aspect_ratio` defaults to `"auto"`. Auto treats 640×240, 640×288, 640×480, and 640×576 as 4:3 CRT modes. Other sizes use the framebuffer width/height ratio, assuming square pixels. The client cannot reliably identify the connected screen from its connector.
+
+If the screen’s proportions differ from that inference, set `"4:3"` or `"16:9"` in `/media/fat/mistervision/settings.json`:
+
+```json
+{
+  "display": {
+    "interlaced": false,
+    "aspect_ratio": "16:9"
+  }
+}
+```
+
+Preserve other settings and restart the app. This setting describes the whole screen, not the movie. Original preserves the source proportions. Zoom crops to fill the screen, or enlarges an already matching source to remove baked-in borders. Browsing and playback overlays retain their centered 4:3 layout. On a 16:9 screen, 16:9 video fills the output, 4:3 video has side bars, and wider films have top and bottom bars. This changes presentation, not the HDMI timing or simultaneous-output limitations below. Use matching client and MPlayer builds.
 
 ### Why both displays may not show the picture
 

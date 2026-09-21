@@ -19,6 +19,9 @@ import (
 type Config struct {
 	// Interlaced loads the supported standalone core for this application run.
 	Interlaced bool `json:"interlaced"`
+	// AspectRatio describes the screen, independently of the media aspect ratio.
+	// Empty and auto preserve known CRT modes and otherwise assume square pixels.
+	AspectRatio string `json:"aspect_ratio"`
 	// FramebufferMaxWidth and FramebufferMaxHeight bound software rendering on
 	// non-CRT outputs. Zero selects 640 and 480. Native CRT rasters are preserved.
 	FramebufferMaxWidth  int `json:"framebuffer_max_width"`
@@ -37,6 +40,11 @@ func Parse(source settings.Section) (Config, error) {
 	if (c.FramebufferMaxWidth != 0 && (c.FramebufferMaxWidth < 320 || c.FramebufferMaxWidth > 1920)) ||
 		(c.FramebufferMaxHeight != 0 && (c.FramebufferMaxHeight < 240 || c.FramebufferMaxHeight > 1080)) {
 		return Config{}, errors.New("display framebuffer limits must be 320–1920 pixels wide and 240–1080 pixels high")
+	}
+	switch c.AspectRatio {
+	case "", "auto", "4:3", "16:9":
+	default:
+		return Config{}, errors.New("display aspect_ratio must be auto, 4:3, or 16:9")
 	}
 	return c, nil
 }

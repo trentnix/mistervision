@@ -117,3 +117,16 @@ func TestFramebufferFormatValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestAspectConfiguration(t *testing.T) {
+	for _, value := range []string{`{}`, `{"aspect_ratio":"auto"}`, `{"aspect_ratio":"4:3"}`, `{"aspect_ratio":"16:9"}`} {
+		if _, err := Parse(settings.Section{Data: []byte(value)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, value := range []string{`{"aspect_ratio":"wide"}`, `{"aspect_ratio":16}`} {
+		if _, err := Parse(settings.Section{Data: []byte(value)}); err == nil {
+			t.Fatalf("accepted %s", value)
+		}
+	}
+}

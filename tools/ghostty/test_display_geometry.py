@@ -52,7 +52,7 @@ class DisplayGeometryTests(BrowserFixture):
         self.open_movie()
         self.wait_video_ready()
         width, height = map(int, dimensions.split("x"))
-        viewport = width if dimensions == "640x480" else height * 4 // 3
+        viewport = width
         margin = (width - viewport) // 2
         row = bytes(margin * 4) + bytes([23]) * viewport * 4 + bytes(margin * 4)
         clean = row * height
@@ -68,7 +68,7 @@ class DisplayGeometryTests(BrowserFixture):
                 break
             self.assertLess(time.monotonic(), deadline, "controls did not appear")
             time.sleep(.02)
-        # Controls stay inside the same pillarboxed viewport as video.
+        # Overlays do not change video outside their own bounds.
         for y in range(height):
             start = y * width * 4
             self.assertEqual(overlay[start:start+margin*4], bytes(margin*4))
@@ -97,11 +97,11 @@ class DisplayGeometryTests(BrowserFixture):
     def test_1080p_preview_composes_and_clears_controls(self):
         self.exercise_preview("1920x1080")
 
-    def exercise_decoded_preview(self, dimensions):
+    def exercise_decoded_preview(self, dimensions, source_size="320x180", display_aspect="auto"):
         media = subprocess.check_output([
-            "ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=red:s=320x180:r=30",
+            "ffmpeg", "-v", "error", "-f", "lavfi", "-i", f"color=red:s={source_size}:r=30",
             "-t", "8", "-c:v", "mpeg2video", "-f", "mpegts", "pipe:1"], timeout=30)
-        self.start_browser(Scenario(player="decode", framebuffer=dimensions, media=media))
+        self.start_browser(Scenario(player="decode", framebuffer=dimensions, media=media, settings={"display": {"aspect_ratio": display_aspect}}))
         self.open_movie()
         self.wait_event("playback.first-position")
         width, height = map(int, dimensions.split("x"))
@@ -116,10 +116,23 @@ class DisplayGeometryTests(BrowserFixture):
                 break
             self.assertLess(time.monotonic(), deadline, "decoded video did not reach the physical frame")
             time.sleep(.02)
-        # A real 16:9 source retains letterboxing inside the 4:3 UI viewport.
-        self.assertEqual(pixel(frame,width//2,height//32), bytes(3))
-        if width > 640:
-            self.assertEqual(pixel(frame,width//32,height//2), bytes(3))
+        # Check actual decoded pixels, including overrides for non-square displays.
+        sw, sh = map(int, source_size.split("x"))
+        target = 4 / 3 if dimensions == "640x480" else width / height
+        if display_aspect == "4:3":
+            target = 4 / 3
+        elif display_aspect == "16:9":
+            target = 16 / 9
+        top = pixel(frame, width//2, height//32)
+        side = pixel(frame, width//32, height//2)
+        if sw/sh > target + .01:
+            self.assertEqual(top, bytes(3))
+        else:
+            self.assertGreater(top[2], 230)
+        if sw/sh < target - .01:
+            self.assertEqual(side, bytes(3))
+        else:
+            self.assertGreater(side[2], 230)
         self.capture(dimensions + "-decoded", frame)
         self.key(b"a")
         self.wait_event("playback.end", failed=False)
@@ -139,3 +152,19 @@ class DisplayGeometryTests(BrowserFixture):
     @unittest.skipUnless(shutil.which("ffmpeg"), "FFmpeg required")
     def test_real_video_at_reduced_1080p(self):
         self.exercise_decoded_preview("480x270")
+
+    @unittest.skipUnless(shutil.which("ffmpeg"), "FFmpeg required")
+    def test_four_three_source_on_wide_display(self):
+        self.exercise_decoded_preview("640x360", "320x240")
+
+    @unittest.skipUnless(shutil.which("ffmpeg"), "FFmpeg required")
+    def test_cinema_source_on_wide_display(self):
+        self.exercise_decoded_preview("640x360", "384x160")
+
+    @unittest.skipUnless(shutil.which("ffmpeg"), "FFmpeg required")
+    def test_explicit_four_three_display(self):
+        self.exercise_decoded_preview("640x360", display_aspect="4:3")
+
+    @unittest.skipUnless(shutil.which("ffmpeg"), "FFmpeg required")
+    def test_explicit_wide_display_with_four_three_raster(self):
+        self.exercise_decoded_preview("640x480", display_aspect="16:9")

@@ -27,7 +27,11 @@ func (f *browsingTypeface) key(text string, width, scale int, color uint32) prim
 }
 
 func (f *browsingTypeface) Measure(text string, scale int) int {
-	return labelWidth(f.cache.image(f.key(text, 4096, scale, 0xffffff)))
+	im := f.cache.image(f.key(text, 4096, scale, 0xffffff))
+	if im == nil {
+		return 0
+	}
+	return im.Bounds().Dx()
 }
 
 func (f *browsingTypeface) Rasterize(text string, width, scale int, color uint32) (*image.NRGBA, int) {
@@ -43,3 +47,11 @@ func (s *sceneCache) typeface(w, h int) ui.Typeface {
 }
 
 var _ ui.Typeface = (*browsingTypeface)(nil)
+
+func (f *browsingTypeface) RasterizeDense(text string, width, scale int, color uint32, sx, sy float64) (image.Image, int) {
+	im := f.cache.denseImage(f.key(text, width, scale, color), sx, sy)
+	if im == nil {
+		return nil, -3 * scale
+	}
+	return im, -3 * scale
+}

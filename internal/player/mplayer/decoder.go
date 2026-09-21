@@ -18,6 +18,8 @@ type Decoder struct {
 	Device string
 	// Width and Height are physical output dimensions. Validate checks supported modes.
 	Width, Height int
+	// DisplayAspect is the screen width/height ratio. Zero retains the legacy 4:3 fit.
+	DisplayAspect float64
 	// Picture selects the initial video fit.
 	Picture player.PictureMode
 
@@ -55,6 +57,9 @@ func (d Decoder) Args(item media.Item, source string) []string {
 	}
 	dar := player.DisplayAspectRatio(item)
 	filter := fmt.Sprintf("mistervision=%d:%d:%.9f:%d", d.Width, d.Height, dar, d.Picture)
+	if d.DisplayAspect > 0 {
+		filter += fmt.Sprintf(":%.9f", d.DisplayAspect)
+	}
 
 	// Match the C player's audio-clock correction. Recorded video smooths ALSA
 	// delay measurements. Live TV reacts sooner to broadcast timing changes.

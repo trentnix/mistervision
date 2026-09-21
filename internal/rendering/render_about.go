@@ -137,7 +137,7 @@ func (s *sceneCache) about(c *ui.Canvas, statusY int, compact bool) {
 		return
 	}
 	if s.aboutBase == nil || s.aboutBase.Width != c.Width || s.aboutBase.Height != c.Height || s.aboutStatusY != statusY || s.aboutCompact != compact {
-		s.aboutBase = ui.New(c.Width, c.Height)
+		s.aboutBase = c.NewLayer()
 		s.aboutBase.Typeface = c.Typeface
 		s.aboutStatusY = statusY
 		s.aboutCompact = compact

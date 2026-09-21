@@ -77,9 +77,7 @@ func (p *screenPainter) list() [][]controlHint {
 	// space for its status header without shrinking text or line spacing.
 	rowHeight := max(20, min(30, (controlsTop(p.bottom, controls)-16-(sy+21))/VisibleRows(w, h)))
 	rowHeight = min(rowHeight, max(20, (controlsTop(p.bottom, controls)-16-top)/rows))
-	list := *c
-	list.Height = min(rows*rowHeight, h-top)
-	list.Pixels = c.Pixels[top*w*4 : (top+list.Height)*w*4]
+	list := c.Rows(top, min(rows*rowHeight, h-top))
 	if item := v.Item(); item != nil {
 		title, line := p.listRowText(*item, width, true, live)
 		geometry := placeListText(title, line, rowHeight)
@@ -113,8 +111,8 @@ type listTextPlacement struct{ titleY, subtitleY, barHeight int }
 
 // placeListText keeps a title-only row at the same top inset. Two-line rows
 // receive equal whole-pixel padding above the title and below the subtext.
-func placeListText(title, subtitle *image.RGBA, rowHeight int) listTextPlacement {
-	height := func(im *image.RGBA) int {
+func placeListText(title, subtitle *ui.RasterImage, rowHeight int) listTextPlacement {
+	height := func(im *ui.RasterImage) int {
 		if im == nil {
 			return 0
 		}
@@ -132,7 +130,7 @@ func placeListText(title, subtitle *image.RGBA, rowHeight int) listTextPlacement
 
 // listRowText uses the same type sizes and metadata treatment in every home
 // and library list. Label rasters and their ink bounds are cached.
-func (p *screenPainter) listRowText(item media.Item, width int, selected, live bool) (*image.RGBA, *image.RGBA) {
+func (p *screenPainter) listRowText(item media.Item, width int, selected, live bool) (*ui.RasterImage, *ui.RasterImage) {
 	color := uint32(dimColor)
 	if selected {
 		color = 0xffffff

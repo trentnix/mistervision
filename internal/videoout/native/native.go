@@ -24,16 +24,20 @@ var overlayMagic = [8]byte{'M', 'F', 'G', 'O', 'O', 'V', '1', 0}
 
 // Backend implements videoout.Output.
 type Backend struct {
-	d         platform.Presenter
-	path      string
-	mu        sync.Mutex
-	owners    int
-	sequence  uint64
-	published []byte
-	handoff   framebufferHandoff
-	physical  []byte // Scaled overlay, reused only while mu is held.
-	payload   []byte // Cropped publication, independent of borrowed input pixels.
-	loading   []byte // Black loading frame composited before decoder ownership.
+	// DisplayAspect enables full-screen video at the resolved screen aspect.
+	// Zero retains the existing presenter viewport. Set before playback starts.
+	DisplayAspect float64
+	projected     []byte
+	d             platform.Presenter
+	path          string
+	mu            sync.Mutex
+	owners        int
+	sequence      uint64
+	published     []byte
+	handoff       framebufferHandoff
+	physical      []byte // Scaled overlay, reused only while mu is held.
+	payload       []byte // Cropped publication, independent of borrowed input pixels.
+	loading       []byte // Black loading frame composited before decoder ownership.
 }
 
 // New publishes overlays for the patched MPlayer framebuffer driver.
@@ -105,7 +109,7 @@ func (o *Backend) Present(f videoout.Frame) error {
 		if o.published != nil {
 			o.removeLocked()
 		}
-		return o.d.Present(f.UI)
+		return platform.PresentRaster(o.d, f.UI, f.UIWidth, f.UIHeight)
 	}
 	overlay := f.Overlay
 	if o.owners > 0 {
@@ -123,12 +127,21 @@ func (o *Backend) Present(f videoout.Frame) error {
 		}
 		defer o.handoff.end()
 	}
+	if o.DisplayAspect > 0 {
+		g := o.d.Geometry()
+		g.OutputWidth, g.OutputHeight = g.Width, g.Height
+		o.projected = videoout.ScaleOverlay(o.projected, overlay, g, o.DisplayAspect)
+		overlay = o.projected
+	}
 	if len(o.loading) != len(overlay) {
 		o.loading = make([]byte, len(overlay))
 	} else {
 		clear(o.loading)
 	}
 	ui.Composite(o.loading, overlay)
+	if o.DisplayAspect > 0 {
+		return platform.PresentVideo(o.d, o.loading)
+	}
 	return o.d.Present(o.loading)
 }
 
@@ -137,7 +150,11 @@ func (o *Backend) publishLocked(logical []byte) error {
 	if len(logical) != g.Width*g.Height*4 {
 		return errors.New("video overlay must contain exactly logical width * height * 4 BGRA bytes")
 	}
-	o.physical = scale(o.physical, logical, g)
+	if o.DisplayAspect > 0 {
+		o.physical = videoout.ScaleOverlay(o.physical, logical, g, o.DisplayAspect)
+	} else {
+		o.physical = scale(o.physical, logical, g)
+	}
 	physical := o.physical
 	x, y, w, h := bounds(physical, g.OutputWidth, g.OutputHeight)
 	if w == 0 || h == 0 {

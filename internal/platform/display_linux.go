@@ -56,27 +56,36 @@ func Open(options Options) (Display, error) {
 	var cw, ch, ow, oh C.int
 	C.mf_geometry(d.handle, &cw, &ch, &ow, &oh)
 	d.geometry = Geometry{int(cw), int(ch), int(ow), int(oh)}
+	if options.AspectRatio == "4:3" || options.AspectRatio == "16:9" {
+		C.mf_set_aspect(d.handle, C.double(ResolveAspect(options.AspectRatio, int(ow), int(oh))))
+	}
 	return d, nil
 }
 
 func (d *framebuffer) Geometry() Geometry { return d.geometry }
 
-func (d *framebuffer) Present(pixels []byte) error {
+func (d *framebuffer) Present(pixels []byte) error { return d.present(pixels, false) }
+
+// PresentVideo fills the complete output without changing browsing geometry.
+func (d *framebuffer) PresentVideo(pixels []byte) error { return d.present(pixels, true) }
+
+func (d *framebuffer) present(pixels []byte, video bool) error {
 	if d.handle == nil {
 		return errors.New("framebuffer is closed")
 	}
 	if len(pixels) != d.geometry.Width*d.geometry.Height*4 {
 		return errors.New("frame must contain exactly width * height * 4 BGRX bytes")
 	}
-	if err := status("present framebuffer", C.mf_present(d.handle, (*C.uint8_t)(unsafe.Pointer(&pixels[0])), C.size_t(len(pixels)))); err != nil {
+	var code C.int
+	if video {
+		code = C.mf_present_video(d.handle, (*C.uint8_t)(unsafe.Pointer(&pixels[0])), C.size_t(len(pixels)))
+	} else {
+		code = C.mf_present(d.handle, (*C.uint8_t)(unsafe.Pointer(&pixels[0])), C.size_t(len(pixels)))
+	}
+	if err := status("present framebuffer", code); err != nil {
 		return err
 	}
-	if d.output != "" {
-		path := C.CString(d.output)
-		defer C.free(unsafe.Pointer(path))
-		return status("dump framebuffer", C.mf_dump(d.handle, path))
-	}
-	return nil
+	return d.dump()
 }
 
 func (d *framebuffer) Close() error {
@@ -90,4 +99,37 @@ func status(operation string, code C.int) error {
 		return nil
 	}
 	return fmt.Errorf("%s: %w", operation, syscall.Errno(code))
+}
+
+// RasterSize reports the browsing viewport raster while preserving CRT fields.
+func (d *framebuffer) RasterSize() (int, int) {
+	if d.handle == nil {
+		return d.geometry.Width, d.geometry.Height
+	}
+	var w, h C.int
+	C.mf_raster_size(d.handle, &w, &h)
+	return int(w), int(h)
+}
+
+// PresentRaster draws a sized browsing frame into the same 4:3 viewport.
+func (d *framebuffer) PresentRaster(pixels []byte, w, h int) error {
+	if d.handle == nil {
+		return errors.New("framebuffer is closed")
+	}
+	if w < 1 || h < 1 || w > 8192 || h > 8192 || len(pixels) != w*h*4 {
+		return errors.New("invalid browsing raster size")
+	}
+	if err := status("present framebuffer", C.mf_present_raster(d.handle, (*C.uint8_t)(unsafe.Pointer(&pixels[0])), C.size_t(len(pixels)), C.int(w), C.int(h))); err != nil {
+		return err
+	}
+	return d.dump()
+}
+
+func (d *framebuffer) dump() error {
+	if d.output == "" {
+		return nil
+	}
+	path := C.CString(d.output)
+	defer C.free(unsafe.Pointer(path))
+	return status("dump framebuffer", C.mf_dump(d.handle, path))
 }

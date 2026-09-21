@@ -11,12 +11,13 @@ import (
 // ready to use. Calls must be serial, and source artwork must remain immutable.
 // Returned pixels are borrowed until the next Render call.
 type RasterRenderer struct {
-	music     musicviz.Renderer
-	captions  caption.Renderer
-	canvas    *ui.Canvas
-	cache     sceneCache
-	overlay   *ui.Canvas
-	animation animationState
+	rasterWidth, rasterHeight int
+	music                     musicviz.Renderer
+	captions                  caption.Renderer
+	canvas                    *ui.Canvas
+	cache                     sceneCache
+	overlay                   *ui.Canvas
+	animation                 animationState
 }
 
 // NewRenderer constructs the shared software renderer used by all destinations.
@@ -26,9 +27,13 @@ func NewRenderer() *RasterRenderer { return &RasterRenderer{} }
 // advances animation from Scene.Now, and invalidates visual caches on size changes.
 // The caller must present or copy both pixel slices before calling Render again.
 func (r *RasterRenderer) Render(w, h int, s Scene) videoout.Frame {
-	r.prepare(w, h)
+	rw, rh := w, h
+	if !s.Video && r.rasterWidth > 0 && r.rasterHeight > 0 {
+		rw, rh = r.rasterWidth, r.rasterHeight
+	}
+	r.prepare(w, h, rw, rh)
 	anim := r.animation.advance(s, s.listRows(w, h))
-	f := videoout.Frame{UI: renderSceneWithMusic(r.canvas, &r.cache, s, anim, &r.music), Video: s.Video}
+	f := videoout.Frame{UIWidth: rw, UIHeight: rh, UI: renderSceneWithMusic(r.canvas, &r.cache, s, anim, &r.music), Video: s.Video}
 	if s.Video {
 		r.overlay.Typeface = r.canvas.Typeface
 		clear(r.overlay.Pixels)
@@ -42,12 +47,22 @@ func (r *RasterRenderer) Render(w, h int, s Scene) videoout.Frame {
 var _ Renderer = (*RasterRenderer)(nil)
 
 // prepare owns geometry invalidation for both frame buffers and artwork caches.
-func (r *RasterRenderer) prepare(w, h int) {
-	if r.canvas == nil || r.canvas.Width != w || r.canvas.Height != h {
-		r.canvas = ui.New(w, h)
+func (r *RasterRenderer) prepare(w, h, rw, rh int) {
+	oldW, oldH := 0, 0
+	if r.canvas != nil {
+		oldW, oldH = r.canvas.RasterSize()
+	}
+	if r.canvas == nil || r.canvas.Width != w || r.canvas.Height != h || oldW != rw || oldH != rh {
+		r.canvas = ui.NewRaster(w, h, rw, rh)
 		r.overlay = ui.NewOverlay(w, h)
 		r.cache = sceneCache{}
 	} else {
 		clear(r.canvas.Pixels)
 	}
+}
+
+// NewRendererForRaster preserves logical layout while drawing browsing text and
+// artwork at the destination's raster size. Video overlays remain logical.
+func NewRendererForRaster(width, height int) *RasterRenderer {
+	return &RasterRenderer{rasterWidth: width, rasterHeight: height}
 }

@@ -119,12 +119,12 @@ class MPV:
         return self.command(handle, values)
 
 
-def publish_frame(output, source, width, height):
-    # Render at square-pixel 4:3, then sample the logical CRT rows. This keeps
-    # both the source aspect ratio and the harness's tall-pixel correction.
+def publish_frame(output, source, width, height, render_height=480):
+    # Sample the square-pixel render surface into the logical output rows.
+    # The presenter expands these pixels to the configured screen aspect.
     row_bytes = width * 4
-    frame = b"".join(source[(y * 480 // height) * row_bytes:
-                            (y * 480 // height + 1) * row_bytes] for y in range(height))
+    frame = b"".join(source[(y * render_height // height) * row_bytes:
+                            (y * render_height // height + 1) * row_bytes] for y in range(height))
     fd, path = tempfile.mkstemp(prefix=".video-frame-", dir=output.parent)
     try:
         with os.fdopen(fd, "wb") as target:
@@ -135,7 +135,7 @@ def publish_frame(output, source, width, height):
             os.unlink(path)
 
 
-def set_picture(mpv, handle, mode):
+def set_picture(mpv, handle, mode, target=4 / 3):
     """Change the current frame's fit without seeking or changing pause state."""
     if mode not in (0, 1):
         return False
@@ -144,15 +144,14 @@ def set_picture(mpv, handle, mode):
     if mode == 0:
         return mpv.send(handle, "set", "video-zoom", "0") >= 0
 
-    # video-zoom is logarithmic. Scale enough to fill the 4:3 surface for
-    # wide or narrow pictures. A 4:3 source gets a fixed enlargement so Zoom
+    # video-zoom is logarithmic. Scale enough to fill the display for
+    # wide or narrow pictures. A matching source gets a fixed enlargement so Zoom
     # can remove letterboxing encoded within the video frame.
     aspect = C.c_double()
     if mpv.property(handle, b"video-out-params/aspect", 5, C.byref(aspect)) < 0:
         return False
     if not math.isfinite(aspect.value) or aspect.value <= 0:
         return False
-    target = 4 / 3
     if abs(aspect.value - target) <= 0.01:
         factor = 4 / 3
     else:
@@ -160,7 +159,7 @@ def set_picture(mpv, handle, mode):
     return mpv.send(handle, "set", "video-zoom", f"{math.log2(factor):.9f}") >= 0
 
 
-def play(output, width, height, audio="auto", audio_only=False, source="fd://3", controls=False, status=False, audio_levels=False, zoom_4_3=False, captions=False):
+def play(output, width, height, audio="auto", audio_only=False, source="fd://3", controls=False, status=False, audio_levels=False, zoom_4_3=False, captions=False, display_aspect=4 / 3):
     mpv = MPV()
     handle = mpv.create()
     if not handle:
@@ -169,6 +168,8 @@ def play(output, width, height, audio="auto", audio_only=False, source="fd://3",
     errors = []
     frames = [0]
     worker = None
+
+    render_height = max(2, round(width / display_aspect))
 
     def render_video():
         context = C.c_void_p()
@@ -179,11 +180,11 @@ def play(output, width, height, audio="auto", audio_only=False, source="fd://3",
                 raise RuntimeError("cannot create software video renderer")
             callback = mpv.callback_type(lambda _: wake.set())
             mpv.callback(context, callback, None)
-            size = (C.c_int * 2)(width, 480)
+            size = (C.c_int * 2)(width, render_height)
             stride = C.c_size_t(width * 4)
-            storage = C.create_string_buffer(width * 480 * 4 + 63)
+            storage = C.create_string_buffer(width * render_height * 4 + 63)
             pointer = (C.addressof(storage) + 63) & ~63
-            pixels = (C.c_ubyte * (width * 480 * 4)).from_address(pointer)
+            pixels = (C.c_ubyte * (width * render_height * 4)).from_address(pointer)
             format_name = C.create_string_buffer(b"bgr0")
             params = (RenderParam * 5)(
                 RenderParam(17, C.addressof(size)), RenderParam(18, C.addressof(format_name)),
@@ -195,7 +196,7 @@ def play(output, width, height, audio="auto", audio_only=False, source="fd://3",
                 if mpv.update(context) & 1:
                     if mpv.render(context, params) < 0:
                         raise RuntimeError("video frame rendering failed")
-                    publish_frame(output, bytes(pixels), width, height)
+                    publish_frame(output, bytes(pixels), width, height, render_height)
                     frames[0] += 1
         except Exception as error:
             errors.append(error)
@@ -249,7 +250,7 @@ def play(output, width, height, audio="auto", audio_only=False, source="fd://3",
         picture_ready = not zoom_4_3 or audio_only
         while not stop.is_set():
             if not picture_ready:
-                picture_ready = set_picture(mpv, handle, 1)
+                picture_ready = set_picture(mpv, handle, 1, display_aspect)
                 if picture_ready:
                     wake.set()
             if control_open and select.select([sys.stdin], [], [], 0)[0]:
@@ -273,7 +274,7 @@ def play(output, width, height, audio="auto", audio_only=False, source="fd://3",
                         request = int(parts[2])
                         if 0 < request < 2**31:
                             mode = int(parts[1])
-                            applied = mode if set_picture(mpv, handle, mode) else -1
+                            applied = mode if set_picture(mpv, handle, mode, display_aspect) else -1
                             print(f"ANS_PICTURE_MODE={request},{applied}", flush=True)
                     next_report = 0.0
                 if len(control_buffer) > 1024:
@@ -330,6 +331,7 @@ def main():
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--audio-only", action="store_true")
     parser.add_argument("--audio-levels", action="store_true")
+    parser.add_argument("--display-aspect", type=float, default=4 / 3)
     parser.add_argument("--zoom-4-3", action="store_true")
     parser.add_argument("--captions", action="store_true", help="publish embedded CC text for the shared overlay")
     parser.add_argument("--source", default="fd://3")
@@ -344,13 +346,15 @@ def main():
         MPV()
         print("libmpv software rendering API is available")
         return
+    if not math.isfinite(args.display_aspect) or not 0.1 <= args.display_aspect <= 10:
+        parser.error("display aspect must be between 0.1 and 10")
     if not args.audio_only and (args.output is None or args.width != 640):
         parser.error("--output and a 640-pixel framebuffer are required")
     if args.source != "fd://3":
         source = urlparse(args.source)
         if not args.audio_only or source.scheme != "http" or source.hostname != "127.0.0.1" or source.username or source.password or source.query or source.fragment:
             parser.error("--source must identify the local audio proxy")
-    play(args.output, args.width, args.height, args.audio, args.audio_only, args.source, args.controls, args.status, args.audio_levels, args.zoom_4_3, args.captions)
+    play(args.output, args.width, args.height, args.audio, args.audio_only, args.source, args.controls, args.status, args.audio_levels, args.zoom_4_3, args.captions, args.display_aspect)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ package rendering
 
 import (
 	"image"
+	"math"
 
 	"mistervision/internal/ui"
 )
@@ -29,6 +30,7 @@ type sceneCache struct {
 	detail                         bool
 	rows                           []*ui.Canvas
 	covers                         []image.Image
+	musicCanvas                    *ui.Canvas
 	music                          bool
 	width, height, tileWidth       int
 }
@@ -63,7 +65,7 @@ func (s *sceneCache) backdrop(c *ui.Canvas, art Artwork, detail bool, custom ima
 		cover = nil
 	}
 	if s.background == nil || s.background.Width != c.Width || s.background.Height != c.Height || s.detail != detail || s.coverBox != coverBox || !sameArtwork(s.backgroundCustom, custom) || !sameArtwork(s.source, art.Backdrop) || !sameArtwork(s.cover, cover) {
-		s.background = ui.New(c.Width, c.Height)
+		s.background = c.NewLayer()
 		draw(s.background)
 		s.source, s.cover, s.detail = art.Backdrop, cover, detail
 		s.backgroundCustom = custom
@@ -101,7 +103,11 @@ func (s *sceneCache) mosaic(c *ui.Canvas, covers []image.Image, music bool, seco
 		s.rows = nil
 		for row := 0; row*ch < c.Height; row++ {
 			// Include the offscreen tiles so scrolling only changes the copy offset.
-			strip := ui.New(9*cw, min(ch, c.Height-row*ch))
+			height := min(ch, c.Height-row*ch)
+			sx, sy := c.Density()
+			top := int(math.Round(float64(row*ch) * sy))
+			bottom := int(math.Round(float64(row*ch+height) * sy))
+			strip := ui.NewRaster(9*cw, height, int(math.Round(float64(9*cw)*sx)), bottom-top)
 			for col := -1; col < 8; col++ {
 				idx := (row*7 + col + 13) % len(covers)
 				strip.Blit(covers[idx], (col+1)*cw, 0, cw, ch)
@@ -122,6 +128,19 @@ func (s *sceneCache) mosaic(c *ui.Canvas, covers []image.Image, music bool, seco
 			shift = -shift
 		}
 		x := s.tileWidth - shift
+		if rw, rh := c.RasterSize(); rw != c.Width || rh != c.Height {
+			sw, sh := strip.RasterSize()
+			sourceX := min(sw-rw, int(math.Round(float64(x)*float64(sw)/float64(strip.Width))))
+			_, scaleY := c.Density()
+			top := int(math.Round(float64(y) * scaleY))
+			for sy := 0; sy < sh; sy++ {
+				src := (sy*sw + sourceX) * 4
+				dst := ((top + sy) * rw) * 4
+				copy(c.Pixels[dst:dst+rw*4], strip.Pixels[src:src+rw*4])
+			}
+			y += strip.Height
+			continue
+		}
 		for sy := 0; sy < strip.Height; sy++ {
 			src := (sy*strip.Width + x) * 4
 			dst := (y * c.Width) * 4
@@ -159,7 +178,7 @@ func (s *sceneCache) videoBackdrop(c *ui.Canvas, source image.Image) {
 		return
 	}
 	if s.videoBackground == nil || s.videoBackground.Width != c.Width || s.videoBackground.Height != c.Height || !sameArtwork(s.videoSource, source) {
-		s.videoBackground = ui.New(c.Width, c.Height)
+		s.videoBackground = c.NewLayer()
 		s.videoBackground.Image(source, 0, 0, c.Width, c.Height)
 		s.videoSource = source
 	}

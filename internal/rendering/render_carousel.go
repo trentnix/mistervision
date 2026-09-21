@@ -1,9 +1,8 @@
 package rendering
 
 import (
-	"image"
-
 	"mistervision/internal/input/control"
+	"mistervision/internal/ui"
 )
 
 // carousel draws library names over cached artwork strips and returns its controls.
@@ -24,7 +23,7 @@ func (p *screenPainter) carousel() [][]controlHint {
 	}
 	p.homeHeader()
 	centers := make([]float64, len(v.Page.Items))
-	names := make([]*image.RGBA, len(centers))
+	names := make([]*ui.RasterImage, len(centers))
 	for i, item := range v.Page.Items {
 		color := uint32(0xffffff)
 		if i == v.Selected {
@@ -73,7 +72,7 @@ func (p *screenPainter) carousel() [][]controlHint {
 }
 
 // labelWidth treats empty library names as an empty carousel slot.
-func labelWidth(im *image.RGBA) int {
+func labelWidth(im *ui.RasterImage) int {
 	if im == nil {
 		return 0
 	}

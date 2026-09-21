@@ -79,3 +79,11 @@ func TestValidateFramebufferModes(t *testing.T) {
 		}
 	}
 }
+
+func TestDisplayAspectIsSeparateFromSourceAspect(t *testing.T) {
+	item := media.Item{MediaStreams: []media.MediaStream{{Type: "Video", AspectRatio: "4:3"}}}
+	args := Decoder{Width: 640, Height: 360, DisplayAspect: 16.0 / 9}.Args(item, "")
+	if !strings.Contains(strings.Join(args, " "), "mistervision=640:360:1.333333333:0:1.777777778") {
+		t.Fatalf("source and display aspects not passed independently: %v", args)
+	}
+}

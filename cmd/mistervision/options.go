@@ -9,6 +9,7 @@ import (
 
 // launchOptions contains command-line choices before opening any resources.
 type launchOptions struct {
+	displayAspect                       float64 // Resolved screen aspect, shared by decoder and output.
 	settingsPath                        string
 	misterDisplayCheck                  bool
 	migrateSettings                     bool

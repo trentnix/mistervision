@@ -13,9 +13,12 @@ import (
 // Video remains true while loading or seeking, even when no decoder owns output.
 // Present borrows the slices for the duration of the call.
 type Frame struct {
-	UI      []byte
-	Overlay []byte
-	Video   bool
+	// UIWidth and UIHeight describe an optional browsing raster. Zero uses
+	// Geometry logical dimensions. Video UI and Overlay always stay logical.
+	UIWidth, UIHeight int
+	UI                []byte
+	Overlay           []byte
+	Video             bool
 }
 
 // Output is the browser's only display boundary for both browsing and playback.

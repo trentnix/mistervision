@@ -8,6 +8,10 @@ func (c *Canvas) Overlay(source *image.NRGBA, x, y int) {
 	if source == nil {
 		return
 	}
+	if c.raster != nil {
+		c.Blit(source, x, y, source.Bounds().Dx(), source.Bounds().Dy())
+		return
+	}
 	bounds := source.Bounds()
 	for yy := max(0, y); yy < min(c.Height, y+bounds.Dy()); yy++ {
 		for xx := max(0, x); xx < min(c.Width, x+bounds.Dx()); xx++ {

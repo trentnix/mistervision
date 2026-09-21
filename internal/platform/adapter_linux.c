@@ -132,14 +132,38 @@ fail:
     return error;
 }
 
+void mf_set_aspect(mf_display *d, double aspect)
+{
+    d->bw = d->ow; d->bh = d->oh;
+    if (aspect > 4.0/3) d->bw = (int)(d->ow * (4.0/3) / aspect + 0.5);
+    else if (aspect > 0 && aspect < 4.0/3) d->bh = (int)(d->oh * aspect / (4.0/3) + 0.5);
+    if (d->bw < 1) d->bw = 1;
+    if (d->bh < 1) d->bh = 1;
+    d->bx = (d->ow - d->bw) / 2; d->by = (d->oh - d->bh) / 2;
+}
+
 void mf_geometry(mf_display *d, int *w, int *h, int *ow, int *oh)
 {
     *w = d->w; *h = d->h; *ow = d->ow; *oh = d->oh;
 }
 
+void mf_raster_size(mf_display *d, int *w, int *h)
+{
+    /* Preserve the tested CRT raster, including interlaced field doubling. */
+    int crt = d->ow == 640 && (d->oh == 240 || d->oh == 288 || d->oh == 480 || d->oh == 576);
+    *w = crt ? d->w : d->bw;
+    *h = crt ? d->h : d->bh;
+}
+
 int mf_present(mf_display *d, const uint8_t *pixels, size_t size)
 {
-    if (!pixels || size != (size_t)d->w * d->h * 4) return EINVAL;
+    return mf_present_raster(d,pixels,size,d->w,d->h);
+}
+
+int mf_present_raster(mf_display *d, const uint8_t *pixels, size_t size, int width, int height)
+{
+    if (width < 1 || height < 1 || width > 8192 || height > 8192 ||
+        !pixels || size != (size_t)width * height * 4) return EINVAL;
     if (d->fd >= 0) {
         uint32_t dummy = 0;
         if (ioctl(d->fd, FBIO_WAITFORVSYNC, &dummy) < 0) return errno;
@@ -153,17 +177,27 @@ int mf_present(mf_display *d, const uint8_t *pixels, size_t size)
     memset(d->mem + (size_t)(d->by + d->bh) * d->stride, 0,
            (size_t)(d->oh - d->by - d->bh) * d->stride);
     for (int y = 0; y < d->bh; y++) {
-        const uint8_t *src = pixels + (size_t)(y * d->h / d->bh) * d->w * 4;
+        const uint8_t *src = pixels + (size_t)(y * height / d->bh) * width * 4;
         uint8_t *row = d->mem + (size_t)(d->by + y) * d->stride;
         memset(row, 0, (size_t)d->bx * 4);
         memset(row + (d->bx + d->bw) * 4, 0,
                d->stride - (size_t)(d->bx + d->bw) * 4);
         uint8_t *dst = row + d->bx * 4;
-        if (d->bw == d->w) memcpy(dst, src, (size_t)d->w * 4);
+        if (d->bw == width) memcpy(dst, src, (size_t)width * 4);
         else for (int x = 0; x < d->bw; x++)
-            memcpy(dst + x * 4, src + (x * d->w / d->bw) * 4, 4);
+            memcpy(dst + x * 4, src + (x * width / d->bw) * 4, 4);
     }
     return 0;
+}
+
+/* Reuse the same synchronized copy with a full-output video viewport. */
+int mf_present_video(mf_display *d, const uint8_t *pixels, size_t size)
+{
+    int bx = d->bx, by = d->by, bw = d->bw, bh = d->bh;
+    d->bx=0; d->by=0; d->bw = d->ow; d->bh = d->oh;
+    int result = mf_present(d, pixels, size);
+    d->bx = bx; d->by = by; d->bw = bw; d->bh = bh;
+    return result;
 }
 
 int mf_dump(mf_display *d, const char *path)

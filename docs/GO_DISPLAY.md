@@ -4,7 +4,7 @@ The default keeps MiSTer's current display, normally 240p for NTSC or 288p for P
 
 ## HDMI framebuffer scaling
 
-On non-CRT framebuffers, the client asks Main to reduce the framebuffer while the FPGA scaler enlarges it across the existing output. HDMI timing stays unchanged. The default ceiling is 640×480. Both 1280×720 and 1920×1080 signals use a 640×360 framebuffer, with a centered 4:3 viewport. Video and overlays share that viewport. Native 640×240, 640×288, 640×480, and 640×576 CRT rasters keep their existing paths, including full-height interlaced playback.
+On non-CRT framebuffers, the client asks Main to reduce the framebuffer while the FPGA scaler enlarges it across the existing output. HDMI timing stays unchanged. The default ceiling is 640×480. Both 1280×720 and 1920×1080 signals use a 640×360 framebuffer, with a centered 4:3 browsing viewport. Video fills the screen according to `display.aspect_ratio`. Overlays retain their proportions within a centered 4:3 area. Native 640×240, 640×288, 640×480, and 640×576 CRT rasters keep their existing paths, including full-height interlaced playback.
 
 To allow more software rendering work, set limits in `settings.json`:
 
@@ -20,11 +20,25 @@ To allow more software rendering work, set limits in `settings.json`:
 
 Omitted or zero limits select 640 and 480. Valid nonzero limits are 320–1920 pixels wide and 240–1080 pixels high. Invalid values stop startup. Main supports divisors of one through four. The client selects the smallest divisor whose even-sized framebuffer fits both limits. A 720p signal with the example limits uses 1280×720. A 1080p signal uses 960×540. If no divisor fits, startup stops and restores the menu. Raising the limits can cause dropped frames even when the server sends lower-resolution video.
 
+Browsing text and artwork render at the pixels available in the centered 4:3 viewport. A 960×540 framebuffer uses a 720×540 browsing raster. A 1280×720 framebuffer uses 960×720. The logical layout stays 640×288, so higher resolution does not add rows or shrink the interface. Navigation hints and the clock retain their bitmap font. Known CRT rasters keep their existing rendering. Video overlays remain at logical resolution.
+
+An isolated ARM benchmark on the maintainer’s MiSTer measured approximately 12 ms per cached carousel frame at 720×540 and 23 ms at 960×720, including artwork but excluding display presentation. The 720-line raster already exceeds a 60 Hz frame budget before presentation. These measurements support testing 540 lines first, not raising the default to 720 lines.
+
+The framebuffer limits still apply to both browsing and playback. Higher-resolution browsing does not yet select a separate, smaller framebuffer for video. Keep the default limits unless you have checked playback performance at the larger size.
+
 The session first probes at one-quarter signal dimensions to avoid allocating a full HD or larger framebuffer. It uses Main's [`fb_cmd0` command](https://github.com/MiSTer-devel/Main_MiSTer/blob/master/video.cpp), waits for the kernel to acknowledge the dimensions, and starts the client only afterward. It writes no persistent display configuration. Exit restores Menu. A supervisor stops orphaned decoders before restoring hardware after a failure. Use the matching updated application and MPlayer together.
 
 Local tests cover negotiation, rejected settings, native picture geometry, real desktop decoding, and overlay composition. On a MiSTer connected through an HDMI-to-DVI adapter to a Dell U2412M, 720p and 1080p tests both negotiated a 640×360 framebuffer and played video successfully. The 1080p test also had responsive menus. Playback diagnostics showed steady position advancement, which does not measure visible frame drops. Returning from the 720p application restored the 1280×720 menu framebuffer. Simultaneous analog output and higher rendering limits still need device validation. The scaler does not fix an analog route that cannot display the Linux framebuffer. Do not infer connector type or CRT capability from framebuffer dimensions alone.
 
-Diagnostics report the render framebuffer as `output_width` and `output_height` in `application.display`. Those dimensions are not the HDMI signal resolution. Unsafe native dimensions produce an “Unsupported display mode” message before opening a stream. Audio-only playback does not require video dimensions.
+Diagnostics also report `browsing_width` and `browsing_height`, independently of the logical `ui_width` and `ui_height`. Diagnostics report the render framebuffer as `output_width` and `output_height` in `application.display`. Those dimensions are not the HDMI signal resolution. Unsafe native dimensions produce an “Unsupported display mode” message before opening a stream. Audio-only playback does not require video dimensions.
+
+## Display aspect
+
+`display.aspect_ratio` accepts `"auto"` (the default), `"4:3"`, or `"16:9"`. Invalid values stop startup. Auto preserves the four native CRT rasters as 4:3 and infers other outputs from framebuffer proportions. Explicit values describe the screen even when its pixels are not square. They do not change signal timing. Restart after changing the setting.
+
+The output layer and decoder receive the same resolved aspect. Native MPlayer and the desktop libmpv helper fit Original to the full video canvas and crop Zoom to the screen aspect. The presenter keeps browsing at 4:3, and the output backend centers overlays without stretching their text. A separate full-output presentation method lets video fill the framebuffer without changing browsing geometry. The native filter keeps its four-argument legacy fit for older invocations. Updated clients pass a fifth display-aspect argument and require the matching player.
+
+Widescreen fitting has local native-filter and real desktop-decoder coverage. Auto aspect has also been visually checked on the maintainer’s CRT and HDMI display.
 
 ## Enable or disable interlaced output
 

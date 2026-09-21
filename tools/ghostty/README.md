@@ -117,6 +117,8 @@ For the default reduced canvas used with 720p or 1080p HDMI, use `--framebuffer 
 
 Add `--mister-display-check` to apply the native decoder's dimension validation while using desktop decoding. Even dimensions from 120×120 through 1920×1080 are accepted. An invalid size such as `1922x1080` reproduces the unsupported-display error before opening a stream. This option requires `--browse --inline-video` and does not change saved settings or activate hardware output.
 
+To compare sharper browsing text, use `--framebuffer 960x540` or `--framebuffer 1280x720`. These render the same browsing layout into 720×540 or 960×720 pixels, respectively, inside the centered 4:3 viewport. Playback overlays retain their existing logical resolution.
+
 The harness previews an explicit framebuffer. It does not apply `display.framebuffer_max_width` or `display.framebuffer_max_height`, which govern MiSTer's hardware negotiation. Local Go tests exercise that negotiation through a fake Main and kernel acknowledgement. Neither previewing nor unit tests establish native performance, HDMI timing, analog routing, or interlaced scanout. See [display limits](../../docs/GO_DISPLAY.md#hdmi-framebuffer-scaling).
 
 Run the local regression matrix without a server or Ghostty window:
@@ -179,3 +181,5 @@ python3 -m unittest tools/ghostty/test_ghostty_harness.py
 Run browser integration tests with `make test-browse`. Each test in [test_go_browse.py](test_go_browse.py) explicitly starts a [Scenario](fixtures/browser.py) with its settings, mock-server behavior, and simulated player. Ordinary tests write `settings.json` directly. One explicit scenario checks legacy files. The standalone player programs in [fixtures](fixtures/) publish controlled frames and playback feedback without opening a media decoder or audio device.
 
 These tests need the Go host build and loopback networking, but do not need Ghostty or a media server. Before sending input that depends on loaded data, wait for the corresponding `browser.page` or `browser.home` diagnostic event. A completed HTTP response alone does not mean the browser has applied the result.
+
+With `display.aspect_ratio` omitted or set to `"auto"`, wide framebuffer previews now use the full width for video. Browsing and overlays retain their centered 4:3 layout. Try `--framebuffer 640x360 --browse --inline-video` to preview the default reduced HDMI framebuffer. Use 16:9, 4:3, and wider source material to check full-screen, pillarboxed, and letterboxed playback. The screen-aspect overrides are documented in [display settings](../../docs/GO_DISPLAY.md#display-aspect).

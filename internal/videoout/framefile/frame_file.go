@@ -13,10 +13,14 @@ import (
 
 // Backend implements videoout.Output.
 type Backend struct {
-	d      platform.Presenter
-	source string
-	watch  *frameWatch
-	frame  []byte // Refilled from the clean decoder file before every composition.
+	// DisplayAspect enables full-screen video at the resolved screen aspect.
+	// Zero retains the existing presenter viewport. Set before playback starts.
+	DisplayAspect float64
+	projected     []byte
+	d             platform.Presenter
+	source        string
+	watch         *frameWatch
+	frame         []byte // Refilled from the clean decoder file before every composition.
 }
 
 // New composites UI over clean decoder frames published at source.
@@ -66,7 +70,7 @@ func (o *Backend) FrameInterval(bool) time.Duration { return time.Second / 60 }
 // Missing or malformed frames use black pixels. Decoder files remain unchanged.
 func (o *Backend) Present(f videoout.Frame) error {
 	if !f.Video {
-		return o.d.Present(f.UI)
+		return platform.PresentRaster(o.d, f.UI, f.UIWidth, f.UIHeight)
 	}
 	g := o.d.Geometry()
 	size := g.Width * g.Height * 4
@@ -85,7 +89,16 @@ func (o *Backend) Present(f videoout.Frame) error {
 			clear(frame)
 		}
 	}
-	ui.Composite(frame, f.Overlay)
+	overlay := f.Overlay
+	if o.DisplayAspect > 0 {
+		g.OutputWidth, g.OutputHeight = g.Width, g.Height
+		o.projected = videoout.ScaleOverlay(o.projected, overlay, g, o.DisplayAspect)
+		overlay = o.projected
+	}
+	ui.Composite(frame, overlay)
+	if o.DisplayAspect > 0 {
+		return platform.PresentVideo(o.d, frame)
+	}
 	return o.d.Present(frame)
 }
 

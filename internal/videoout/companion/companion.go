@@ -47,7 +47,7 @@ func (o *Backend) FrameInterval(video bool) time.Duration {
 // decoder window. Input pixels are borrowed only until Present returns.
 func (o *Backend) Present(f videoout.Frame) error {
 	if !f.Video {
-		return o.d.Present(f.UI)
+		return platform.PresentRaster(o.d, f.UI, f.UIWidth, f.UIHeight)
 	}
 	frame := append([]byte(nil), f.UI...)
 	ui.Composite(frame, f.Overlay)

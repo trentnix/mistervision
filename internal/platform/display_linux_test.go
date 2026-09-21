@@ -118,3 +118,97 @@ func TestErrors(t *testing.T) {
 		}
 	}
 }
+
+func TestVideoFillsOutputAndRestoresBrowsingViewport(t *testing.T) {
+	for _, aspect := range []string{"auto", "4:3", "16:9"} {
+		t.Run(aspect, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "frame")
+			d, err := Open(Options{Headless: "640x360", Output: path, AspectRatio: aspect})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer d.Close()
+			g := d.Geometry()
+			pixels := bytes.Repeat([]byte{120, 120, 120, 255}, g.Width*g.Height)
+			read := func() []byte {
+				b, e := os.ReadFile(path)
+				if e != nil {
+					t.Fatal(e)
+				}
+				return b
+			}
+			if err = d.Present(pixels); err != nil {
+				t.Fatal(err)
+			}
+			before := read()
+			want := byte(0)
+			if aspect == "4:3" {
+				want = 120
+			}
+			if before[(180*640)*4] != want {
+				t.Fatal("wrong browsing aspect")
+			}
+			if err = PresentVideo(d, pixels); err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(read(), bytes.Repeat([]byte{120, 120, 120, 255}, 640*360)) {
+				t.Fatal("video did not fill output")
+			}
+			if err = d.Present(pixels); err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(before, read()) {
+				t.Fatal("video changed browsing viewport")
+			}
+		})
+	}
+}
+
+func TestBrowsingRasterUsesViewportWithoutResampling(t *testing.T) {
+	for _, tc := range []struct {
+		spec string
+		w, h int
+	}{{"640x240", 640, 240}, {"640x480", 640, 240}, {"640x576", 640, 288}, {"960x540", 720, 540}, {"1280x720", 960, 720}} {
+		t.Run(tc.spec, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "raster.raw")
+			d, err := Open(Options{Headless: tc.spec, Output: path})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer d.Close()
+			w, h := RasterSize(d)
+			if w != tc.w || h != tc.h {
+				t.Fatalf("raster %dx%d, want %dx%d", w, h, tc.w, tc.h)
+			}
+			pixels := make([]byte, w*h*4)
+			for y := 0; y < h; y++ {
+				for x := 0; x < w; x++ {
+					pixels[(y*w+x)*4] = byte(x)
+					pixels[(y*w+x)*4+1] = byte(y)
+				}
+			}
+			if err := PresentRaster(d, pixels, w, h); err != nil {
+				t.Fatal(err)
+			}
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			g := d.Geometry()
+			if g.OutputWidth != 640 {
+				left := (g.OutputWidth - w) / 2
+				for y := 0; y < h; y++ {
+					for x := 0; x < w; x++ {
+						at := (y*g.OutputWidth + left + x) * 4
+						if raw[at] != byte(x) || raw[at+1] != byte(y) {
+							t.Fatalf("raster was resampled at %d,%d", x, y)
+						}
+					}
+				}
+			}
+			if err := PresentRaster(d, pixels[:len(pixels)-1], w, h); err == nil {
+				t.Fatal("accepted incomplete raster")
+			}
+		})
+	}
+}

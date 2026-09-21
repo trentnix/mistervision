@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"mistervision/internal/input/control"
+	"mistervision/internal/ui"
 )
 
 // music draws the current track, elapsed time, and optional controls.
@@ -46,7 +47,17 @@ func (p *screenPainter) music() {
 	spinning := false
 	if s.Music != nil && p.visualizer != nil {
 		s.MusicFrame.ArtworkBounds = image.Rect(24, sy+28, w-24, max(sy+29, titleY-10))
-		p.visualizer.Draw(c, s.Music, s.MusicIndex, s.MusicFrame)
+		rw, rh := c.RasterSize()
+		if rw != w || rh != h {
+			if p.cache.musicCanvas == nil {
+				p.cache.musicCanvas = ui.New(w, h)
+			}
+			clear(p.cache.musicCanvas.Pixels)
+			p.visualizer.Draw(p.cache.musicCanvas, s.Music, s.MusicIndex, s.MusicFrame)
+			c.CopyRows(p.cache.musicCanvas, 0, 0)
+		} else {
+			p.visualizer.Draw(c, s.Music, s.MusicIndex, s.MusicFrame)
+		}
 		spinning = s.Music.Config.Backgrounds[s.MusicIndex].Type == "spinning"
 		c.Shade(0, 0, w, sy+22, 155)
 		c.Shade(0, titleY-4, w, h-titleY+4, 175)

@@ -12,7 +12,13 @@ import (
 // display's pixel aspect ratio. Text is left aligned and truncated to limit
 // lines. Callers must cache repeated labels and serialize use of the renderer.
 func (r *Renderer) Label(text string, width, size, limit int, scaleY float32, ink color.RGBA) *image.RGBA {
-	if width <= 6 || size <= 0 || limit <= 0 || scaleY <= 0 {
+	return r.LabelDensity(text, width, size, limit, scaleY, ink, 1, 1)
+}
+
+// LabelDensity rasterizes the same logical label at a higher pixel density.
+// Shaping and wrapping remain identical to Label. The caller owns the image.
+func (r *Renderer) LabelDensity(text string, width, size, limit int, scaleY float32, ink color.RGBA, sx, sy float32) *image.RGBA {
+	if sx <= 0 || sy <= 0 || width <= 6 || size <= 0 || limit <= 0 || scaleY <= 0 {
 		return nil
 	}
 	runes := []rune(text)
@@ -32,7 +38,7 @@ func (r *Renderer) Label(text string, width, size, limit int, scaleY float32, in
 		}
 		used = max(used, (advance+63)/64)
 	}
-	mask := rasterMask(lines, min(width, used+6), size, scaleY, false)
+	mask := rasterMaskDensity(lines, min(width, used+6), size, scaleY, false, sx, sy)
 	if mask == nil {
 		return nil
 	}

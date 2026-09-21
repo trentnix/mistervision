@@ -96,6 +96,21 @@ int main(void) {
   vf_instance_t vf={0};
   assert(!vf_open(&vf,(char *)unsupported[n]));
  }
+ // Explicit display aspect fills a widescreen canvas and preserves source shape.
+ const double sources[]={16.0/9,4.0/3,2.4};
+ for(int n=0;n<3;n++) {
+  vf_instance_t vf={0};char args[100];
+  snprintf(args,sizeof(args),"640:360:%.9f:0:1.777777778",sources[n]);
+  assert(vf_open(&vf,args));assert(vf.config(&vf,640,480,640,480,0,IMGFMT_YV12));
+  mp_image_t *input=alloc_mpi(640,480,IMGFMT_YV12);memset(input->planes[0],200,640*480);
+  assert(vf.put_image(&vf,input,4,4.04));
+  assert(output.planes[0][(180*640+320)*4]==200);
+  assert(output.planes[0][(180*640+5)*4]==(n==1?0:200));
+  assert(output.planes[0][(5*640+320)*4]==(n==2?0:200));
+  int mode=1;assert(vf.control(&vf,VFCTRL_MISTERVISION_PICTURE,&mode)==CONTROL_TRUE);
+  assert(output.planes[0][(5*640+5)*4]==200);
+  free_mp_image(input);vf.uninit(&vf);
+ }
  const int canvases[][2]={{480,270},{640,360},{1280,720},{1920,1080}};
  for(int n=0;n<4;n++) {
   int w=canvases[n][0],h=canvases[n][1];

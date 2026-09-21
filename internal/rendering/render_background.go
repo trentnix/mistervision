@@ -15,7 +15,7 @@ func (s *sceneCache) customBackground(c *ui.Canvas, source image.Image) {
 		return
 	}
 	if s.customBase == nil || s.customBase.Width != c.Width || s.customBase.Height != c.Height || !sameArtwork(s.customSource, source) {
-		s.customBase = ui.New(c.Width, c.Height)
+		s.customBase = c.NewLayer()
 		drawCustomBackground(s.customBase, source)
 		s.customSource = source
 	}

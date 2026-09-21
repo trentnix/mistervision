@@ -41,17 +41,14 @@ func run() (err error) {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	var mode displaymode.Config
-	var loadErr error
 	interlaced := os.Getenv(displaymode.ActiveEnv) == "1"
-	if o.headless == "" && !interlaced {
-		mode, loadErr = displaymode.Parse(source.Section("display"))
-	}
+	mode, loadErr := displaymode.Parse(source.Section("display"))
 	var scaled bool
 	if o.headless == "" && !interlaced && !mode.Interlaced && loadErr == nil {
 		scaled, loadErr = displaymode.NeedsFramebufferScaling()
 	}
-	trace, err := openStartupDiagnostics(o, (mode.Interlaced || scaled) && loadErr == nil, source)
+	supervised := o.headless == "" && !interlaced && (mode.Interlaced || scaled) && loadErr == nil
+	trace, err := openStartupDiagnostics(o, supervised, source)
 	if err != nil {
 		return err
 	}
@@ -63,7 +60,7 @@ func run() (err error) {
 	if o.headless == "" {
 		mister.RecordStartup(trace.log, interlaced)
 	}
-	if mode.Interlaced {
+	if o.headless == "" && !interlaced && mode.Interlaced {
 		trace.phase("interlaced-supervisor")
 		return displaymode.Run(ctx, filepath.Dir(source.Path), os.Args[1:])
 	}
@@ -72,13 +69,15 @@ func run() (err error) {
 		return displaymode.RunScaled(ctx, mode, os.Args[1:])
 	}
 	trace.phase("display-open")
-	d, err := platform.Open(platform.Options{Device: o.device, Headless: o.headless, Output: o.output})
+	d, err := platform.Open(platform.Options{Device: o.device, Headless: o.headless, Output: o.output, AspectRatio: mode.AspectRatio})
 	if err != nil {
 		return err
 	}
 	defer func() { err = errors.Join(err, d.Close()) }()
 	g := d.Geometry()
-	trace.log.Record("application.display", slog.Int("ui_width", g.Width), slog.Int("ui_height", g.Height), slog.Int("output_width", g.OutputWidth), slog.Int("output_height", g.OutputHeight))
+	o.displayAspect = platform.ResolveAspect(mode.AspectRatio, g.OutputWidth, g.OutputHeight)
+	rw, rh := platform.RasterSize(d)
+	trace.log.Record("application.display", slog.Int("browsing_width", rw), slog.Int("browsing_height", rh), slog.Int("ui_width", g.Width), slog.Int("ui_height", g.Height), slog.Int("output_width", g.OutputWidth), slog.Int("output_height", g.OutputHeight), slog.Float64("display_aspect", o.displayAspect))
 	if o.browse {
 		return runBrowser(ctx, d, o, trace, source)
 	}
