@@ -79,7 +79,7 @@ static mp_image_t *alloc_mpi(int w,int h,unsigned long fmt) {
 static void free_mp_image(mp_image_t *p) { if(p){for(int i=0;i<3;i++)free(p->planes[i]);free(p);} }
 static void memcpy_pic(uint8_t *d,const uint8_t *s,int w,int h,int ds,int ss) { for(int y=0;y<h;y++)memcpy(d+y*ds,s+y*ss,w); }
 static mp_image_t *vf_get_image(vf_instance_t *v,unsigned int fmt,int type,int flags,int w,int h) {
- if(!output.planes[0])output.planes[0]=malloc(640*576*4);
+ if(!output.planes[0])output.planes[0]=malloc(1920*1080*4);
  output.w=w;output.h=h;output.stride[0]=w*4;return &output;
 }
 static int vf_next_put_image(vf_instance_t *v,mp_image_t *p,double pts,double endpts) {last_pts=pts;return 1;}
@@ -90,6 +90,29 @@ static void vf_extra_flip(vf_instance_t *v) {flips++;}
 '''
         suffix = r'''
 int main(void) {
+ // Production filter and Go validation reject unsafe dimensions.
+ const char *unsupported[]={"3840:2160:1.333333333:0","641:480:1.333333333:0","640:119:1.333333333:0"};
+ for(int n=0;n<3;n++) {
+  vf_instance_t vf={0};
+  assert(!vf_open(&vf,(char *)unsupported[n]));
+ }
+ const int canvases[][2]={{480,270},{640,360},{1280,720},{1920,1080}};
+ for(int n=0;n<4;n++) {
+  int w=canvases[n][0],h=canvases[n][1];
+  vf_instance_t vf={0};char args[80];
+  snprintf(args,sizeof(args),"%d:%d:1.333333333:0",w,h);
+  assert(vf_open(&vf,args));assert(vf.config(&vf,640,480,640,480,0,IMGFMT_YV12));
+  mp_image_t *input=alloc_mpi(640,480,IMGFMT_YV12);memset(input->planes[0],200,640*480);
+  assert(vf.put_image(&vf,input,4,4.04));
+  assert(output.planes[0][(h/2*w+w/2)*4]==200);
+  assert(output.planes[0][(h/2*w)*4]==0);
+  int margin=(w-h*4/3)/2;
+  assert(output.planes[0][(h/2*w+margin-1)*4]==0);
+  assert(output.planes[0][(h/2*w+margin)*4]==200);
+  int mode=1;assert(vf.control(&vf,VFCTRL_MISTERVISION_PICTURE,&mode)==CONTROL_TRUE);
+  assert(output.planes[0][(h/2*w+margin-1)*4]==0);
+  free_mp_image(input);vf.uninit(&vf);
+ }
  for(int height=240;height<=576;height+=48) {
   if(height!=240&&height!=288&&height!=480&&height!=576)continue;
   vf_instance_t vf={0};char args[80];

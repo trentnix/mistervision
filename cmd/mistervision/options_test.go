@@ -74,3 +74,14 @@ func TestSettingsPathFlagOverridesEnvironment(t *testing.T) {
 		t.Fatal("settings flags lost", err)
 	}
 }
+
+func TestDisplayCheckRequiresInlineHeadlessPlayback(t *testing.T) {
+	for _, args := range [][]string{{"-mister-display-check"}, {"-browse", "-headless=1920x1080", "-mister-display-check"}} {
+		if _, err := parseOptions(args); err == nil {
+			t.Fatal("display check accepted without inline output")
+		}
+	}
+	if _, err := parseOptions([]string{"-browse", "-headless=1920x1080", "-output=frame", "-terminal-player=helper.py", "-mister-display-check"}); err != nil {
+		t.Fatal(err)
+	}
+}

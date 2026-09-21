@@ -44,16 +44,24 @@ func renderVideoOverlayOn(c *ui.Canvas, p PlaybackPresentation, now time.Time, l
 	}
 	seeking := p.ShowDestination
 	if label := p.WaitLabel; !p.ControlsVisible && (label != "" || seeking) {
+		// Emphasize status text without changing captions or playback controls.
+		status := *c
+		if face, ok := c.Typeface.(*browsingTypeface); ok {
+			larger := *face
+			larger.bodyHeight = 9
+			larger.bold = true
+			status.Typeface = &larger
+		}
 		// Match the display's 4:3 shape after logical CRT pixels are stretched.
 		boxWidth := 140
 		boxHeight := (boxWidth*h + w/2) / w
-		c.Shade((w-boxWidth)/2, (h-boxHeight)/2, boxWidth, boxHeight, 64)
+		c.Shade((w-boxWidth)/2, (h-boxHeight)/2, boxWidth, boxHeight, 210)
 		if seeking {
-			center(c, h/2-12, "Seek to", titleColor, 1)
-			center(c, h/2+5, runtime(p.DestinationTicks), titleColor, 1)
+			center(&status, h/2-12, "Seek to", 0xffffff, 1)
+			center(&status, h/2+5, runtime(p.DestinationTicks), 0xffffff, 1)
 			return c.Pixels
 		}
-		center(c, h/2-12, label, titleColor, 1)
+		center(&status, h/2-12, label, 0xffffff, 1)
 		// Reduce in int64 before narrowing: MiSTer uses a 32-bit int.
 		step := int((now.UnixMilli() / 150) % 8)
 		for i := 0; i < 8; i++ {

@@ -28,7 +28,7 @@ type startupDiagnostics struct {
 }
 
 // openStartupDiagnostics starts logging before framebuffer or browser setup.
-// The interlaced supervisor has a separate bounded log because its child opens
+// The display supervisor has a separate bounded log because its child opens
 // the application log independently. Preview runs retain their existing behavior.
 func openStartupDiagnostics(o launchOptions, supervisor bool, source *settings.File) (*startupDiagnostics, error) {
 	s := &startupDiagnostics{started: time.Now()}

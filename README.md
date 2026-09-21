@@ -108,6 +108,55 @@ Updates replace the application, matching MPlayer, and standard launcher togethe
 
 Automatic updates require the standard installation paths above. Desktop and custom installations use manual installation. See [manual installation and recovery](docs/GO_BUILD.md#application-updates) for details.
 
+## Composite and S-Video output
+
+MiSTerVision draws through the Linux framebuffer. Analog output must display that framebuffer through the scaler. If the CRT says to disable the framebuffer or enable the VGA scaler, use `vga_scaler=1` with a CRT-compatible timing. Disabling `fb_terminal` does not solve the application’s display requirement.
+
+The following **NTSC 240p** settings worked over composite through a Super Video Custard on a MiSTer Multisystem 2. Back up `/media/fat/MiSTer.ini`, then merge these keys into its existing `[Menu]` section. Preserve other sections. Exit MiSTerVision before editing and reload the Menu core afterward.
+
+```ini
+[Menu]
+vga_mode=rgb
+vga_scaler=1
+vga_sog=0
+composite_sync=0
+forced_scandoubler=0
+direct_video=0
+fb_terminal=1
+menu_pal=0
+video_mode=640,30,60,70,240,4,4,14,12587
+vscale_mode=0
+vscale_border=8
+```
+
+Set `display.interlaced` to `false` in `settings.json` for this configuration. The border value suits my CRT’s overscan and can be adjusted. These are adapter-specific settings, not a preset for every composite or S-Video connection. The Custard converts RGB to composite/S-Video, so it uses `vga_mode=rgb`. Other adapters may require different settings.
+
+Follow the [Custard manual](https://multisystem.uk/media/2025/04/Super_Video_Custard_Manual.pdf) for its NTSC/PAL, termination, and sync-on-green switches. Its normal game-core instructions use `vga_scaler=0`. MiSTerVision requires the framebuffer route above instead. Composite browsing and playback have been tested. S-Video shares the adapter’s input, but S-Video and 480i through the Custard have not been tested. The SS1 S-Video path also needs separate validation.
+
+## HDMI output
+
+For a conventional HDMI or HDMI-to-DVI monitor, use a timing supported by the monitor. For example, merge these keys into the existing `[Menu]` section of `/media/fat/MiSTer.ini` and set `display.interlaced` to `false` in `settings.json`:
+
+```ini
+[Menu]
+direct_video=0
+vga_scaler=0
+fb_terminal=1
+video_mode=0
+vscale_mode=0
+vscale_border=0
+```
+
+`video_mode=0` selects 720p60. Use `video_mode=6` for 1080p60. Replace any existing custom `[Menu]` timing when switching. This example leaves analog output on the core’s native path, which does not display MiSTerVision’s framebuffer. Do not enable the analog scaler with these HD timings on a standard-definition CRT or the Custard.
+
+The development build reduces a non-CRT framebuffer and lets MiSTer’s FPGA scaler enlarge the picture without changing HDMI timing. The default render limit is 640×480. Both tested HDMI modes use a 640×360 framebuffer with a centered 4:3 picture. Higher limits are configurable but require more CPU and memory bandwidth. The defaults have been tested at 720p and 1080p through an HDMI-to-DVI adapter. See [framebuffer settings and test scope](docs/GO_DISPLAY.md#hdmi-framebuffer-scaling).
+
+### Why both displays may not show the picture
+
+Many game cores send their native picture to analog while the scaler produces a separate HD picture for HDMI. MiSTerVision’s Linux framebuffer needs the scaler on analog too. With `vga_scaler=1`, analog uses the timing selected by `video_mode`, as HDMI does. A 240p timing can work on the CRT while leaving an HDMI/DVI monitor blank because that monitor does not accept the timing. A passive HDMI-to-DVI adapter does not upscale it. See [MiSTer’s video settings](https://mister-devel.github.io/MkDocs_MiSTer/advanced/ini/).
+
+Simultaneous display therefore requires both displays to accept the output timing, or an external scaler to convert the CRT-compatible signal for the modern display. MiSTerVision does not currently provide independent HD and CRT framebuffer outputs. Simultaneous output has not been validated. The interlaced RGB path also enables `direct_video`, which MiSTer documents as incompatible with ordinary HDMI monitors. See [Direct Video](https://mister-devel.github.io/MkDocs_MiSTer/advanced/directvideo/).
+
 ## Progressive and interlaced output
 
 The default uses MiSTer’s current display mode, normally 240p for NTSC or 288p for PAL. Interlaced output is optional: 480i for NTSC or 576i for PAL. I have tested 240p and 480i. Someone with PAL hardware will need to validate 288p and 576i output.

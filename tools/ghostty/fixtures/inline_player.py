@@ -22,7 +22,7 @@ def main():
     args = parser.parse_args()
     output = Path(args.output)
     record_picture(output, args.zoom_4_3)
-    output.write_bytes(bytes([23]) * 640 * 240 * 4)
+    output.write_bytes(bytes([23]) * int(args.width) * int(args.height) * 4)
     print("ANS_TIME_POSITION=2", flush=True)
     if args.captions:
         print("ANS_CAPTION_TEXT=" + b"Live caption text".hex(), flush=True)

@@ -1,6 +1,6 @@
-// Package displaymode owns the optional interlaced MiSTer core for one app run.
-// It switches hardware before the framebuffer opens and restores the normal
-// menu after the child exits, including when the child crashes.
+// Package displaymode owns session-scoped MiSTer display changes. It selects
+// an optional interlaced core or a bounded framebuffer before the client opens
+// the display, then restores Menu after the child exits.
 package displaymode
 
 import (
@@ -14,14 +14,18 @@ import (
 	"mistervision/internal/settings"
 )
 
-// Config selects the native output at startup. The default preserves the
-// current display. Interlaced uses the community core included in release installations.
+// Config selects native output at startup. Defaults preserve CRT rasters and
+// bound software rendering on other outputs. Interlaced uses the bundled core.
 type Config struct {
 	// Interlaced loads the supported standalone core for this application run.
 	Interlaced bool `json:"interlaced"`
+	// FramebufferMaxWidth and FramebufferMaxHeight bound software rendering on
+	// non-CRT outputs. Zero selects 640 and 480. Native CRT rasters are preserved.
+	FramebufferMaxWidth  int `json:"framebuffer_max_width"`
+	FramebufferMaxHeight int `json:"framebuffer_max_height"`
 }
 
-// Load reads legacy display settings. A missing file preserves the current mode.
+// Load reads legacy display settings. A missing file selects conservative defaults.
 func Load(path string) (Config, error) { return Parse(settings.Read(path, 4096, false)) }
 
 // Parse validates the display section before any hardware changes occur.
@@ -29,6 +33,10 @@ func Parse(source settings.Section) (Config, error) {
 	var c Config
 	if err := source.Decode(&c); err != nil {
 		return c, fmt.Errorf("display configuration %s: %w", source.Path, err)
+	}
+	if (c.FramebufferMaxWidth != 0 && (c.FramebufferMaxWidth < 320 || c.FramebufferMaxWidth > 1920)) ||
+		(c.FramebufferMaxHeight != 0 && (c.FramebufferMaxHeight < 240 || c.FramebufferMaxHeight > 1080)) {
+		return Config{}, errors.New("display framebuffer limits must be 320–1920 pixels wide and 240–1080 pixels high")
 	}
 	return c, nil
 }

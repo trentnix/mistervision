@@ -43,8 +43,14 @@ static int render(vf_instance_t *vf)
 {
     struct vf_priv_s *p = vf->priv;
     mp_image_t *src = p->source;
-    int cw = src->w, ch = src->h, left = 0, top = 0, w = p->width;
-    double par = (double)p->width * 3 / (p->height * 4);
+    int vw = p->width, vh = p->height;
+    int crt = vw == 640 && (vh == 240 || vh == 288 || vh == 480 || vh == 576);
+    if (!crt) {
+        vw = p->height * 4 / 3;
+        if (vw > p->width) { vw = p->width; vh = p->width * 3 / 4; }
+    }
+    int cw = src->w, ch = src->h, left = 0, top = 0, w = vw & ~1;
+    double par = crt ? (double)vw * 3 / (vh * 4) : 1.0;
     int h = ((int)(w / (p->dar * par) + 0.5)) & ~1;
     int zoom = p->mode;
     if (zoom) {
@@ -63,9 +69,9 @@ static int render(vf_instance_t *vf)
         if (ch > src->h) ch = src->h & ~1;
         left = ((src->w - cw) / 2) & ~1;
         top = ((src->h - ch) / 2) & ~1;
-        h = p->height;
-    } else if (h > p->height) {
-        h = p->height;
+        h = vh & ~1;
+    } else if (h > vh) {
+        h = vh & ~1;
         w = ((int)(h * p->dar * par + 0.5)) & ~1;
     }
     if (w < 2) w = 2;
@@ -191,7 +197,8 @@ static int vf_open(vf_instance_t *vf, char *args)
     struct vf_priv_s *p = calloc(1, sizeof(*p));
     if (!p) return 0;
     if (!args || sscanf(args, "%d:%d:%lf:%d", &p->width, &p->height, &p->dar, &p->mode) != 4 ||
-        p->width != 640 || (p->height != 240 && p->height != 288 && p->height != 480 && p->height != 576) ||
+        p->width < 120 || p->width > 1920 || p->height < 120 || p->height > 1080 ||
+        (p->width & 1) || (p->height & 1) ||
         !isfinite(p->dar) || p->dar < 0.1 || p->dar > 10 || p->mode < 0 || p->mode > 1) {
         free(p);
         return 0;

@@ -9,6 +9,7 @@ import (
 	"mistervision/internal/platform"
 	"mistervision/internal/playback"
 	"mistervision/internal/player/ffplay"
+	"mistervision/internal/player/mplayer"
 	"mistervision/internal/player/pythonhelper"
 	"mistervision/internal/sound/alsa"
 	"mistervision/internal/videoout"
@@ -38,7 +39,13 @@ func desktopPlayback(o launchOptions, g platform.Geometry) playback.Config {
 	decoder := ffplay.Decoder{Player: o.player}
 	config := playback.Config{VideoDecoder: decoder, AudioDecoder: decoder, Timing: crtPlaybackTiming(g.OutputHeight)}
 	if o.terminalPlayer != "" {
-		config.VideoDecoder = pythonhelper.Decoder{Script: o.terminalPlayer, Output: inlineFramePath(o), Width: g.OutputWidth, Height: g.OutputHeight}
+		// Frame files contain logical pixels. The presenter expands them to the
+		// physical framebuffer, including line doubling and pillarboxing.
+		helper := pythonhelper.Decoder{Script: o.terminalPlayer, Output: inlineFramePath(o), Width: g.Width, Height: g.Height}
+		if o.misterDisplayCheck {
+			helper.DisplayValidator = mplayer.Decoder{Width: g.OutputWidth, Height: g.OutputHeight}
+		}
+		config.VideoDecoder = helper
 		config.AudioDecoder = config.VideoDecoder
 	}
 	if o.audioPlayer != "" && o.player == "" {

@@ -2,7 +2,6 @@
 package mplayer
 
 import (
-	"errors"
 	"fmt"
 	"io"
 
@@ -120,11 +119,15 @@ func (d Decoder) SetPicture(c player.Control, mode player.PictureMode, request i
 	return err
 }
 
-// Validate requires a 640-pixel framebuffer with 240, 288, 480, or 576 lines.
+// Validate bounds native video allocations. Startup applies the configured
+// framebuffer ceiling before launch. Audio does not use fbdev.
 // It does not open the framebuffer or verify the installed player.
 func (d Decoder) Validate(item media.Item) error {
-	if d.Width != 640 || (d.Height != 240 && d.Height != 288 && d.Height != 480 && d.Height != 576) {
-		return errors.New("MiSTer playback currently requires a 640-pixel PAL or NTSC framebuffer")
+	if item.Type == "Audio" {
+		return nil
+	}
+	if d.Width < 120 || d.Width > 1920 || d.Height < 120 || d.Height > 1080 || d.Width%2 != 0 || d.Height%2 != 0 {
+		return &player.UnsupportedDisplayError{Width: d.Width, Height: d.Height}
 	}
 	return nil
 }

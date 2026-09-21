@@ -10,7 +10,10 @@ import (
 )
 
 const titleColor = 0xffe040
-const dimColor = 0x808080
+
+// Keep secondary text bright enough to read through composite video.
+// Size and placement distinguish it from headings without relying on dark gray.
+const dimColor = 0xe8e8e8
 
 func safeY(w, h int) int { return int(24*float64(h*4)/float64(w*3) + 0.5) }
 

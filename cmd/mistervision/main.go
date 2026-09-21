@@ -47,7 +47,11 @@ func run() (err error) {
 	if o.headless == "" && !interlaced {
 		mode, loadErr = displaymode.Parse(source.Section("display"))
 	}
-	trace, err := openStartupDiagnostics(o, mode.Interlaced && loadErr == nil, source)
+	var scaled bool
+	if o.headless == "" && !interlaced && !mode.Interlaced && loadErr == nil {
+		scaled, loadErr = displaymode.NeedsFramebufferScaling()
+	}
+	trace, err := openStartupDiagnostics(o, (mode.Interlaced || scaled) && loadErr == nil, source)
 	if err != nil {
 		return err
 	}
@@ -62,6 +66,10 @@ func run() (err error) {
 	if mode.Interlaced {
 		trace.phase("interlaced-supervisor")
 		return displaymode.Run(ctx, filepath.Dir(source.Path), os.Args[1:])
+	}
+	if scaled {
+		trace.phase("framebuffer-supervisor")
+		return displaymode.RunScaled(ctx, mode, os.Args[1:])
 	}
 	trace.phase("display-open")
 	d, err := platform.Open(platform.Options{Device: o.device, Headless: o.headless, Output: o.output})

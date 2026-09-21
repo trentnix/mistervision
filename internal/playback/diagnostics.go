@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"mistervision/internal/diagnostics"
+	"mistervision/internal/player"
 )
 
 var diagnosticSequence atomic.Uint64
@@ -60,7 +61,10 @@ func (t *playbackTrace) finish(ctx context.Context, err error) {
 		return
 	}
 	kind := diagnostics.ErrorKind(err)
+	var display *player.UnsupportedDisplayError
 	switch {
+	case errors.As(err, &display):
+		kind = "unsupported-display"
 	case errors.Is(err, ErrStartupTimeout):
 		kind = "startup-timeout"
 	case errors.Is(err, ErrNotStarted):

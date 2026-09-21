@@ -21,6 +21,9 @@ type Decoder struct {
 	Width, Height int
 	// Picture selects the initial video fit.
 	Picture player.PictureMode
+	// DisplayValidator optionally checks target output capabilities before launch.
+	// Local previews can apply a hardware decoder's limits without running it.
+	DisplayValidator interface{ Validate(media.Item) error }
 
 	levels bool
 }
@@ -102,6 +105,11 @@ func (d Decoder) WithAudioLevels() (player.Decoder, player.Meter) {
 // Validate requires a helper script. Video also requires an output path and
 // 640x240 or 640x288 geometry. It does not check whether the script exists.
 func (d Decoder) Validate(item media.Item) error {
+	if d.DisplayValidator != nil {
+		if err := d.DisplayValidator.Validate(item); err != nil {
+			return err
+		}
+	}
 	if d.Script == "" {
 		return errors.New("Python playback requires a helper script and no player override")
 	}

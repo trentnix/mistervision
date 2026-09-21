@@ -3,7 +3,9 @@ package playback
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"mistervision/internal/player"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -134,5 +136,43 @@ func TestTranscodeDiagnosticsUsePreparedLimitsWithoutStreamSecrets(t *testing.T)
 	}
 	if strings.Contains(string(data), "private-") {
 		t.Fatal("logged stream credentials or origin")
+	}
+}
+
+func TestUnsupportedDisplayStopsBeforeServerPreparation(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "debug.log")
+	log, err := diagnostics.Open(diagnostics.Config{Enabled: true, Path: path, MaxBytes: 32768})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer log.Close()
+	// A nil provider and nonexistent player would fail if validation did not run first.
+	err = Run(context.Background(), nil, Config{Diagnostics: log, VideoDecoder: nativeplayer.Decoder{Player: "/missing/player", Width: 3840, Height: 2160}}, Request{Item: media.Item{Type: "Movie"}})
+	var display *player.UnsupportedDisplayError
+	if !errors.As(err, &display) {
+		t.Fatalf("wrong error: %v", err)
+	}
+	if err := log.Close(); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		var event map[string]any
+		if err := json.Unmarshal([]byte(line), &event); err != nil {
+			t.Fatal(err)
+		}
+		if event["msg"] == "playback.end" {
+			found = true
+			if event["stage"] != "decoder-configuration" || event["error_kind"] != "unsupported-display" || event["failed"] != true {
+				t.Fatalf("wrong diagnosis: %v", event)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("missing playback result")
 	}
 }

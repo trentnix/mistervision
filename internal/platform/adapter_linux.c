@@ -76,18 +76,17 @@ int mf_open(mf_display **out, const char *device, int width, int height)
     if (d->size > 128u * 1024u * 1024u) goto fail;
     d->ow = d->w = width; d->oh = d->h = height;
     d->bw = width; d->bh = height;
-    if (height == 480 || height == 576) {
+    if (width == 640 && (height == 480 || height == 576)) {
         d->h /= 2;
-    } else if (width > 640 || height > 480 ||
-               (height >= 360 && 3 * width > 4 * height)) {
+    } else if (!(width == 640 && (height == 240 || height == 288))) {
         d->bw = height * 4 / 3;
         if (d->bw > width) {
             d->bw = width;
             d->bh = width * 3 / 4;
         }
         d->bx = (width - d->bw) / 2; d->by = (height - d->bh) / 2;
-        d->w = d->bw >= 640 ? 640 : d->bw;
-        d->h = d->bw >= 640 ? 288 : d->bh * 2 / 3;
+        d->w = 640;
+        d->h = 288;
     }
     if (!d->w || !d->h) goto fail;
     if (d->fd < 0) {

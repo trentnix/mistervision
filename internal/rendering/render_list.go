@@ -133,7 +133,7 @@ func placeListText(title, subtitle *image.RGBA, rowHeight int) listTextPlacement
 // listRowText uses the same type sizes and metadata treatment in every home
 // and library list. Label rasters and their ink bounds are cached.
 func (p *screenPainter) listRowText(item media.Item, width int, selected, live bool) (*image.RGBA, *image.RGBA) {
-	color := uint32(0xcccccc)
+	color := uint32(dimColor)
 	if selected {
 		color = 0xffffff
 	}
@@ -143,13 +143,6 @@ func (p *screenPainter) listRowText(item media.Item, width int, selected, live b
 		s = ""
 		if item.LibraryCount != nil {
 			s = libraryCountText(item, *item.LibraryCount)
-		}
-	}
-	// Match channel-list contrast while retaining watched/resume colors.
-	if col == 0x585858 {
-		col = 0x999999
-		if selected {
-			col = 0xcccccc
 		}
 	}
 	if live {

@@ -141,6 +141,8 @@ python3 tools/ghostty/ghostty_harness.py --go --ntsc
 
 `make headless` writes `build/go-frame.raw` and `build/go-frame.png` at 640×288. The Ghostty command shows the color bars at 640×240 until interrupted. Direct test-frame runs accept `-headless WIDTHxHEIGHT`, `-output PATH`, and either `-hold 10s` or `-wait`. Hardware test frames need a hold or wait option to remain visible.
 
+For physical framebuffer previews and reproduction of MiSTer playback-size errors, see the [harness framebuffer guide](../tools/ghostty/README.md#framebuffer-previews-and-native-playback-checks). The local matrix covers 480-line, 720p, and 1080p output without changing hardware configuration.
+
 ## Tests and CI
 
 Install a C compiler, Python 3, FFmpeg, libmpv, and the libavcodec/libavutil development headers. Then run:

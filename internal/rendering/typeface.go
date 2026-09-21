@@ -11,7 +11,8 @@ import (
 type browsingTypeface struct {
 	cache      *primaryTextCache
 	scaleY     float32
-	bodyHeight int // Logical body font height. Zero uses the standard seven pixels.
+	bodyHeight int  // Logical body font height. Zero uses the standard seven pixels.
+	bold       bool // Apply heading weight without increasing the text size.
 }
 
 func (f *browsingTypeface) key(text string, width, scale int, color uint32) primaryTextKey {
@@ -22,7 +23,7 @@ func (f *browsingTypeface) key(text string, width, scale int, color uint32) prim
 	}
 	size := max(8, int(float32(height)/f.scaleY+0.5))
 	return primaryTextKey{text: text, width: width, size: size, lines: 1,
-		color: color, scaleY: f.scaleY, bold: scale > 1}
+		color: color, scaleY: f.scaleY, bold: f.bold || scale > 1}
 }
 
 func (f *browsingTypeface) Measure(text string, scale int) int {

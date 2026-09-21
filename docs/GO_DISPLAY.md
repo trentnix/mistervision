@@ -2,6 +2,30 @@
 
 The default keeps MiSTer's current display, normally 240p for NTSC or 288p for PAL. Optional interlaced output uses a standalone Menu core at 480i or 576i. Synchronization is automatic. Exit the application before changing settings.
 
+## HDMI framebuffer scaling
+
+On non-CRT framebuffers, the client asks Main to reduce the framebuffer while the FPGA scaler enlarges it across the existing output. HDMI timing stays unchanged. The default ceiling is 640×480. Both 1280×720 and 1920×1080 signals use a 640×360 framebuffer, with a centered 4:3 viewport. Video and overlays share that viewport. Native 640×240, 640×288, 640×480, and 640×576 CRT rasters keep their existing paths, including full-height interlaced playback.
+
+To allow more software rendering work, set limits in `settings.json`:
+
+```json
+{
+  "display": {
+    "interlaced": false,
+    "framebuffer_max_width": 1280,
+    "framebuffer_max_height": 720
+  }
+}
+```
+
+Omitted or zero limits select 640 and 480. Valid nonzero limits are 320–1920 pixels wide and 240–1080 pixels high. Invalid values stop startup. Main supports divisors of one through four. The client selects the smallest divisor whose even-sized framebuffer fits both limits. A 720p signal with the example limits uses 1280×720. A 1080p signal uses 960×540. If no divisor fits, startup stops and restores the menu. Raising the limits can cause dropped frames even when the server sends lower-resolution video.
+
+The session first probes at one-quarter signal dimensions to avoid allocating a full HD or larger framebuffer. It uses Main's [`fb_cmd0` command](https://github.com/MiSTer-devel/Main_MiSTer/blob/master/video.cpp), waits for the kernel to acknowledge the dimensions, and starts the client only afterward. It writes no persistent display configuration. Exit restores Menu. A supervisor stops orphaned decoders before restoring hardware after a failure. Use the matching updated application and MPlayer together.
+
+Local tests cover negotiation, rejected settings, native picture geometry, real desktop decoding, and overlay composition. On a MiSTer connected through an HDMI-to-DVI adapter to a Dell U2412M, 720p and 1080p tests both negotiated a 640×360 framebuffer and played video successfully. The 1080p test also had responsive menus. Playback diagnostics showed steady position advancement, which does not measure visible frame drops. Returning from the 720p application restored the 1280×720 menu framebuffer. Simultaneous analog output and higher rendering limits still need device validation. The scaler does not fix an analog route that cannot display the Linux framebuffer. Do not infer connector type or CRT capability from framebuffer dimensions alone.
+
+Diagnostics report the render framebuffer as `output_width` and `output_height` in `application.display`. Those dimensions are not the HDMI signal resolution. Unsafe native dimensions produce an “Unsupported display mode” message before opening a stream. Audio-only playback does not require video dimensions.
+
 ## Enable or disable interlaced output
 
 Starting with v1.4.1, both [installation packages](GO_BUILD.md#release-bundles) include the matching client, player, and [InterlacedMenu.rbf v0.0.1](https://github.com/iwalton3/Menu_MiSTer/releases/tag/v0.0.1). Choose the interlaced ZIP for a new installation to enable interlacing without editing settings. Existing installations retain their configuration. Source builds must still place the pinned core beside `settings.json`, normally in `/media/fat/mistervision`. The supported core has this SHA-256:
@@ -47,6 +71,10 @@ For 480i Live TV, Jellyfin and Plex conversion is capped at 30000/1001 fps. Prog
 ## Tested scope
 
 I test 240p and 480i on a consumer 4:3 CRT, using a MiSTer configured for RGB through its 9-pin output and a Retrovision YPbPr cable. This is not validation of MiSTer's direct YPbPr mode. Browsing, playback, shared overlays, paused picture changes, and menu restoration have been checked on that setup. Jellyfin testing used version 12.
+
+240p browsing and playback have also been checked through a Super Video Custard composite connection on a MiSTer Multisystem 2. That setup used `vga_scaler=1` and `composite_sync=0` in `[Menu]`, with a 15 kHz 240p video timing. S-Video and 480i through that adapter have not been validated. The UI uses bright secondary text and white playback-status text over a dark backing to improve composite readability.
+
+The warning to disable the framebuffer or enable the VGA scaler means the analog output is not displaying the Linux framebuffer. MiSTerVision needs the framebuffer, so disabling it is not a solution. The analog output must use the scaler with timings and sync appropriate for the connected adapter and CRT. Do not copy an HDMI timing into an analog CRT configuration.
 
 Generated patterns and matched media comparisons found no sustained decoder drops after the timing fixes. Field-counter measurements describe presentation requests, not light emitted by the CRT. Perceived judder still depends on source cadence and display mode. Preserve the current timing unless a reproducible case supports a change.
 
