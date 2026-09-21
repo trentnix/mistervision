@@ -133,3 +133,18 @@ func (d *framebuffer) dump() error {
 	defer C.free(unsafe.Pointer(path))
 	return status("dump framebuffer", C.mf_dump(d.handle, path))
 }
+
+// PresentFullRaster fills the output with an already composed browsing frame.
+// It preserves the normal viewport for subsequent browsing and video frames.
+func (d *framebuffer) PresentFullRaster(pixels []byte, w, h int) error {
+	if d.handle == nil {
+		return errors.New("framebuffer is closed")
+	}
+	if w < 1 || h < 1 || w > 8192 || h > 8192 || len(pixels) != w*h*4 {
+		return errors.New("invalid browsing raster size")
+	}
+	if err := status("present framebuffer", C.mf_present_full_raster(d.handle, (*C.uint8_t)(unsafe.Pointer(&pixels[0])), C.size_t(len(pixels)), C.int(w), C.int(h))); err != nil {
+		return err
+	}
+	return d.dump()
+}

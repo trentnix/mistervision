@@ -109,7 +109,7 @@ func (o *Backend) Present(f videoout.Frame) error {
 		if o.published != nil {
 			o.removeLocked()
 		}
-		return platform.PresentRaster(o.d, f.UI, f.UIWidth, f.UIHeight)
+		return videoout.PresentUI(o.d, f)
 	}
 	overlay := f.Overlay
 	if o.owners > 0 {

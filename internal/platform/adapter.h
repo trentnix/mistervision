@@ -10,6 +10,7 @@ void mf_geometry(mf_display *d, int *w, int *h, int *ow, int *oh);
 void mf_raster_size(mf_display *d, int *w, int *h);
 int mf_present_raster(mf_display *d, const uint8_t *pixels, size_t size, int width, int height);
 int mf_present(mf_display *d, const uint8_t *pixels, size_t size);
+int mf_present_full_raster(mf_display *d, const uint8_t *pixels, size_t size, int width, int height);
 int mf_present_video(mf_display *d, const uint8_t *pixels, size_t size);
 int mf_dump(mf_display *d, const char *path);
 int mf_close(mf_display *d);

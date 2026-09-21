@@ -2,7 +2,7 @@ MiSTerVision
 
 Start here
 
-Use the progressive package for a first installation. It keeps MiSTer's current display mode and includes the core needed for optional interlaced output. Start with working display settings and the default framebuffer limits. You do not need a connection file for local server discovery.
+Use the single application package for a first installation. It keeps MiSTer's current display mode and includes the core needed for optional interlaced output. Start with working display settings and the default framebuffer limits. You do not need a connection file for local server discovery.
 
 Install through update_all or Downloader
 
@@ -10,22 +10,24 @@ Install through update_all or Downloader
 2. Extract downloader_MultiDatabases_mister-vision.ini to /media/fat. Do not replace downloader.ini.
 3. Exit MiSTerVision if it is running, then run update_all or MiSTer Downloader.
 
-The database installs the progressive package and preserves existing settings and sign-in. Use the same updater for later releases. About shows release information and directs registered installations to the external updater. To return to built-in updates, remove the registration and restart.
+The database installs the application package and preserves existing settings and sign-in. Use the same updater for later releases. About shows release information and directs registered installations to the external updater. To return to built-in updates, remove the registration and restart.
 
 Manual installation
 
-1. Download the progressive ZIP and extract it on your computer.
+1. Download the application ZIP and extract it on your computer.
 2. If MiSTerVision is running, exit it. Keep a backup before upgrading.
 3. Copy Scripts/MiSTerVision.sh to /media/fat/Scripts/ and the contents of mistervision/ to /media/fat/mistervision/. Copy the application and matching MPlayer together. Keep the launcher filename free of spaces.
 4. Preserve existing configuration and state. The archive contains examples but no active settings, credentials, saved state, or caches. Make the launcher and binaries executable if your filesystem requires it.
 
 Check your display
 
+MiSTerVision uses the Linux framebuffer. It does not provide independent CRT and HDMI pictures. Choose one output setup before launching.
+
 - Analog CRT: retain CRT-compatible timing. MiSTerVision needs the Linux framebuffer on the analog scaler. Adapter-specific timing and sync settings matter.
-- HDMI or HDMI-to-DVI monitor: keep display.interlaced false and display.aspect_ratio on auto. Keep the default framebuffer limits. The hardware scaler enlarges the smaller framebuffer to the HDMI signal resolution.
+- HDMI monitor: keep display.interlaced false and display.aspect_ratio on auto. Keep the default framebuffer limits. The hardware scaler enlarges the smaller framebuffer to the HDMI signal resolution.
 - Optional 480i: first verify browsing and playback on a compatible CRT route, then set display.interlaced true. The included InterlacedMenu.rbf loads automatically. Do not use this mode for an ordinary HDMI monitor.
 
-The interlaced ZIP contains the same binaries and core with a different first-launch preset. Either preset creates settings.json only when no current or legacy configuration exists. Choosing another ZIP does not change an existing display configuration.
+The single application ZIP retains the -progressive.zip filename for compatibility with existing updaters and Downloader. It includes the optional interlaced core. First launch creates settings.json only when no current or legacy configuration exists. Reinstalling does not change an existing display configuration. Enable interlacing through display.interlaced in settings.json.
 
 See tested adapter settings, output limits, and recovery in docs/GO_DISPLAY.md in the source bundle or https://github.com/trentnix/mistervision/blob/main/docs/GO_DISPLAY.md.
 

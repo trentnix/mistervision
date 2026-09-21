@@ -148,17 +148,14 @@ def write_bundle(root, version, revision, output):
     payload["mistervision/THIRD_PARTY.md"] = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", source_link, notices).encode()
     metadata = (root / "build/release-manifest.txt").read_bytes()
     payload["mistervision/BUILD.txt"] = f"Version: {version}\nRevision: {revision}\n\n".encode() + metadata
-    paths = []
-    for preset in ("progressive", "interlaced"):
-        files = dict(payload)
-        if preset == "interlaced":
-            launcher = files["Scripts/MiSTerVision.sh"]
-            if launcher.count(b"MISTERVISION_INITIAL_INTERLACED=0") != 1:
-                raise ValueError("launcher must declare exactly one installation preset")
-            files["Scripts/MiSTerVision.sh"] = launcher.replace(b"MISTERVISION_INITIAL_INTERLACED=0", b"MISTERVISION_INITIAL_INTERLACED=1")
-        path = output / f"mistervision-{version}-{preset}.zip"
-        write_zip(path, files, epoch)
-        paths.append(path)
+    # Retain the established filename so installed updaters and Downloader
+    # continue to recognize the single package. Interlacing is a setting.
+    launcher = payload["Scripts/MiSTerVision.sh"]
+    if launcher.count(b"MISTERVISION_INITIAL_INTERLACED=0") != 1 or b"MISTERVISION_INITIAL_INTERLACED=1" in launcher:
+        raise ValueError("launcher must default to non-interlaced output")
+    path = output / f"mistervision-{version}-progressive.zip"
+    write_zip(path, payload, epoch)
+    paths = [path]
     source_path = output / f"mistervision-{version}-source.tar.gz"
     source_bundle(root, source_path, version, epoch, upstream, core["Menu_MiSTer-source.tar.gz"])
     paths.append(source_path)

@@ -12,6 +12,7 @@ import (
 // Returned pixels are borrowed until the next Render call.
 type RasterRenderer struct {
 	rasterWidth, rasterHeight int
+	wide                      *carouselBackdrop
 	music                     musicviz.Renderer
 	captions                  caption.Renderer
 	canvas                    *ui.Canvas
@@ -33,6 +34,13 @@ func (r *RasterRenderer) Render(w, h int, s Scene) videoout.Frame {
 	}
 	r.prepare(w, h, rw, rh)
 	anim := r.animation.advance(s, s.listRows(w, h))
+	wide := r.wide != nil && s.Root && !s.ListMode && !s.Video && !s.Audio && !s.About.Visible && s.Setup.Kind == SetupHidden && s.Content.Detail == nil
+	if wide {
+		r.wide.draw(r.canvas, s, anim)
+		// The backdrop is already painted. The carousel now draws only its foreground.
+		s.Background = nil
+		s.Artwork.Covers = nil
+	}
 	f := videoout.Frame{UIWidth: rw, UIHeight: rh, UI: renderSceneWithMusic(r.canvas, &r.cache, s, anim, &r.music), Video: s.Video}
 	if s.Video {
 		r.overlay.Typeface = r.canvas.Typeface
@@ -41,6 +49,11 @@ func (r *RasterRenderer) Render(w, h int, s Scene) videoout.Frame {
 		drawMessage(r.overlay, s.Message, s.Now)
 	}
 	drawMessage(r.canvas, s.Message, s.Now)
+	if wide {
+		f.UI = r.wide.compose(r.canvas)
+		f.UIWidth, f.UIHeight = r.wide.width, r.wide.height
+		f.FullScreen = true
+	}
 	return f
 }
 

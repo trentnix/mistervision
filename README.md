@@ -4,20 +4,18 @@
   <img src="docs/images/mistervision-logo.png" alt="MiSTerVision logo" width="256" height="256">
 </p>
 
-MiSTerVision is a Jellyfin and Plex client for CRT televisions on MiSTer FPGA. It supports movies, TV shows, live TV, music, photos, collections, and playlists through one interface.
+MiSTerVision is a Jellyfin and Plex client for MiSTer FPGA, designed for CRT televisions with support for HDMI displays. It supports movies, TV shows, live TV, music, photos, collections, and playlists through one interface.
 
 Both providers share browsing and playback controls, server discovery, and saved connection switching. Jellyfin can switch saved Quick Connect users. Plex supports Home profiles with avatars and PIN entry. About also lets you forget a Jellyfin user or sign out of Plex on this device.
 
-My goal is a great media experience on CRTs. I use a consumer 4:3 CRT television for everyday testing, including RGB and composite connections. I also test HDMI through an HDMI-to-DVI monitor. I have tested both server providers, including Jellyfin 12.
-
-![MiSTerVision library carousel](docs/images/screenshots/home-carousel.png)
+My goal is a great media experience on CRTs. I use a consumer 4:3 CRT television for everyday testing, including RGB and composite connections. I also test HDMI output. I have tested both server providers, including Jellyfin 12.
 
 ## Run on MiSTer
 
-Start with the **progressive package** or the Downloader installation below. Both keep MiSTer’s current display mode and include the core needed for optional interlaced output. You do not need a configuration file to discover and link a local server.
+There is **one application package** for CRT and HDMI output. It keeps MiSTer’s current display mode and includes the core needed for optional interlaced output. You do not need a configuration file to discover and link a local server.
 
 1. Install MiSTerVision using one method below.
-2. Check the [display setup](#choose-your-display) for your connection.
+2. Check the [display setup](#display-setup) for your connection.
 3. Launch **MiSTerVision** from Scripts and [connect to a server](#connect-to-a-server).
 
 ### Install through update_all or Downloader
@@ -26,7 +24,7 @@ Start with the **progressive package** or the Downloader installation below. Bot
 2. Extract `downloader_MultiDatabases_mister-vision.ini` to `/media/fat/` on the SD card. This registers the database without replacing `downloader.ini`.
 3. If MiSTerVision is running, exit it. Run `update_all` or MiSTer Downloader.
 
-The database installs the progressive package and preserves existing settings and sign-in. Use the same updater for later releases. See the maintainer’s [database instructions](https://github.com/theypsilon/MultiDatabases_MiSTer/tree/main/mister-vision).
+The database installs the application package and preserves existing settings and sign-in. Use the same updater for later releases. See the maintainer’s [database instructions](https://github.com/theypsilon/MultiDatabases_MiSTer/tree/main/mister-vision).
 
 ### Manual installation
 
@@ -36,37 +34,36 @@ The database installs the progressive package and preserves existing settings an
 
 The result includes `/media/fat/Scripts/MiSTerVision.sh`, `/media/fat/mistervision/mistervision`, `/media/fat/mistervision/mplayer-arm`, and `/media/fat/mistervision/InterlacedMenu.rbf`. Keep the launcher filename free of spaces. Make the launcher and binaries executable if your filesystem requires it.
 
-The interlaced ZIP contains the same application and core with a different first-launch preset. It does not change an existing installation’s display setting. Use it only for a compatible CRT setup. See [interlaced output](#progressive-and-interlaced-output).
+The filename retains `-progressive.zip` so existing updaters and Downloader continue to recognize it. This is the only application ZIP. It supports both display modes and preserves existing display settings.
 
 Upgrading from v1.4.0 or earlier requires one Downloader or manual installation. For older MiSTerFin CRT installations, follow the [rename instructions](docs/GO_BUILD.md#moving-from-misterfin-crt). Unreleased changes require a [source build](docs/GO_BUILD.md).
 
-## Choose your display
+### Updating
 
-| Connection | Recommended starting point |
-| --- | --- |
-| Analog CRT | Keep working CRT timing. Enable the analog framebuffer route described in the [display guide](docs/GO_DISPLAY.md). |
-| Composite or S-Video adapter | Use settings specific to the adapter. A tested Super Video Custard composite example is in the [display guide](docs/GO_DISPLAY.md#composite-and-s-video-output). |
-| HDMI or HDMI-to-DVI monitor | Keep interlacing off and the default framebuffer limits. See [HDMI setup](docs/GO_DISPLAY.md#hdmi-output). |
+- **Downloader installation:** Exit MiSTerVision and run `update_all` or Downloader. About shows release information and directs you to the external updater.
+- **Manual installation:** Open **About → View release → Install**. The app restarts after a successful update.
 
-The HDMI scaling and aspect behavior described below is in current source and is not included in v1.4.2.
+Updates preserve settings, sign-in, playback preferences, and caches. Do not mix update methods because Downloader can restore the version its database lists. To return to built-in updates, remove the MiSTerVision database registration and restart. See [update ownership and recovery](docs/GO_BUILD.md#application-updates).
 
-### Composite and S-Video output
+## Display setup
 
-If the CRT says “Either disable framebuffer: fb_terminal=0 or enable scaler on VGA: vga_scaler=1”, the analog route is not showing the Linux framebuffer. MiSTerVision needs that framebuffer. Use `vga_scaler=1` with adapter-appropriate CRT timing, not an HD timing. See the [tested settings and hardware limits](docs/GO_DISPLAY.md#composite-and-s-video-output).
+MiSTerVision draws through the **Linux framebuffer**, including its menus and video. Unlike many game cores, it does not provide independent CRT and HDMI output. Choose one display setup for MiSTerVision. It cannot send a CRT picture to analog and a separate HD picture to HDMI at the same time.
 
-### HDMI output
+HDMI scaling and automatic aspect handling are available starting with v1.5.0.
 
-Keep `display.interlaced` off, `display.aspect_ratio` on `"auto"`, and framebuffer limits at their defaults. At 720p or 1080p HDMI timing, MiSTerVision uses a 640×360 framebuffer and the hardware scaler enlarges it. This applies to browsing and playback. The larger 960×540 framebuffer reduced Live TV smoothness in testing, so it is not recommended for initial setup.
+MiSTer video setups vary widely. I appreciate feedback on what works and what needs adjustment. When reporting a display issue, include your MiSTer hardware, display, cable or adapter, and relevant video settings.
 
-Browsing and overlays retain a centered 4:3 layout. Video uses the screen’s aspect without stretching the source. Auto infers aspect from framebuffer geometry, not connector detection. Use an explicit `"4:3"` or `"16:9"` only if that inference is wrong. See [aspect settings](docs/GO_DISPLAY.md#display-aspect).
+### CRT
 
-MiSTerVision does not provide independent HD and CRT outputs. Both displays must accept the chosen timing, or you need an external scaler. See [simultaneous output](docs/GO_DISPLAY.md#simultaneous-analog-and-hdmi-output).
+Start with your working CRT timing and leave `display.interlaced` off. Analog output must show the Linux framebuffer through the scaler, using `vga_scaler=1` with timing and sync settings appropriate for your CRT and adapter. A working game-core picture alone does not verify the framebuffer route.
 
-### Progressive and interlaced output
+See the [CRT setup and tested composite settings](docs/GO_DISPLAY.md#composite-and-s-video-output). Back up `MiSTer.ini` before editing. Merge settings into its existing `[Menu]` section and preserve other core settings. Do not copy HD timing into a standard-definition CRT configuration.
 
-The default keeps MiSTer’s current mode, normally 240p on an NTSC CRT. After verifying browsing and playback, compatible CRT setups can try 480i for finer text and subtitles. Interlacing can introduce flicker and is not suitable for ordinary HDMI monitors. PAL modes and interlaced output through the Super Video Custard or SS1 S-Video path still need validation.
+#### Interlaced output
 
-To enable it, exit MiSTerVision and add or edit the `display` section in `/media/fat/mistervision/settings.json`, preserving other settings:
+After verifying browsing and playback, a compatible CRT setup can try 480i for finer text and subtitles. Interlacing can introduce flicker.
+
+Exit MiSTerVision and edit `/media/fat/mistervision/settings.json`, preserving other settings:
 
 ```json
 {
@@ -76,7 +73,27 @@ To enable it, exit MiSTerVision and add or edit the `display` section in `/media
 }
 ```
 
-The bundled core loads automatically, and the normal menu returns on exit. Set `interlaced` to `false` to return to the default. Both modes use the same launcher. See [interlaced setup and recovery](docs/GO_DISPLAY.md#enable-or-disable-interlaced-output).
+The included core loads automatically. The normal menu returns on exit. Set `interlaced` to `false` to return to the default. No different package or launcher is needed. See [interlaced setup and recovery](docs/GO_DISPLAY.md#enable-or-disable-interlaced-output).
+
+#### If the picture is wrong
+
+- **“Either disable framebuffer … or enable scaler on VGA”**: keep `fb_terminal=1`. Enable `vga_scaler=1` with CRT-compatible timing. Disabling the framebuffer is not a fix for MiSTerVision.
+- **Blank or rolling picture**: check the adapter’s RGB/component/composite requirements, sync switches, and NTSC/PAL settings. Return to the last working configuration before trying another mode.
+- **Clipped text or edges**: check overscan and `vscale_border`. The tested example’s border value may need adjustment for your television.
+- **Trouble after enabling interlacing**: exit the app, set `display.interlaced` to `false`, and relaunch. If you cannot see the menu, edit the setting through SSH or on the SD card and restart MiSTer.
+
+### HDMI
+
+Use an HDMI timing supported by your display. Keep `display.interlaced` off, `display.aspect_ratio` on `"auto"`, and framebuffer limits at their defaults. See the [HDMI settings example](docs/GO_DISPLAY.md#hdmi-output).
+
+At 720p or 1080p HDMI timing, MiSTerVision uses a 640×360 framebuffer. MiSTer’s hardware scaler enlarges it to the HDMI output resolution. This framebuffer serves the entire application, including browsing and playback. The carousel background fills widescreen displays. Browsing controls, text, and playback overlays keep a centered 4:3 layout. Video uses the screen’s aspect without stretching the source.
+
+#### If the picture or playback is wrong
+
+- **Blank screen after using a CRT**: replace the CRT-specific `[Menu]` timing with a supported HDMI timing and use `direct_video=0`. Keep application interlacing off. Reload the Menu core after editing `MiSTer.ini`.
+- **Live TV drops frames**: remove custom framebuffer limits, or set `framebuffer_max_width` to `640` and `framebuffer_max_height` to `480` in the `display` section. Restart and compare the same channel. A 960×540 framebuffer reduced Live TV smoothness in testing.
+- **Wrong video proportions**: Auto infers aspect from framebuffer geometry, not connector detection. Set `display.aspect_ratio` to `"4:3"` or `"16:9"` if that inference is wrong. Check the display’s own stretch or zoom settings too.
+- **Analog CRT does not show the HDMI picture**: MiSTerVision has no independent dual-output path. Do not enable the analog scaler with HD timing on a standard-definition CRT. See [output limitations](docs/GO_DISPLAY.md#simultaneous-analog-and-hdmi-output).
 
 ## Connect to a server
 
@@ -108,13 +125,6 @@ About offers **Switch profile** when multiple saved Jellyfin users or Plex Home 
 
 **Forget user** removes a saved Jellyfin user. **Sign out** removes the linked Plex sign-in on this device. Both require confirmation and leave server accounts and media intact. Back from a profile picker returns to About without changing users. See [Jellyfin users](docs/GO_BROWSING.md#jellyfin-users), [Plex Home](docs/GO_PLEX.md#plex-home-profiles), and [multiple connections](docs/GO_CONFIGURATION.md#multiple-connections).
 
-## Updates
-
-- **Downloader installation:** Exit MiSTerVision and run `update_all` or Downloader. About shows release information and directs you to the external updater.
-- **Manual installation:** Open **About → View release → Install**. The app restarts after a successful update.
-
-Updates preserve settings, sign-in, playback preferences, and caches. Do not mix update methods because Downloader can restore the version its database lists. To return to built-in updates, remove the MiSTerVision database registration and restart. See [update ownership and recovery](docs/GO_BUILD.md#application-updates).
-
 ## Controls
 
 
@@ -142,30 +152,9 @@ The numbers are Linux input event codes. For a standard Xbox mapping, `304` is A
 
 Restart after editing. Unspecified bindings keep their defaults. See the [input guide](docs/GO_INPUT.md) for device matching, axes, and labels.
 
-The [playback guide](docs/GO_PLAYBACK.md#playback-controls) lists controller and keyboard controls. [About](docs/GO_BROWSING.md#about-and-updates) shows the installed version and provides [updates](#updates).
+The [playback guide](docs/GO_PLAYBACK.md#playback-controls) lists controller and keyboard controls. [About](docs/GO_BROWSING.md#about-and-updates) shows the installed version and provides [updates](#updating).
 
 To control playback from another Jellyfin client, select **MiSTerVision** as the playback device. Remote play, queues, pause/resume, seeking, shuffle, and repeat are supported. See [remote control](docs/GO_REMOTE.md).
-
-## Screenshots
-
-
-These images show the v1.4.0 interface. Browsing captures come from the desktop harness. Setup previews use example names, addresses, approval codes, and a sample avatar. Controller and keyboard hints follow the active input device.
-
-| Continue Watching | Movie details |
-| --- | --- |
-| ![Continue Watching with saved playback positions](docs/images/screenshots/continue-watching.png) | ![Movie artwork, summary, runtime, and playback controls](docs/images/screenshots/movie-info.png) |
-| **Choose a connection** | **Discover Jellyfin** |
-| ![Saved connections and Jellyfin or Plex setup](docs/images/screenshots/connections.png) | ![A discovered Jellyfin server with its name and address](docs/images/screenshots/jellyfin-discovery.png) |
-| **Plex Home viewers** | **Protected profile** |
-| ![Three visible Plex Home cards and a counter for four viewers](docs/images/screenshots/plex-profiles.png) | ![Viewer avatar and name above the centered PIN keypad](docs/images/screenshots/plex-pin.png) |
-| **Saved Jellyfin users** | **About and Plex sign-out** |
-| ![Saved Jellyfin users with Add user and Forget user controls](docs/images/screenshots/jellyfin-users.png) | ![About with Switch profile, Sign out, Connections, and update controls](docs/images/screenshots/about.png) |
-
-The home carousel and root List view share library counts and show the active viewer and an update notice when available. Live TV lists show current and upcoming programs when the server supplies guide data. Shows with a single season open directly to their episodes. See [browsing behavior](docs/GO_BROWSING.md).
-
-Interface text uses the same smooth font as captions. Navigation hints and the clock keep the bitmap font.
-
-The [full gallery](docs/SCREENSHOTS.md) also shows the home List view, account linking, server selection, the movie list, setup help, and About.
 
 ## Configuration
 
@@ -255,6 +244,28 @@ See the [documentation index](docs/README.md) for all guides and current limits.
 - [Subtitles, audio tracks, and picture modes](docs/GO_PLAYBACK.md#video-options)
 - [Builds and tests](docs/GO_BUILD.md)
 - [Rendering architecture](docs/GO_RENDERING.md)
+
+## Screenshots
+
+These images show the v1.4.0 interface. Browsing captures come from the desktop harness. Setup previews use example names, addresses, approval codes, and a sample avatar. Controller and keyboard hints follow the active input device.
+
+![MiSTerVision library carousel](docs/images/screenshots/home-carousel.png)
+
+| Continue Watching | Movie details |
+| --- | --- |
+| ![Continue Watching with saved playback positions](docs/images/screenshots/continue-watching.png) | ![Movie artwork, summary, runtime, and playback controls](docs/images/screenshots/movie-info.png) |
+| **Choose a connection** | **Discover Jellyfin** |
+| ![Saved connections and Jellyfin or Plex setup](docs/images/screenshots/connections.png) | ![A discovered Jellyfin server with its name and address](docs/images/screenshots/jellyfin-discovery.png) |
+| **Plex Home viewers** | **Protected profile** |
+| ![Three visible Plex Home cards and a counter for four viewers](docs/images/screenshots/plex-profiles.png) | ![Viewer avatar and name above the centered PIN keypad](docs/images/screenshots/plex-pin.png) |
+| **Saved Jellyfin users** | **About and Plex sign-out** |
+| ![Saved Jellyfin users with Add user and Forget user controls](docs/images/screenshots/jellyfin-users.png) | ![About with Switch profile, Sign out, Connections, and update controls](docs/images/screenshots/about.png) |
+
+The home carousel and root List view share library counts and show the active viewer and an update notice when available. Live TV lists show current and upcoming programs when the server supplies guide data. Shows with a single season open directly to their episodes. See [browsing behavior](docs/GO_BROWSING.md).
+
+Interface text uses the same smooth font as captions. Navigation hints and the clock keep the bitmap font.
+
+The [full gallery](docs/SCREENSHOTS.md) also shows the home List view, account linking, server selection, the movie list, setup help, and About.
 
 ## Origins and license
 

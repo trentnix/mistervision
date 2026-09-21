@@ -45,24 +45,23 @@ This command rebuilds both ARM executables, records their metadata and checksums
 
 | Artifact | Contents |
 | --- | --- |
-| `mistervision-v1.4.1-progressive.zip` | Both binaries, interlaced core, launcher with a progressive first-install preset, examples, notices, metadata, and checksums. Also used for automatic updates. |
-| `mistervision-v1.4.1-interlaced.zip` | The same files with an interlaced first-install preset in the launcher. |
+| `mistervision-v1.4.1-progressive.zip` | Both binaries, optional interlaced core, default launcher, examples, notices, metadata, and checksums. Also used for automatic updates. |
 | `mistervision-v1.4.1-source.tar.gz` | Committed project source plus the exact upstream MPlayer and interlaced Menu source archives. Patches and build recipes remain under `docker/`. |
-| `SHA256SUMS` | Checksums for the two ZIPs and source archive. |
+| `SHA256SUMS` | Checksums for the application ZIP and source archive. |
 
-Recommend the progressive ZIP for a first installation. It retains the current display mode and includes the interlaced core. The interlaced ZIP is an optional first-launch preset for compatible CRT setups, not a different build. Keep it disabled for ordinary HDMI monitors. See [display setup](GO_DISPLAY.md#choose-an-output).
+There is one application ZIP. Its established `-progressive.zip` filename remains unchanged for installed updaters and Downloader. New installations leave interlacing off. Both output modes use the same binaries and included core. Enable optional interlacing through configuration on a compatible CRT. See [display setup](GO_DISPLAY.md#choose-an-output).
 
-The ZIP contains only example configuration files. It contains no active `jellyfin.conf`, `settings.json`, sign-in, preferences, or caches. Read its `INSTALL.txt` before copying files. Both ZIPs include the pinned interlaced core. The first-launch preset creates `settings.json` only if no current or legacy configuration exists. Neither reinstalling nor updating replaces active settings. `tools/interlaced-core.json` pins the upstream core and complete source archive. Release builds download missing components, verify their hashes, and fail on corrupt cached files.
+The ZIP contains only example configuration files. It contains no active `jellyfin.conf`, `settings.json`, sign-in, preferences, or caches. Read its `INSTALL.txt` before copying files. The ZIP includes the pinned interlaced core. The first-launch preset creates `settings.json` only if no current or legacy configuration exists. Neither reinstalling nor updating replaces active settings. `tools/interlaced-core.json` pins the upstream core and complete source archive. Release builds download missing components, verify their hashes, and fail on corrupt cached files.
 
 To rebuild MPlayer from the source bundle, run `make native-player` in its extracted project directory. Docker uses the included upstream archive and still verifies its checksum. The base image and compiler packages need network access or a local Docker cache.
 
 `make release-manifest` can run after separate `make arm` and `make native-player` builds. It writes `build/release-manifest.txt`, which records Go metadata, MPlayer source/compiler details, and both executable checksums. Packaging includes that record as `mistervision/BUILD.txt`, with the release version and source revision. Packaging the same inputs produces identical archives. This does not promise identical compiler output across toolchain or environment changes.
 
-The [release workflow](../.github/workflows/release.yml) runs when a version tag is pushed. It can also run manually with that tag selected as the workflow ref. It builds the bundle and creates a GitHub draft release with generated notes and all four assets. It refuses to overwrite an existing release. After creating the draft, it downloads the four assets, verifies their contents and source revision, and exercises installation and interrupted-update recovery in temporary storage. A verification failure leaves the release unpublished as a draft.
+The [release workflow](../.github/workflows/release.yml) runs when a version tag is pushed. It can also run manually with that tag selected as the workflow ref. It builds the bundle and creates a GitHub draft release with generated notes and all three assets. It refuses to overwrite an existing release. After creating the draft, it downloads the three assets, verifies their contents and source revision, and exercises installation and interrupted-update recovery in temporary storage. A verification failure leaves the release unpublished as a draft.
 
 Before publishing, review the notes, require successful Go validation and downloaded-asset verification, and test the paired binaries on MiSTer. Publishing requires a manual action on GitHub. Draft or private releases are unavailable to the application's unauthenticated checker.
 
-The [latest release](https://github.com/trentnix/mistervision/releases/latest) provides both installation ZIPs, the source archive, and their checksums. Bundles include `mistervision/UPDATE_FORMAT` with transaction format `1`. The updater rejects older or incompatible formats before replacing any files.
+The [latest release](https://github.com/trentnix/mistervision/releases/latest) provides the application ZIP, the source archive, and their checksums. Bundles include `mistervision/UPDATE_FORMAT` with transaction format `1`. The updater rejects older or incompatible formats before replacing any files.
 
 ## Install on MiSTer
 
@@ -98,7 +97,7 @@ Environment overrides now start with `MISTERVISION_`, for example `MISTERVISION_
 
 ### Downloader-managed installations
 
-The [MultiDatabases MiSTerVision database](https://github.com/theypsilon/MultiDatabases_MiSTer/tree/main/mister-vision) installs the published progressive package and preserves active configuration and state. The [README](../README.md#install-through-update_all-or-downloader) describes registration and installation. Exit MiSTerVision before running an external updater.
+The [MultiDatabases MiSTerVision database](https://github.com/theypsilon/MultiDatabases_MiSTer/tree/main/mister-vision) installs the published application package and preserves active configuration and state. The [README](../README.md#install-through-update_all-or-downloader) describes registration and installation. Exit MiSTerVision before running an external updater.
 
 Native startup recognizes the `[MultiDatabases/mister-vision]` database registration in `/media/fat/downloader.ini`, then visible `.ini` files in `/media/fat/downloader/`, then `/media/fat/downloader_*.ini`. Each group is alphabetical, and the first matching section wins. The registration must include a nonempty `db_url`. Filenames alone do not establish ownership. These rules follow [Downloader’s documented locations and precedence](https://github.com/MiSTer-devel/Downloader_MiSTer/blob/main/docs/drop-in-databases.md).
 

@@ -45,6 +45,14 @@ func (p *screenPainter) details() [][]controlHint {
 		}
 	})
 	p.clock()
+	// Preview metadata and synopsis need stronger strokes on low-resolution CRTs.
+	// Restore the shared face before the caller draws navigation and notices.
+	originalFace := c.Typeface
+	face := *cache.face
+	face.bold = true
+	face.bodyHeight = 9
+	c.Typeface = &face
+	defer func() { c.Typeface = originalFace }()
 	overviewBottom := controlsTop(p.bottom, rows) - 4
 	if p.footerMessage() != "" {
 		overviewBottom -= 12
@@ -60,7 +68,9 @@ func (p *screenPainter) details() [][]controlHint {
 	if art.Logo != nil {
 		c.Image(art.Logo, (w-480)/2, cy-22, 480, 44)
 	} else {
-		center(c, cy-4, truncate(itemTitle(*v.Detail), w-48, 1), 0xffffff, 1)
+		if title := p.headingText(itemTitle(*v.Detail), w-48, 28, 1, 0xffffff); title != nil {
+			c.Blit(title, (w-title.Bounds().Dx())/2, cy-6, title.Bounds().Dx(), title.Bounds().Dy())
+		}
 	}
 	metadataX := 24
 	if v.Detail.ProductionYear > 0 {
@@ -83,7 +93,7 @@ func (p *screenPainter) details() [][]controlHint {
 	}
 	lines := min(3, (overviewBottom-(ty+16))/10)
 	if lines > 0 {
-		c.Wrap(24, ty+16, w-48, lines, v.Detail.Overview, 0xcccccc)
+		c.Wrap(24, ty+16, w-48, lines, v.Detail.Overview, 0xffffff)
 	}
 
 	return rows

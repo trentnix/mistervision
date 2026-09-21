@@ -193,9 +193,15 @@ int mf_present_raster(mf_display *d, const uint8_t *pixels, size_t size, int wid
 /* Reuse the same synchronized copy with a full-output video viewport. */
 int mf_present_video(mf_display *d, const uint8_t *pixels, size_t size)
 {
+    return mf_present_full_raster(d, pixels, size, d->w, d->h);
+}
+
+/* Present a composed browsing frame without applying the foreground viewport. */
+int mf_present_full_raster(mf_display *d, const uint8_t *pixels, size_t size, int width, int height)
+{
     int bx = d->bx, by = d->by, bw = d->bw, bh = d->bh;
     d->bx=0; d->by=0; d->bw = d->ow; d->bh = d->oh;
-    int result = mf_present(d, pixels, size);
+    int result = mf_present_raster(d, pixels, size, width, height);
     d->bx = bx; d->by = by; d->bw = bw; d->bh = bh;
     return result;
 }

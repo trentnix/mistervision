@@ -31,3 +31,9 @@ func PresentRaster(d Presenter, pixels []byte, width, height int) error {
 	}
 	return fmt.Errorf("presenter cannot accept a %dx%d browsing raster", width, height)
 }
+
+// FullRasterPresenter accepts a composed frame covering the entire display,
+// independently of the normal browsing viewport.
+type FullRasterPresenter interface {
+	PresentFullRaster(pixels []byte, width, height int) error
+}

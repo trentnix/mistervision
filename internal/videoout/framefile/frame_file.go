@@ -70,7 +70,7 @@ func (o *Backend) FrameInterval(bool) time.Duration { return time.Second / 60 }
 // Missing or malformed frames use black pixels. Decoder files remain unchanged.
 func (o *Backend) Present(f videoout.Frame) error {
 	if !f.Video {
-		return platform.PresentRaster(o.d, f.UI, f.UIWidth, f.UIHeight)
+		return videoout.PresentUI(o.d, f)
 	}
 	g := o.d.Geometry()
 	size := g.Width * g.Height * 4

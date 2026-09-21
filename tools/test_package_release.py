@@ -170,22 +170,24 @@ class ReleaseTest(unittest.TestCase):
         self.assertTrue(all("VERSION=v0.1.0" in call.args[0] for call in run.call_args_list))
         self.assertTrue((self.output / "SHA256SUMS").is_file())
 
-    def test_both_presets_bundle_same_core_without_active_settings(self):
+    def test_single_package_includes_optional_core_without_active_settings(self):
         self.package()
-        snapshots = []
-        for preset, flag in (("progressive", b"0"), ("interlaced", b"1")):
-            with zipfile.ZipFile(self.output / f"mistervision-v0.1.0-{preset}.zip") as archive:
-                files = {name: archive.read(name) for name in archive.namelist()}
-                self.assertNotIn("mistervision/settings.json", files)
-                self.assertEqual(files["mistervision/InterlacedMenu.rbf"], b"test core")
-                launcher = files.pop("Scripts/MiSTerVision.sh")
-                self.assertIn(b"MISTERVISION_INITIAL_INTERLACED=" + flag, launcher)
-                files.pop("SHA256SUMS")
-                snapshots.append(files)
-        self.assertEqual(*snapshots)
-        self.assertFalse((self.output / "mistervision-v0.1.0-mister.zip").exists())
+        self.assertEqual({p.name for p in self.output.iterdir()}, {
+            "mistervision-v0.1.0-progressive.zip", "mistervision-v0.1.0-source.tar.gz", "SHA256SUMS"})
+        with zipfile.ZipFile(self.output / "mistervision-v0.1.0-progressive.zip") as archive:
+            self.assertNotIn("mistervision/settings.json", archive.namelist())
+            self.assertEqual(archive.read("mistervision/InterlacedMenu.rbf"), b"test core")
+            launcher = archive.read("Scripts/MiSTerVision.sh")
+            self.assertIn(b"MISTERVISION_INITIAL_INTERLACED=0", launcher)
+            self.assertNotIn(b"MISTERVISION_INITIAL_INTERLACED=1", launcher)
         with tarfile.open(self.output / "mistervision-v0.1.0-source.tar.gz") as archive:
             self.assertEqual(archive.extractfile("mistervision-v0.1.0/third_party/Menu_MiSTer-source.tar.gz").read(), b"test source")
+
+    def test_interlaced_first_launch_is_rejected(self):
+        path = self.root / "tools/mistervision.sh"
+        path.write_bytes(path.read_bytes().replace(b"MISTERVISION_INITIAL_INTERLACED=0", b"MISTERVISION_INITIAL_INTERLACED=1"))
+        with self.assertRaisesRegex(ValueError, "must default to non-interlaced"):
+            self.package()
 
     def test_corrupt_core_or_source_is_rejected(self):
         for name in ("InterlacedMenu.rbf", "Menu_MiSTer-source.tar.gz"):

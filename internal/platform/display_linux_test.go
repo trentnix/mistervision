@@ -212,3 +212,35 @@ func TestBrowsingRasterUsesViewportWithoutResampling(t *testing.T) {
 		})
 	}
 }
+
+// A full-screen background must not change the next screen's normal viewport.
+func TestFullRasterRestoresBrowsingViewport(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "frame.raw")
+	d, err := Open(Options{Headless: "640x360", Output: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	full := d.(FullRasterPresenter)
+	pixels := bytes.Repeat([]byte{10, 20, 30, 0}, 640*360)
+	if err = full.PresentFullRaster(pixels, 640, 360); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(raw, pixels) {
+		t.Fatal("full-screen frame was cropped or pillarboxed")
+	}
+	if err = PresentRaster(d, bytes.Repeat([]byte{40, 50, 60, 0}, 480*360), 480, 360); err != nil {
+		t.Fatal(err)
+	}
+	raw, err = os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if raw[0] != 0 || raw[80*4] != 40 || raw[560*4] != 0 {
+		t.Fatal("normal viewport was not restored")
+	}
+}

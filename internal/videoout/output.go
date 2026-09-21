@@ -2,6 +2,7 @@
 package videoout
 
 import (
+	"errors"
 	"time"
 
 	"mistervision/internal/platform"
@@ -16,9 +17,11 @@ type Frame struct {
 	// UIWidth and UIHeight describe an optional browsing raster. Zero uses
 	// Geometry logical dimensions. Video UI and Overlay always stay logical.
 	UIWidth, UIHeight int
-	UI                []byte
-	Overlay           []byte
-	Video             bool
+	// FullScreen means UI already includes the background outside the browsing viewport.
+	FullScreen bool
+	UI         []byte
+	Overlay    []byte
+	Video      bool
 }
 
 // Output is the browser's only display boundary for both browsing and playback.
@@ -53,4 +56,15 @@ type Output interface {
 // when drawing falls behind, so presentation always uses the latest frame.
 type FrameNotifier interface {
 	FrameUpdates() (<-chan struct{}, error)
+}
+
+// PresentUI routes a sized browsing frame without interpreting its scene.
+func PresentUI(d platform.Presenter, f Frame) error {
+	if f.FullScreen {
+		if full, ok := d.(platform.FullRasterPresenter); ok {
+			return full.PresentFullRaster(f.UI, f.UIWidth, f.UIHeight)
+		}
+		return errors.New("presenter cannot accept a full-screen browsing raster")
+	}
+	return platform.PresentRaster(d, f.UI, f.UIWidth, f.UIHeight)
 }

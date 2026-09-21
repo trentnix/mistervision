@@ -15,6 +15,7 @@ import (
 type sceneCache struct {
 	text                           primaryTextCache
 	face                           *browsingTypeface
+	customAspect                   float64
 	customBase                     *ui.Canvas
 	customSource, backgroundCustom image.Image
 	setupBase                      *ui.Canvas
