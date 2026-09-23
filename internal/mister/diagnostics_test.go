@@ -93,3 +93,83 @@ func settingsLog(t *testing.T, source io.Reader) string {
 	}
 	return string(data)
 }
+
+func TestConsoleModeINISettingsAreAllowlisted(t *testing.T) {
+	data := settingsLog(t, strings.NewReader(`[Menu]
+vga_mode=cvbs
+main=ConsoleMode/MiSTer_ConsoleMode
+fb_terminal=1
+fb_size=1
+[MiSTerVisionFramebuffer]
+main=MiSTer
+log_file_entry=1
+vga_mode=secret-connector
+main=secret-host
+`))
+	if strings.Contains(data, "secret") {
+		t.Fatal(data)
+	}
+	for _, want := range []string{`"value":"cvbs"`, `"value":"ConsoleMode/MiSTer_ConsoleMode"`, `"section":"mistervisionframebuffer"`, `"key":"fb_terminal"`, `"key":"log_file_entry"`, `"rejected_values":2`} {
+		if !strings.Contains(data, want) {
+			t.Fatalf("missing %s: %s", want, data)
+		}
+	}
+}
+
+func TestSettingsLogIncludesWildcardAndGroupedDisplaySections(t *testing.T) {
+	for _, tc := range []struct{ name, header, section string }{
+		{"wildcard", "[MeNu*]", "menu"},
+		{"group", "[private-core]\n+Menu", "menu"},
+		{"wildcard group", "[private-core]\n+Men*", "menu"},
+		{"named core", "[MiSTerVisionFrame*]", "mistervisionframebuffer"},
+		// Main matches only the prefix before *, but the log must not copy the suffix.
+		{"private suffix", "[Menu*private-section]", "menu"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			data := settingsLog(t, strings.NewReader(tc.header+` ; private-comment
+vga_scaler=1
+vga_mode=ypbpr
+password=private-password
+video_mode=private-value
+main=private-host
++private-other
+fb_terminal=1
+[private-core]
+video_mode=99
+`))
+			if strings.Contains(data, "private") {
+				t.Fatalf("private text leaked: %s", data)
+			}
+			var entries []map[string]any
+			for _, line := range strings.Split(strings.TrimSpace(data), "\n") {
+				var event map[string]any
+				if err := json.Unmarshal([]byte(line), &event); err != nil {
+					t.Fatal(err)
+				}
+				if event["msg"] == "mister.setting" {
+					entries = append(entries, event)
+				}
+			}
+			if len(entries) != 3 {
+				t.Fatalf("missing or unrelated settings: %s", data)
+			}
+			for i, key := range []string{"vga_scaler", "vga_mode", "fb_terminal"} {
+				if entries[i]["key"] != key || entries[i]["section"] != tc.section {
+					t.Fatal(entries)
+				}
+			}
+			if !strings.Contains(data, `"rejected_values":2`) {
+				t.Fatal(data)
+			}
+		})
+	}
+}
+
+func TestGroupedSettingsLogRemainsBounded(t *testing.T) {
+	for _, header := range []string{"[Menu*]", "[private-core]\n+Menu"} {
+		data := settingsLog(t, strings.NewReader(header+"\n"+strings.Repeat("vga_scaler=1\n", 10000)))
+		if strings.Count(data, `"msg":"mister.setting"`) != 64 || !strings.Contains(data, `"limited":true`) {
+			t.Fatal("grouped settings bypassed event limit")
+		}
+	}
+}

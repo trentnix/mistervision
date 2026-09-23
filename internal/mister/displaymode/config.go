@@ -72,21 +72,7 @@ func CoreConfig(data []byte) ([]byte, error) {
 	if strings.Contains(strings.ToLower(text), "["+strings.ToLower(coreName)+"]") {
 		return nil, errors.New("MiSTerVisionInterlaced INI section already exists outside the managed block")
 	}
-	values := map[string]string{}
-	section := ""
-	for _, line := range strings.Split(text, "\n") {
-		line = strings.TrimSpace(strings.SplitN(line, ";", 2)[0])
-		if strings.HasPrefix(line, "[") {
-			section = strings.ToLower(strings.TrimSpace(strings.Trim(line, "[]")))
-			continue
-		}
-		if section != "mister" && section != "menu" {
-			continue
-		}
-		if key, value, ok := strings.Cut(line, "="); ok {
-			values[strings.ToLower(strings.TrimSpace(key))] = strings.ToLower(strings.TrimSpace(value))
-		}
-	}
+	values := menuSettings([]byte(text), coreName)
 	scandoubler := 1
 	component := values["ypbpr"] == "1"
 	if mode := values["vga_mode"]; mode != "" {
@@ -98,7 +84,7 @@ func CoreConfig(data []byte) ([]byte, error) {
 	if component {
 		scandoubler = 0
 	}
-	block := fmt.Sprintf("%s\n[%s]\ndirect_video=1\nforced_scandoubler=%d\nfb_size=1\nfb_terminal=1\nlog_file_entry=1\n%s\n", blockStart, coreName, scandoubler, blockEnd)
+	block := fmt.Sprintf("%s\n[%s]\nmain=MiSTer\ndirect_video=1\nforced_scandoubler=%d\nfb_size=1\nfb_terminal=1\nlog_file_entry=1\n%s\n", blockStart, coreName, scandoubler, blockEnd)
 	if text != "" && !strings.HasSuffix(text, "\n") {
 		text += "\n"
 	}
@@ -124,24 +110,12 @@ func prepareCore(directory string) (string, error) {
 	if fmt.Sprintf("%x", sha256.Sum256(bitstream)) != "0158e0338a00441271f38be0703c22253d53ea39b60a1a96b7ec964bedae8999" {
 		return "", errors.New("interlaced core checksum does not match v0.0.1")
 	}
-	original, err := os.ReadFile(root + "/MiSTer.ini")
+	ini, err := ActiveINIPath()
 	if err != nil {
 		return "", err
 	}
-	configured, err := CoreConfig(original)
-	if err != nil {
+	if err := configureINI(ini, directory, "interlaced", CoreConfig); err != nil {
 		return "", err
-	}
-	if string(configured) != string(original) {
-		backup := root + "/mistervision/MiSTer.ini.before-interlaced"
-		if _, e := os.Stat(backup); errors.Is(e, os.ErrNotExist) {
-			if e = os.WriteFile(backup, original, 0600); e != nil {
-				return "", e
-			}
-		}
-		if err := replace(root+"/MiSTer.ini", configured); err != nil {
-			return "", err
-		}
 	}
 	// MGL resolves RBF paths relative to the SD card root, not the descriptor.
 	relative, err := filepath.Rel(root, core)
@@ -158,7 +132,7 @@ func prepareCore(directory string) (string, error) {
 
 // replace publishes a complete file before it can be read during a core load.
 func replace(path string, data []byte) error {
-	f, err := os.CreateTemp(filepath.Dir(path), ".interlaced-*")
+	f, err := os.CreateTemp(filepath.Dir(path), ".mistervision-*")
 	if err != nil {
 		return err
 	}
@@ -170,5 +144,41 @@ func replace(path string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	return os.Rename(f.Name(), path)
+	if err := os.Rename(f.Name(), path); err != nil {
+		return err
+	}
+	// Make the published name durable before callers modify a file it backs up.
+	directory, err := os.Open(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+	return errors.Join(directory.Sync(), directory.Close())
+}
+
+// menuSettings reads matching global, Menu, and named-core sections in file
+// order. Like Main_MiSTer, wildcard sections use prefix matching and + sections
+// can include a core in a group without disabling an already matched group.
+// Display timings are retained as text rather than interpreted here.
+func menuSettings(data []byte, names ...string) map[string]string {
+	values := map[string]string{}
+	section := ""
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(strings.SplitN(line, ";", 2)[0])
+		if strings.HasPrefix(line, "[") {
+			section = MatchMenuSection(line[1:], names...)
+			continue
+		}
+		if strings.HasPrefix(line, "+") {
+			if section == "" {
+				section = MatchMenuSection(line[1:], names...)
+			}
+			continue
+		}
+		if section != "" {
+			if key, value, ok := strings.Cut(line, "="); ok {
+				values[strings.ToLower(strings.TrimSpace(key))] = strings.ToLower(strings.TrimSpace(value))
+			}
+		}
+	}
+	return values
 }

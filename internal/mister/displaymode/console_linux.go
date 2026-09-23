@@ -83,6 +83,24 @@ static int console_close_keyboard(void) {
     return error;
 }
 
+// ConsoleMode's frontend can leave the active terminal in graphics mode with
+// switching locked. Release that state only after its core and frontend exit.
+static int console_unlock(void) {
+    struct vt_stat state;
+    int fd = open("/dev/tty0", O_RDWR | O_CLOEXEC);
+    if (fd < 0) return errno;
+    int error = 0;
+    if (ioctl(fd, VT_GETSTATE, &state) < 0) error = errno;
+    if (!error && ioctl(fd, KDSETMODE, KD_TEXT) < 0) error = errno;
+    if (!error && ioctl(fd, VT_UNLOCKSWITCH) < 0) error = errno;
+    // A failed F9 may already have Main waiting for VT1. Complete that switch
+    // before restoration sends any more commands to Main's FIFO.
+    if (!error && ioctl(fd, VT_ACTIVATE, 1) < 0) error = errno;
+    if (!error) usleep(100000);
+    close(fd);
+    return error;
+}
+
 // A freshly loaded menu core starts with console output disabled. F9 enables
 // it directly, without F12 exposing the OSD first. Retry only until Main selects
 // VT1. Keeping the keyboard alive and checking the VT handles delayed discovery.
@@ -113,16 +131,25 @@ static int console_enable(void) {
 static int console_restore(void) {
     const char clear[] = "\033[0m\033[40m\033[2J\033[3J\033[H";
     int error = console_close_keyboard();
+    // ConsoleMode removes its tty2 instance while switching hosts. Reopen the
+    // named terminals so restoration does not use a hung-up descriptor.
+    const char *paths[] = {"/dev/tty1", "/dev/tty2"};
+    for (int i = 0; i < 2; i++) {
+        if (!console_saved[i]) continue;
+        if (console_fds[i] >= 0 && close(console_fds[i]) < 0 && !error) error = errno;
+        console_fds[i] = open(paths[i], O_RDWR | O_CLOEXEC);
+        if (console_fds[i] < 0 && !error) error = errno;
+    }
     // Release the client's graphics mode even if the child crashed. Restore
     // the original active VT before restoring any saved graphics modes.
     for (int i = 0; i < 2; i++) {
-        if (!console_saved[i]) continue;
+        if (!console_saved[i] || console_fds[i] < 0) continue;
         if (write(console_fds[i], clear, sizeof(clear) - 1) != sizeof(clear) - 1 && !error) error = errno ? errno : EIO;
         if (ioctl(console_fds[i], KDSETMODE, KD_TEXT) < 0 && !error) error = errno;
     }
     if (previous_vt && ioctl(console_fds[0], VT_ACTIVATE, previous_vt) < 0 && !error) error = errno;
     for (int i = 0; i < 2; i++) {
-        if (console_saved[i] && ioctl(console_fds[i], KDSETMODE, console_modes[i]) < 0 && !error) error = errno;
+        if (console_saved[i] && console_fds[i] >= 0 && ioctl(console_fds[i], KDSETMODE, console_modes[i]) < 0 && !error) error = errno;
         if (console_fds[i] >= 0 && close(console_fds[i]) < 0 && !error) error = errno;
         console_fds[i] = -1;
         console_saved[i] = 0;
@@ -159,6 +186,15 @@ func enableConsole() error {
 func restoreConsole() error {
 	if code := C.console_restore(); code != 0 {
 		return fmt.Errorf("restore MiSTer console: %w", syscall.Errno(code))
+	}
+	return nil
+}
+
+// unlockConsole releases terminal state left by ConsoleMode after it gives up
+// the display. Ordinary MiSTer startup does not need this operation.
+func unlockConsole() error {
+	if code := C.console_unlock(); code != 0 {
+		return fmt.Errorf("release ConsoleMode terminal: %w", syscall.Errno(code))
 	}
 	return nil
 }
