@@ -33,7 +33,8 @@ Each line is JSON with a timestamp and event name in `msg`.
 | `application.start`, `.exit`, `.phase`, `.failure` | Build/platform, application or supervisor role, startup stage, elapsed time, and failure category. |
 | `application.display` | Logical and physical dimensions. |
 | `input.backend`, `.device`, `.unavailable` | Backend, initial devices and bindings, and identification/open failures. No button presses. |
-| `mister.display`, `.framebuffer`, `.setting`, `.settings` | Interlaced state, kernel framebuffer geometry, numeric INI settings, and known host/connector names. Includes the application’s handoff section. |
+| `mister.ini_profile` | Active INI filename, or a failure category if the host selection cannot be resolved. |
+| `mister.display`, `.framebuffer`, `.setting`, `.settings` | Interlaced state, kernel framebuffer geometry, numeric INI settings, and known host/connector names. Includes the application’s handoff section and matching wildcard or `+Menu` groups. Groups use known section labels so private section names stay out of logs. |
 | `mister.state`, `.state.framebuffer` | Known active hosts, ConsoleMode frontend presence, known core identity, active virtual terminal, and framebuffer geometry at startup and each ConsoleMode handoff stage. |
 | `mister.consolemode.setting` | Saved CRT, video-mode, and rotation selections as raw numeric values with their byte lengths. Missing or malformed files produce a failure category, not guessed defaults. |
 | `mister.handoff`, `.handoff.failure`, `.handoff.result` | ConsoleMode handoff stage, elapsed time, and failure category, including cleanup and return. |

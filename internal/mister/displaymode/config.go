@@ -72,7 +72,7 @@ func CoreConfig(data []byte) ([]byte, error) {
 	if strings.Contains(strings.ToLower(text), "["+strings.ToLower(coreName)+"]") {
 		return nil, errors.New("MiSTerVisionInterlaced INI section already exists outside the managed block")
 	}
-	values := menuSettings([]byte(text))
+	values := menuSettings([]byte(text), coreName)
 	scandoubler := 1
 	component := values["ypbpr"] == "1"
 	if mode := values["vga_mode"]; mode != "" {
@@ -110,24 +110,12 @@ func prepareCore(directory string) (string, error) {
 	if fmt.Sprintf("%x", sha256.Sum256(bitstream)) != "0158e0338a00441271f38be0703c22253d53ea39b60a1a96b7ec964bedae8999" {
 		return "", errors.New("interlaced core checksum does not match v0.0.1")
 	}
-	original, err := os.ReadFile(root + "/MiSTer.ini")
+	ini, err := ActiveINIPath()
 	if err != nil {
 		return "", err
 	}
-	configured, err := CoreConfig(original)
-	if err != nil {
+	if err := configureINI(ini, directory, "interlaced", CoreConfig); err != nil {
 		return "", err
-	}
-	if string(configured) != string(original) {
-		backup := root + "/mistervision/MiSTer.ini.before-interlaced"
-		if _, e := os.Stat(backup); errors.Is(e, os.ErrNotExist) {
-			if e = os.WriteFile(backup, original, 0600); e != nil {
-				return "", e
-			}
-		}
-		if err := replace(root+"/MiSTer.ini", configured); err != nil {
-			return "", err
-		}
 	}
 	// MGL resolves RBF paths relative to the SD card root, not the descriptor.
 	relative, err := filepath.Rel(root, core)
@@ -144,7 +132,7 @@ func prepareCore(directory string) (string, error) {
 
 // replace publishes a complete file before it can be read during a core load.
 func replace(path string, data []byte) error {
-	f, err := os.CreateTemp(filepath.Dir(path), ".interlaced-*")
+	f, err := os.CreateTemp(filepath.Dir(path), ".mistervision-*")
 	if err != nil {
 		return err
 	}
@@ -156,25 +144,40 @@ func replace(path string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	return os.Rename(f.Name(), path)
+	if err := os.Rename(f.Name(), path); err != nil {
+		return err
+	}
+	// Make the published name durable before callers modify a file it backs up.
+	directory, err := os.Open(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+	return errors.Join(directory.Sync(), directory.Close())
 }
 
-// menuSettings reads effective global/Menu values without interpreting timings.
-// Core-specific handoff settings must not change the user's analog routing.
-func menuSettings(data []byte) map[string]string {
+// menuSettings reads matching global, Menu, and named-core sections in file
+// order. Like Main_MiSTer, wildcard sections use prefix matching and + sections
+// can include a core in a group without disabling an already matched group.
+// Display timings are retained as text rather than interpreted here.
+func menuSettings(data []byte, names ...string) map[string]string {
 	values := map[string]string{}
 	section := ""
 	for _, line := range strings.Split(string(data), "\n") {
 		line = strings.TrimSpace(strings.SplitN(line, ";", 2)[0])
 		if strings.HasPrefix(line, "[") {
-			section = strings.ToLower(strings.TrimSpace(strings.Trim(line, "[]")))
+			section = MatchMenuSection(line[1:], names...)
 			continue
 		}
-		if section != "mister" && section != "menu" {
+		if strings.HasPrefix(line, "+") {
+			if section == "" {
+				section = MatchMenuSection(line[1:], names...)
+			}
 			continue
 		}
-		if key, value, ok := strings.Cut(line, "="); ok {
-			values[strings.ToLower(strings.TrimSpace(key))] = strings.ToLower(strings.TrimSpace(value))
+		if section != "" {
+			if key, value, ok := strings.Cut(line, "="); ok {
+				values[strings.ToLower(strings.TrimSpace(key))] = strings.ToLower(strings.TrimSpace(value))
+			}
 		}
 	}
 	return values

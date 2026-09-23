@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"mistervision/internal/diagnostics"
@@ -23,14 +24,8 @@ func RecordStartup(log *diagnostics.Log, interlaced bool) {
 	}
 	log.Record("mister.display", slog.Bool("interlaced", interlaced))
 	displaymode.RecordState(log, "startup")
-	f, err := os.Open("/media/fat/MiSTer.ini")
-	if err != nil {
-		log.Record("mister.settings", slog.String("error_kind", diagnostics.ErrorKind(err)))
-	} else {
-		recordSettings(log, f)
-		f.Close()
-	}
-	f, err = os.Open("/sys/module/MiSTer_fb/parameters/mode")
+	recordActiveINI(log)
+	f, err := os.Open("/sys/module/MiSTer_fb/parameters/mode")
 	if err != nil {
 		log.Record("mister.framebuffer", slog.String("error_kind", diagnostics.ErrorKind(err)))
 		return
@@ -45,7 +40,26 @@ func RecordStartup(log *diagnostics.Log, interlaced bool) {
 	log.Record("mister.framebuffer", slog.Int("format", format), slog.Int("swap", swap), slog.Int("width", width), slog.Int("height", height), slog.Int("stride", stride))
 }
 
-// recordSettings preserves section identity rather than guessing INI precedence.
+// recordActiveINI records the selected profile and only its allowed display keys.
+// A selection failure must not substitute Main and produce misleading evidence.
+func recordActiveINI(log *diagnostics.Log) {
+	ini, err := displaymode.ActiveINIPath()
+	if err != nil {
+		log.Record("mister.ini_profile", slog.String("error_kind", diagnostics.ErrorKind(err)))
+		return
+	}
+	log.Record("mister.ini_profile", slog.String("file", filepath.Base(ini)))
+	f, err := os.Open(ini)
+	if err != nil {
+		log.Record("mister.settings", slog.String("error_kind", diagnostics.ErrorKind(err)))
+		return
+	}
+	defer f.Close()
+	recordSettings(log, f)
+}
+
+// recordSettings labels each entry with its known matched section, not arbitrary
+// source text. Wildcard and included groups follow the startup matching rules.
 // Only display-related sections, numeric values, and known host/connector names are eligible. Limits
 // bound startup reads and queue use even when the INI is unexpectedly large.
 func recordSettings(log *diagnostics.Log, source io.Reader) {
@@ -55,14 +69,18 @@ func recordSettings(log *diagnostics.Log, source io.Reader) {
 	section := "top"
 	entries, rejected := 0, 0
 	for scan.Scan() {
-		line := strings.TrimSpace(strings.SplitN(strings.SplitN(scan.Text(), ";", 2)[0], "#", 2)[0])
+		line := strings.TrimSpace(strings.SplitN(scan.Text(), ";", 2)[0])
 		if strings.HasPrefix(line, "[") {
-			section = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(line, "["), "]")))
+			section = displaymode.MatchMenuSection(line[1:], "MiSTerVisionInterlaced", "MiSTerVisionFramebuffer")
 			continue
 		}
-		switch section {
-		case "top", "mister", "menu", "mistervisioninterlaced", "mistervisionframebuffer":
-		default:
+		if strings.HasPrefix(line, "+") {
+			if section == "" || section == "top" {
+				section = displaymode.MatchMenuSection(line[1:], "MiSTerVisionInterlaced", "MiSTerVisionFramebuffer")
+			}
+			continue
+		}
+		if section == "" {
 			continue
 		}
 		key, value, ok := strings.Cut(line, "=")

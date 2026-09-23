@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -89,5 +90,41 @@ func TestOwnedProcessesMatchWholeMarker(t *testing.T) {
 func TestCoreConfigRejectsUnverifiedEncoderModes(t *testing.T) {
 	if _, err := CoreConfig([]byte("[MiSTer]\nvga_mode=cvbs\n")); err == nil {
 		t.Fatal("accepted unverified encoder mode")
+	}
+}
+
+func TestMenuSettingsSectionMatching(t *testing.T) {
+	for _, tc := range []struct {
+		name, text, alias string
+		want              map[string]string
+	}{
+		{"wildcard", "[MiSTer]\nvga_mode=rgb\n[Menu*]\nvga_mode=ypbpr\nvga_scaler=1\n", "", map[string]string{"vga_mode": "ypbpr", "vga_scaler": "1"}},
+		{"included group", "[Other]\nvga_scaler=0\n+Menu\nvga_scaler=1\n+Unrelated\nvga_mode=ypbpr\n[Other]\nvga_scaler=0\n", "", map[string]string{"vga_scaler": "1", "vga_mode": "ypbpr"}},
+		{"included wildcard", "[Other]\n+mEn* ; include Menu\nvga_scaler=1\n", "", map[string]string{"vga_scaler": "1"}},
+		{"file order", "[Menu*]\nvga_scaler=1\n[MiSTer]\nvga_scaler=0\n[Menu]\nvga_scaler=1\n", "", map[string]string{"vga_scaler": "1"}},
+		{"named core", "[MiSTerVision*]\nvga_mode=ypbpr\n[MiSTerVisionFramebuffer]\nvga_scaler=1\n", framebufferCore, map[string]string{"vga_mode": "ypbpr", "vga_scaler": "1"}},
+		{"unrelated", "vga_scaler=1\n[Other]\nvga_scaler=1\n+Other*\nvga_mode=ypbpr\n", "", map[string]string{}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := menuSettings([]byte(tc.text), tc.alias)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("got %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestCoreConfigComponentGroups(t *testing.T) {
+	for _, section := range []string{"[Menu*]", "[Other]\n+Menu", "[MiSTerVision*]"} {
+		t.Run(section, func(t *testing.T) {
+			original := []byte("[MiSTer]\nvga_mode=rgb\n" + section + "\nvga_mode=ypbpr\n")
+			got, err := CoreConfig(original)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.HasPrefix(got, original) || !bytes.Contains(got, []byte("forced_scandoubler=0\n")) {
+				t.Fatalf("component routing lost: %s", got)
+			}
+		})
 	}
 }

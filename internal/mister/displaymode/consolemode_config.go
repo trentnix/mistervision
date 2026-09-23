@@ -44,7 +44,11 @@ func prepareConsoleModeCore(directory string, interlaced bool) (string, error) {
 	if interlaced {
 		return prepareCore(directory)
 	}
-	original, err := os.ReadFile(root + "/MiSTer.ini")
+	ini, err := ActiveINIPath()
+	if err != nil {
+		return "", err
+	}
+	original, err := os.ReadFile(ini)
 	if err != nil {
 		return "", err
 	}
@@ -52,13 +56,9 @@ func prepareConsoleModeCore(directory string, interlaced bool) (string, error) {
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return "", err
 	}
-	values := menuSettings(original)
+	values := menuSettings(original, framebufferCore)
 	if len(crt) > 0 && crt[0] != 0 && values["vga_scaler"] != "1" && values["direct_video"] != "1" {
-		return "", errors.New("ConsoleMode CRT output needs a working CRT framebuffer configuration: set vga_scaler=1 with CRT-compatible video_mode in MiSTer.ini [Menu]")
-	}
-	configured, err := consoleModeConfig(original)
-	if err != nil {
-		return "", err
+		return "", errors.New("ConsoleMode CRT output needs a working CRT framebuffer configuration: set vga_scaler=1 with CRT-compatible video_mode in the active MiSTer INI [Menu]")
 	}
 	directory, err = filepath.Abs(directory)
 	if err != nil {
@@ -67,18 +67,8 @@ func prepareConsoleModeCore(directory string, interlaced bool) (string, error) {
 	if !strings.HasPrefix(directory, root+"/") || strings.ContainsAny(directory, "\r\n") {
 		return "", errors.New("ConsoleMode handoff settings must be on the SD card")
 	}
-	if string(configured) != string(original) {
-		backup := filepath.Join(directory, "MiSTer.ini.before-consolemode")
-		if _, e := os.Stat(backup); errors.Is(e, os.ErrNotExist) {
-			if e = os.WriteFile(backup, original, 0600); e != nil {
-				return "", e
-			}
-		} else if e != nil {
-			return "", e
-		}
-		if err = replace(root+"/MiSTer.ini", configured); err != nil {
-			return "", err
-		}
+	if err := configureINI(ini, directory, "consolemode", consoleModeConfig); err != nil {
+		return "", err
 	}
 	mgl := filepath.Join(directory, "Framebuffer.mgl")
 	if err = replace(mgl, []byte("<mistergamedescription><rbf>menu</rbf><setname>"+framebufferCore+"</setname></mistergamedescription>\n")); err != nil {

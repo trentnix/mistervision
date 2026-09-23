@@ -19,9 +19,11 @@ HDMI scaling and automatic aspect handling are available starting with v1.5.0.
 
 When ConsoleMode is running, MiSTerVision temporarily uses the original MiSTer host and a standard framebuffer core. Exit returns to ConsoleMode. The Scripts launcher uses a separate process session so closing ConsoleMode’s terminal does not terminate the application. Launcher errors are recorded in `/tmp/mistervision-consolemode.log`. The handoff releases the terminal-switch lock left by ConsoleMode and waits for framebuffer activation before starting the application. HDMI uses the same framebuffer limits as a normal launch. Interlaced output uses the bundled core.
 
-The handoff configures the main `/media/fat/MiSTer.ini` profile. Use the Main INI profile for this path. Its standard `[Menu]` settings must already support the intended output. A working native ConsoleMode CRT picture does not establish that the Linux framebuffer can reach the CRT. For analog output, configure the scaler and a CRT-compatible timing as described below. MiSTerVision does not infer safe analog timing from an HDMI resolution or replace the user's connector settings.
+The handoff uses the active MiSTer INI profile. MiSTerVision reads the host’s selection without changing it and resolves Main or one of the three alternate profiles. If the selection cannot be read or resolved safely, startup stops before changing the display. Reload Menu after adding or renaming alternate INI files, because the host caches their names.
 
-The application adds an isolated `[MiSTerVisionFramebuffer]` section for host selection and console activation. Existing display settings remain unchanged. Before the first change, it saves `MiSTer.ini.before-consolemode` beside the application settings. The interlaced section also selects the original host. These sections apply only to the application's named core configurations.
+The active profile’s standard `[Menu]` settings must already support the intended output. A working native ConsoleMode CRT picture does not establish that the Linux framebuffer can reach the CRT. For analog output, configure the scaler and a CRT-compatible timing as described below. MiSTerVision does not infer safe analog timing from an HDMI resolution or replace the user's connector settings.
+
+The application adds an isolated `[MiSTerVisionFramebuffer]` section for host selection and console activation. Existing display settings remain unchanged. Before the first change, it saves `<profile filename>.before-consolemode` beside the application settings. The interlaced section also selects the original host. These sections apply only to the application's named core configurations.
 
 With [diagnostics enabled](GO_DIAGNOSTICS.md), startup records the saved ConsoleMode display selections and follows host, core, terminal, and framebuffer state through the handoff. It records only known settings and bounded numeric values.
 
@@ -126,13 +128,15 @@ To change an existing installation, set the `display` section in `settings.json`
 
 Use this mode only with a compatible CRT route. Ordinary HDMI monitors must keep interlacing disabled.
 
-Launch **MiSTerVision** from the normal Scripts menu using the main `MiSTer.ini`. The client verifies and loads the core, then restores the normal menu on exit. No replacement of `MiSTer`, `menu.rbf`, or the kernel is part of this setup. Zaparoo is not required.
+Launch **MiSTerVision** from the normal Scripts menu using the intended MiSTer INI profile. The client verifies and loads the core, then restores the normal menu on exit. No replacement of `MiSTer`, `menu.rbf`, or the kernel is part of this setup. Zaparoo is not required.
 
 To return to progressive output, set `interlaced` to `false` or omit the section. Preserve other settings when editing. The same launcher supports both modes.
 
 ## Configuration changes and recovery
 
-The application writes `Interlaced.mgl` beside `settings.json` and a marked `[MiSTerVisionInterlaced]` section in `/media/fat/MiSTer.ini`. Before its first change, it saves `/media/fat/mistervision/MiSTer.ini.before-interlaced`. Existing sections remain intact. An unmarked section with the same name causes an error instead of being overwritten. Disabling interlacing leaves the isolated section available for later use.
+The application writes `Interlaced.mgl` beside `settings.json` and a marked `[MiSTerVisionInterlaced]` section in the active MiSTer INI profile. Before its first change, it saves `<profile filename>.before-interlaced` beside `settings.json`. Backups are fully written and synced before their final names are published. Existing backups are preserved.
+
+Existing sections remain intact. An unmarked section with the same name causes an error instead of being overwritten. Disabling interlacing leaves the isolated section available for later use.
 
 The scoped section inherits RGB/component and PAL/NTSC settings. RGB enables `direct_video` and `forced_scandoubler`. Component enables `direct_video` without forcing the scandoubler. These rules do not establish compatibility with every cable or DAC.
 
