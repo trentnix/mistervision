@@ -22,7 +22,7 @@ func TestLauncherMenuReturn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, mode := range []string{"240p", "480i", "480i failure"} {
+	for _, mode := range []string{"240p", "480i", "480i failure", "ConsoleMode"} {
 		t.Run(mode, func(t *testing.T) {
 			dir := t.TempDir()
 			fifo := filepath.Join(dir, "commands")
@@ -41,6 +41,10 @@ func TestLauncherMenuReturn(t *testing.T) {
 			}
 			helper := `#!/bin/bash
 set -eu
+if [ "$TEST_MODE" = "ConsoleMode" ]; then
+ test "${MISTERVISION_CONSOLEMODE_SESSION:-}" = 1
+ test "$(ps -o sid= -p $$ | tr -d ' ')" != "$TEST_PARENT_SID"
+fi
 if [ "$TEST_MODE" = "480i failure" ]; then
  printf '%s\n' "load_core $TEST_MENU" > "$TEST_FIFO"
  echo 'client failed' >&2
@@ -54,19 +58,21 @@ fi
 				filepath.Join(app, "mistervision"): helper,
 				filepath.Join(app, "mplayer-arm"):  "#!/bin/sh\nexit 0\n",
 				filepath.Join(dir, "taskset"):      "#!/bin/sh\nexit 0\n",
+				filepath.Join(dir, "pidof"):        "#!/bin/sh\n[ \"$TEST_MODE\" = ConsoleMode ]\n",
 				filepath.Join(fat, "menu.rbf"):     "test core",
 			} {
 				if err := os.WriteFile(name, []byte(data), 0700); err != nil {
 					t.Fatal(err)
 				}
 			}
-			script := strings.NewReplacer("/dev/tty0", filepath.Join(dir, "console"), "/dev/MiSTer_cmd", fifo, "/media/fat", fat).Replace(string(source))
+			script := strings.NewReplacer("/tmp/mistervision-consolemode.log", filepath.Join(dir, "consolemode.log"), "/dev/tty0", filepath.Join(dir, "console"), "/dev/MiSTer_cmd", fifo, "/media/fat", fat).Replace(string(source))
 			path := filepath.Join(dir, "launch.sh")
 			if err := os.WriteFile(path, []byte(script), 0700); err != nil {
 				t.Fatal(err)
 			}
 			cmd := exec.Command("bash", path)
-			cmd.Env = append(os.Environ(), "PATH="+dir+":"+os.Getenv("PATH"), "TEST_MODE="+mode, "TEST_FIFO="+fifo, "TEST_MENU="+filepath.Join(fat, "menu.rbf"))
+			sid, _, _ := syscall.Syscall(syscall.SYS_GETSID, 0, 0, 0)
+			cmd.Env = append(os.Environ(), "TEST_PARENT_SID="+strconv.Itoa(int(sid)), "PATH="+dir+":"+os.Getenv("PATH"), "TEST_MODE="+mode, "TEST_FIFO="+fifo, "TEST_MENU="+filepath.Join(fat, "menu.rbf"))
 			output, err := cmd.CombinedOutput()
 			if mode == "480i failure" {
 				var exit *exec.ExitError
@@ -78,6 +84,12 @@ fi
 			}
 			buffer := make([]byte, 4096)
 			n, err := syscall.Read(fd, buffer)
+			if mode == "ConsoleMode" {
+				if n > 0 || !errors.Is(err, syscall.EAGAIN) {
+					t.Fatalf("ConsoleMode must own menu return: bytes=%d err=%v", n, err)
+				}
+				return
+			}
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -96,15 +108,18 @@ func TestLauncherUpdateRestart(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, tc := range []struct {
-		name       string
-		interlaced bool
-		nextStatus int
-		missing    bool
+		name        string
+		interlaced  bool
+		nextStatus  int
+		missing     bool
+		consoleMode bool
 	}{
-		{"240p", false, 0, false},
-		{"480i", true, 0, false},
-		{"new client fails", false, 1, false},
-		{"launcher missing", false, 0, true},
+		{"240p", false, 0, false, false},
+		{"480i", true, 0, false, false},
+		{"new client fails", false, 1, false, false},
+		{"launcher missing", false, 0, true, false},
+		{"ConsoleMode restart", false, 0, false, true},
+		{"ConsoleMode new client fails", false, 1, false, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()
@@ -125,12 +140,21 @@ func TestLauncherUpdateRestart(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer syscall.Close(fd)
-			script := strings.NewReplacer("/dev/tty0", filepath.Join(dir, "console"), "/dev/MiSTer_cmd", fifo, "/media/fat", fat).Replace(string(source))
+			script := strings.NewReplacer("/tmp/mistervision-consolemode.log", filepath.Join(dir, "consolemode.log"), "/dev/tty0", filepath.Join(dir, "console"), "/dev/MiSTer_cmd", fifo, "/media/fat", fat).Replace(string(source))
 			// The replacement records entry before running its own startup.
 			replacement := "#!/bin/bash\nprintf 'updated launcher\\n' >> \"$TEST_EVENTS\"\n" + script
 			helper := `#!/bin/bash
 set -eu
 [ "$MISTERVISION_AUTO_RESTART" = 1 ]
+if [ "$TEST_CONSOLEMODE" = true ]; then
+ [ "$MISTERVISION_CONSOLEMODE_SESSION" = 1 ]
+ sid=$(ps -o sid= -p $$ | tr -d ' ')
+ if [ -f "$TEST_STARTED" ]; then
+  test "$sid" = "$(cat "$TEST_STARTED.sid")"
+ else
+  printf '%s' "$sid" > "$TEST_STARTED.sid"
+ fi
+fi
 if [ ! -f "$TEST_STARTED" ]; then
     touch "$TEST_STARTED"
     printf 'old client\n' >> "$TEST_EVENTS"
@@ -152,6 +176,7 @@ exit "$TEST_NEXT_STATUS"
 				filepath.Join(dir, "launch-copy.sh"): script,
 				filepath.Join(dir, "replacement.sh"): replacement,
 				filepath.Join(dir, "taskset"):        "#!/bin/sh\nexit 0\n",
+				filepath.Join(dir, "pidof"):          "#!/bin/sh\n[ \"$TEST_CONSOLEMODE\" = true ]\n",
 				filepath.Join(fat, "menu.rbf"):       "test core",
 				filepath.Join(app, "mistervision"):   helper,
 				filepath.Join(app, "mplayer-arm"):    "#!/bin/sh\nexit 0\n",
@@ -172,6 +197,7 @@ exit "$TEST_NEXT_STATUS"
 				"TEST_LAUNCHER="+filepath.Join(scripts, "MiSTerVision.sh"),
 				"TEST_MENU="+filepath.Join(fat, "menu.rbf"), "TEST_FIFO="+fifo,
 				"TEST_INTERLACED="+strconv.FormatBool(tc.interlaced),
+				"TEST_CONSOLEMODE="+strconv.FormatBool(tc.consoleMode),
 				"TEST_MISSING="+strconv.FormatBool(tc.missing),
 				"TEST_RESTART_STATUS="+strconv.Itoa(update.RestartExitCode),
 				"TEST_NEXT_STATUS="+strconv.Itoa(tc.nextStatus))
@@ -207,7 +233,7 @@ exit "$TEST_NEXT_STATUS"
 			if tc.interlaced {
 				returns++
 			}
-			if tc.nextStatus == 0 && !tc.missing {
+			if tc.nextStatus == 0 && !tc.missing && !tc.consoleMode {
 				returns++
 			}
 			want = strings.Repeat("load_core "+filepath.Join(fat, "menu.rbf")+"\n", returns)

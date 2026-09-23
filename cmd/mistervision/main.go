@@ -43,11 +43,12 @@ func run() (err error) {
 	defer stop()
 	interlaced := os.Getenv(displaymode.ActiveEnv) == "1"
 	mode, loadErr := displaymode.Parse(source.Section("display"))
+	consoleMode := o.headless == "" && !interlaced && displaymode.ConsoleModeActive()
 	var scaled bool
-	if o.headless == "" && !interlaced && !mode.Interlaced && loadErr == nil {
+	if o.headless == "" && !interlaced && !mode.Interlaced && !consoleMode && loadErr == nil {
 		scaled, loadErr = displaymode.NeedsFramebufferScaling()
 	}
-	supervised := o.headless == "" && !interlaced && (mode.Interlaced || scaled) && loadErr == nil
+	supervised := o.headless == "" && !interlaced && (mode.Interlaced || scaled || consoleMode) && loadErr == nil
 	trace, err := openStartupDiagnostics(o, supervised, source)
 	if err != nil {
 		return err
@@ -59,6 +60,10 @@ func run() (err error) {
 	}
 	if o.headless == "" {
 		mister.RecordStartup(trace.log, interlaced)
+	}
+	if consoleMode {
+		trace.phase("consolemode-supervisor")
+		return displaymode.RunConsoleMode(ctx, filepath.Dir(source.Path), mode, os.Args[1:], trace.log)
 	}
 	if o.headless == "" && !interlaced && mode.Interlaced {
 		trace.phase("interlaced-supervisor")

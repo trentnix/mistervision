@@ -11,3 +11,5 @@ func enableConsole() error {
 }
 
 func restoreConsole() error { return nil }
+
+func unlockConsole() error { return errors.New("ConsoleMode handoff requires Linux with cgo") }

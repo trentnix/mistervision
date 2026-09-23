@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"mistervision/internal/diagnostics"
+	"mistervision/internal/mister/displaymode"
 )
 
 // RecordStartup reads a bounded snapshot of display settings when logging is
@@ -21,6 +22,7 @@ func RecordStartup(log *diagnostics.Log, interlaced bool) {
 		return
 	}
 	log.Record("mister.display", slog.Bool("interlaced", interlaced))
+	displaymode.RecordState(log, "startup")
 	f, err := os.Open("/media/fat/MiSTer.ini")
 	if err != nil {
 		log.Record("mister.settings", slog.String("error_kind", diagnostics.ErrorKind(err)))
@@ -44,7 +46,7 @@ func RecordStartup(log *diagnostics.Log, interlaced bool) {
 }
 
 // recordSettings preserves section identity rather than guessing INI precedence.
-// Only display-related sections and numeric display values are eligible. Limits
+// Only display-related sections, numeric values, and known host/connector names are eligible. Limits
 // bound startup reads and queue use even when the INI is unexpectedly large.
 func recordSettings(log *diagnostics.Log, source io.Reader) {
 	const limit = 128 << 10
@@ -59,7 +61,7 @@ func recordSettings(log *diagnostics.Log, source io.Reader) {
 			continue
 		}
 		switch section {
-		case "top", "mister", "menu", "mistervisioninterlaced":
+		case "top", "mister", "menu", "mistervisioninterlaced", "mistervisionframebuffer":
 		default:
 			continue
 		}
@@ -69,11 +71,21 @@ func recordSettings(log *diagnostics.Log, source io.Reader) {
 		}
 		key, value = strings.ToLower(strings.TrimSpace(key)), strings.TrimSpace(value)
 		switch key {
-		case "ypbpr", "composite_sync", "forced_scandoubler", "vga_scaler", "direct_video", "vsync_adjust", "video_mode", "video_mode_ntsc", "video_mode_pal":
+		case "ypbpr", "composite_sync", "forced_scandoubler", "vga_scaler", "direct_video", "vsync_adjust", "video_mode", "video_mode_ntsc", "video_mode_pal", "fb_terminal", "fb_size", "vscale_mode", "vscale_border", "ntsc_mode", "log_file_entry":
+		case "vga_mode":
+			if value != "rgb" && value != "ypbpr" && value != "svideo" && value != "cvbs" {
+				rejected++
+				continue
+			}
+		case "main":
+			if value != "MiSTer" && value != "ConsoleMode/MiSTer_ConsoleMode" {
+				rejected++
+				continue
+			}
 		default:
 			continue
 		}
-		if !numericSetting(value) {
+		if key != "vga_mode" && key != "main" && !numericSetting(value) {
 			rejected++
 			continue
 		}

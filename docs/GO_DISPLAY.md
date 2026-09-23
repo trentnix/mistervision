@@ -15,6 +15,18 @@ Install the application package and `display.interlaced: false`. This keeps the 
 
 HDMI scaling and automatic aspect handling are available starting with v1.5.0.
 
+## ConsoleMode
+
+When ConsoleMode is running, MiSTerVision temporarily uses the original MiSTer host and a standard framebuffer core. Exit returns to ConsoleMode. The Scripts launcher uses a separate process session so closing ConsoleMode’s terminal does not terminate the application. Launcher errors are recorded in `/tmp/mistervision-consolemode.log`. The handoff releases the terminal-switch lock left by ConsoleMode and waits for framebuffer activation before starting the application. HDMI uses the same framebuffer limits as a normal launch. Interlaced output uses the bundled core.
+
+The handoff configures the main `/media/fat/MiSTer.ini` profile. Use the Main INI profile for this path. Its standard `[Menu]` settings must already support the intended output. A working native ConsoleMode CRT picture does not establish that the Linux framebuffer can reach the CRT. For analog output, configure the scaler and a CRT-compatible timing as described below. MiSTerVision does not infer safe analog timing from an HDMI resolution or replace the user's connector settings.
+
+The application adds an isolated `[MiSTerVisionFramebuffer]` section for host selection and console activation. Existing display settings remain unchanged. Before the first change, it saves `MiSTer.ini.before-consolemode` beside the application settings. The interlaced section also selects the original host. These sections apply only to the application's named core configurations.
+
+With [diagnostics enabled](GO_DIAGNOSTICS.md), startup records the saved ConsoleMode display selections and follows host, core, terminal, and framebuffer state through the handoff. It records only known settings and bounded numeric values.
+
+The handoff was developed against ConsoleMode 1.1.4.2 on the maintainer's MiSTer. Keep the original `/media/fat/MiSTer` executable and `menu.rbf` installed. A ConsoleMode installation on disk does not activate this path unless its host is running.
+
 ## Composite and S-Video output
 
 MiSTerVision draws through the Linux framebuffer. Analog output must display that framebuffer through the scaler. If the CRT says to disable the framebuffer or enable the VGA scaler, use `vga_scaler=1` with a CRT-compatible timing. Disabling `fb_terminal` does not solve the application’s display requirement.

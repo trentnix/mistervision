@@ -72,21 +72,7 @@ func CoreConfig(data []byte) ([]byte, error) {
 	if strings.Contains(strings.ToLower(text), "["+strings.ToLower(coreName)+"]") {
 		return nil, errors.New("MiSTerVisionInterlaced INI section already exists outside the managed block")
 	}
-	values := map[string]string{}
-	section := ""
-	for _, line := range strings.Split(text, "\n") {
-		line = strings.TrimSpace(strings.SplitN(line, ";", 2)[0])
-		if strings.HasPrefix(line, "[") {
-			section = strings.ToLower(strings.TrimSpace(strings.Trim(line, "[]")))
-			continue
-		}
-		if section != "mister" && section != "menu" {
-			continue
-		}
-		if key, value, ok := strings.Cut(line, "="); ok {
-			values[strings.ToLower(strings.TrimSpace(key))] = strings.ToLower(strings.TrimSpace(value))
-		}
-	}
+	values := menuSettings([]byte(text))
 	scandoubler := 1
 	component := values["ypbpr"] == "1"
 	if mode := values["vga_mode"]; mode != "" {
@@ -98,7 +84,7 @@ func CoreConfig(data []byte) ([]byte, error) {
 	if component {
 		scandoubler = 0
 	}
-	block := fmt.Sprintf("%s\n[%s]\ndirect_video=1\nforced_scandoubler=%d\nfb_size=1\nfb_terminal=1\nlog_file_entry=1\n%s\n", blockStart, coreName, scandoubler, blockEnd)
+	block := fmt.Sprintf("%s\n[%s]\nmain=MiSTer\ndirect_video=1\nforced_scandoubler=%d\nfb_size=1\nfb_terminal=1\nlog_file_entry=1\n%s\n", blockStart, coreName, scandoubler, blockEnd)
 	if text != "" && !strings.HasSuffix(text, "\n") {
 		text += "\n"
 	}
@@ -171,4 +157,25 @@ func replace(path string, data []byte) error {
 		return err
 	}
 	return os.Rename(f.Name(), path)
+}
+
+// menuSettings reads effective global/Menu values without interpreting timings.
+// Core-specific handoff settings must not change the user's analog routing.
+func menuSettings(data []byte) map[string]string {
+	values := map[string]string{}
+	section := ""
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(strings.SplitN(line, ";", 2)[0])
+		if strings.HasPrefix(line, "[") {
+			section = strings.ToLower(strings.TrimSpace(strings.Trim(line, "[]")))
+			continue
+		}
+		if section != "mister" && section != "menu" {
+			continue
+		}
+		if key, value, ok := strings.Cut(line, "="); ok {
+			values[strings.ToLower(strings.TrimSpace(key))] = strings.ToLower(strings.TrimSpace(value))
+		}
+	}
+	return values
 }

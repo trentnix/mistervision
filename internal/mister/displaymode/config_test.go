@@ -24,7 +24,7 @@ func TestCoreConfigPreservesOtherModes(t *testing.T) {
 			if !bytes.HasPrefix(got, original) {
 				t.Fatal("existing configuration changed")
 			}
-			if !strings.Contains(string(got), "[MiSTerVisionInterlaced]\ndirect_video=1\n"+tc.want) {
+			if !strings.Contains(string(got), "[MiSTerVisionInterlaced]\nmain=MiSTer\ndirect_video=1\n"+tc.want) {
 				t.Fatalf("wrong mode block: %s", got)
 			}
 			managed := string(got[len(original):])

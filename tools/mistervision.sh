@@ -4,6 +4,14 @@
 # Binaries, login, and playback choices persist on the SD card.
 set -eu
 
+# ConsoleMode closes its Scripts terminal when the host changes. Keep the whole
+# launcher in a separate session so that terminal hangup cannot kill the display
+# supervisor before it restores ConsoleMode. Restarted launchers reuse the session.
+if [ "${MISTERVISION_CONSOLEMODE_SESSION:-}" != 1 ] && pidof MiSTer_ConsoleMode >/dev/null 2>&1; then
+    export MISTERVISION_CONSOLEMODE_SESSION=1
+    exec setsid --fork --wait bash "$0" </dev/null >/tmp/mistervision-consolemode.log 2>&1
+fi
+
 # Address the active virtual console directly. Scripts stdout can point at a
 # different terminal, leaving the CRT's login text untouched.
 clear_console() {
@@ -15,6 +23,13 @@ finish() {
         clear_console
     fi
     printf '\033[?25h' > /dev/tty0
+
+    # The display supervisor restores ConsoleMode before returning. Loading
+    # the standard core again would undo that handoff. Detect the running host,
+    # not merely an installation that may be inactive.
+    if pidof MiSTer_ConsoleMode >/dev/null 2>&1; then
+        return
+    fi
 
     # MiSTer's Scripts wrapper waits for a key after the launcher returns.
     # Reload the menu on success. Leave errors visible for troubleshooting.

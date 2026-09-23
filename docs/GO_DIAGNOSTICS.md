@@ -22,7 +22,7 @@ Without a JSON `server` section, `DEBUGLOG` on a line in legacy `jellyfin.conf` 
 
 `max_bytes` applies to each file and accepts 4,096–67,108,864 bytes. Use a dedicated path because startup truncates it and owns its `.1` companion. Only one application instance can use a log path.
 
-The interlaced supervisor has an additional pair, `debug.log.supervisor` and `debug.log.supervisor.1`. Collect both pairs for a 480i startup or exit problem. Each file uses the same limit, so defaults retain up to 4 MiB in interlaced mode. If the child never starts, its existing log can be from a previous run. Check timestamps.
+Display supervisors for interlaced output, HDMI scaling, and ConsoleMode have an additional pair, `debug.log.supervisor` and `debug.log.supervisor.1`. Collect both pairs for a display startup or exit problem. For ConsoleMode, also collect `/tmp/mistervision-consolemode.log` before rebooting. Each file uses the same limit, so defaults retain up to 4 MiB when a display supervisor runs. If the child never starts, its existing log can be from a previous run. Check timestamps.
 
 ## Events
 
@@ -33,7 +33,10 @@ Each line is JSON with a timestamp and event name in `msg`.
 | `application.start`, `.exit`, `.phase`, `.failure` | Build/platform, application or supervisor role, startup stage, elapsed time, and failure category. |
 | `application.display` | Logical and physical dimensions. |
 | `input.backend`, `.device`, `.unavailable` | Backend, initial devices and bindings, and identification/open failures. No button presses. |
-| `mister.display`, `.framebuffer`, `.setting`, `.settings` | Interlaced state, kernel framebuffer geometry, and allowlisted numeric INI settings. |
+| `mister.display`, `.framebuffer`, `.setting`, `.settings` | Interlaced state, kernel framebuffer geometry, numeric INI settings, and known host/connector names. Includes the application’s handoff section. |
+| `mister.state`, `.state.framebuffer` | Known active hosts, ConsoleMode frontend presence, known core identity, active virtual terminal, and framebuffer geometry at startup and each ConsoleMode handoff stage. |
+| `mister.consolemode.setting` | Saved CRT, video-mode, and rotation selections as raw numeric values with their byte lengths. Missing or malformed files produce a failure category, not guessed defaults. |
+| `mister.handoff`, `.handoff.failure`, `.handoff.result` | ConsoleMode handoff stage, elapsed time, and failure category, including cleanup and return. |
 | `update.start`, `.end`, `.recovered`, `.restart`, `.manager` | Installation start, completion flags for failure/cancellation/recovery, startup rollback, and a restart request after successful cleanup. Update-manager configuration read failures. No download URLs or raw errors. |
 | `configuration.fallback` | Logical setting, safe error category, and selected recovery behavior. |
 | `connection.discovery`, `connection.rediscovery` | Discovered server count and failure flag for initial discovery or remembered-address recovery. No server names or addresses. |

@@ -15,27 +15,31 @@ class InterlacedConsoleTest(unittest.TestCase):
         harness = includes + r'''
 #include <assert.h>
 #include <stdarg.h>
-static int active = 2, modes[2] = {KD_TEXT, KD_GRAPHICS};
+static int active = 2, modes[3] = {KD_TEXT, KD_GRAPHICS, KD_GRAPHICS};
+static int switch_locked, terminal_stale, terminal_reopens;
 static int key_writes, destroyed, acknowledged, never_ready, short_write, create_failure;
 static int mock_open(const char *path, int flags, ...) {
+    if (!strcmp(path, "/dev/tty0")) return 12;
     if (!strcmp(path, "/dev/tty1")) return 10;
-    if (!strcmp(path, "/dev/tty2")) return 11;
+    if (!strcmp(path, "/dev/tty2")) { terminal_stale = 0; terminal_reopens++; return 11; }
     assert(!strcmp(path, "/dev/uinput"));
     return 9;
 }
 static int mock_close(int fd) { return 0; }
 static int mock_usleep(useconds_t duration) { return 0; }
 static int mock_ioctl(int fd, unsigned long request, ...) {
+    if (fd == 11 && terminal_stale) { errno = EIO; return -1; }
     va_list args;
     va_start(args, request);
-    if (request == KDGETMODE) *va_arg(args, int *) = modes[fd - 10];
-    else if (request == KDSETMODE) modes[fd - 10] = va_arg(args, int);
+    if (request == KDGETMODE) *va_arg(args, int *) = modes[fd == 12 ? active - 1 : fd - 10];
+    else if (request == KDSETMODE) modes[fd == 12 ? active - 1 : fd - 10] = va_arg(args, int);
     else if (request == VT_GETSTATE) va_arg(args, struct vt_stat *)->v_active = active;
     else if (request == VT_ACTIVATE) {
         int target = va_arg(args, int);
         // A graphics console blocks the switch that Main waits to complete.
-        if (modes[active - 1] == KD_TEXT) active = target;
-    } else if (request == UI_DEV_CREATE && create_failure) {
+        if (!switch_locked && modes[active - 1] == KD_TEXT) active = target;
+    } else if (request == VT_UNLOCKSWITCH) switch_locked = 0;
+    else if (request == UI_DEV_CREATE && create_failure) {
         va_end(args);
         errno = EIO;
         return -1;
@@ -46,6 +50,7 @@ static int mock_ioctl(int fd, unsigned long request, ...) {
     return 0;
 }
 static ssize_t mock_write(int fd, const void *data, size_t size) {
+    if (fd == 11 && terminal_stale) { errno = EIO; return -1; }
     if (fd != 9 || size == sizeof(struct uinput_user_dev)) return size;
     if (short_write) { errno = 0; return size - 1; }
     const struct input_event *event = data;
@@ -74,8 +79,10 @@ int main(void) {
     assert(destroyed == 1 && modes[0] == KD_TEXT && modes[1] == KD_TEXT);
     // Simulate a child crash while the visible console is still in graphics.
     modes[0] = KD_GRAPHICS;
+    terminal_stale = 1; // ConsoleMode removed the original tty2.
     assert(console_restore() == 0);
     assert(active == 2 && modes[0] == KD_TEXT && modes[1] == KD_GRAPHICS);
+    assert(!terminal_stale && terminal_reopens >= 2);
     assert(console_restore() == 0);
     assert(destroyed == 1 && keyboard_fd == -1);
 
@@ -100,6 +107,12 @@ int main(void) {
     assert(console_restore() == 0);
     assert(destroyed == 3 && keyboard_fd == -1);
     assert(active == 2 && modes[0] == KD_TEXT && modes[1] == KD_GRAPHICS);
+    // ConsoleMode can leave VT3 in graphics mode and lock VT switching.
+    active = 3;
+    modes[2] = KD_GRAPHICS;
+    switch_locked = 1;
+    assert(console_unlock() == 0);
+    assert(active == 1 && !switch_locked && modes[2] == KD_TEXT);
     return 0;
 }
 '''
