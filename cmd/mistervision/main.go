@@ -46,7 +46,10 @@ func run() (err error) {
 	consoleMode := o.headless == "" && !interlaced && displaymode.ConsoleModeActive()
 	var scaled bool
 	if o.headless == "" && !interlaced && !mode.Interlaced && !consoleMode && loadErr == nil {
-		scaled, loadErr = displaymode.NeedsFramebufferScaling()
+		loadErr = displaymode.ValidateMenuFramebuffer()
+		if loadErr == nil {
+			scaled, loadErr = displaymode.NeedsFramebufferScaling()
+		}
 	}
 	supervised := o.headless == "" && !interlaced && (mode.Interlaced || scaled || consoleMode) && loadErr == nil
 	trace, err := openStartupDiagnostics(o, supervised, source)

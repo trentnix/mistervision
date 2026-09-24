@@ -24,7 +24,7 @@ func TestPlaybackDiagnosticsRecordMilestonesWithoutMediaSecrets(t *testing.T) {
 	dir := t.TempDir()
 	player := filepath.Join(dir, "player")
 	// The raw decoder output deliberately contains a private URL. It must remain discarded.
-	script := "#!/bin/sh\nprintf 'https://private-player/?ApiKey=decoder-secret\nANS_VIDEO_STARTED=true\nANS_BUFFERING=false\nANS_TIME_POSITION=3\n'\nwhile IFS= read -r command; do :; done\n"
+	script := "#!/bin/sh\nprintf 'https://private-player/?ApiKey=decoder-secret\nID_VIDEO_WIDTH=640\nID_VIDEO_HEIGHT=360\nID_VIDEO_FPS=23.976\nID_VIDEO_CODEC=ffh264\nANS_VIDEO_STARTED=true\nANS_BUFFERING=false\nANS_TIME_POSITION=3\n'\nwhile IFS= read -r command; do :; done\n"
 	if err := os.WriteFile(player, []byte(script), 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -78,6 +78,17 @@ func TestPlaybackDiagnosticsRecordMilestonesWithoutMediaSecrets(t *testing.T) {
 		case <-time.After(5 * time.Second):
 			t.Fatal("missing playback milestone")
 		}
+	}
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		data, _ := os.ReadFile(path)
+		if strings.Contains(string(data), `"video_codec":"h264"`) && strings.Contains(string(data), `"frame_rate":23.976`) {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("decoder metadata never reached diagnostics")
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 	cancel()
 	// Wait for cleanup before flushing the borrowed logger.
@@ -174,5 +185,58 @@ func TestUnsupportedDisplayStopsBeforeServerPreparation(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("missing playback result")
+	}
+}
+
+func TestStreamDiagnosticsSeparateSourceRequestAndDecoder(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "debug.log")
+	log, err := diagnostics.Open(diagnostics.Config{Enabled: true, Path: path, MaxBytes: 32768})
+	if err != nil {
+		t.Fatal(err)
+	}
+	trace := newPlaybackTrace(log, Config{}, Request{})
+	trace.prepared(&playbackSession{
+		item: media.Item{MediaSources: []media.MediaSource{
+			{ID: "wrong", MediaStreams: []media.MediaStream{{Type: "Video", Width: 1, Height: 1}}},
+			{ID: "selected", MediaStreams: []media.MediaStream{{Type: "Video", Codec: "hevc", Width: 3840, Height: 2160, RealFrameRate: 23.976, BitRate: 40000000}}},
+		}},
+		stream: media.PreparedStream{SourceID: "selected", Delivery: media.Delivery("plex", "transcode", "https://private-host/?token=private-secret"), Limits: media.StreamLimits{MaxWidth: 720, MaxHeight: 576, MaxFrameRate: 30}},
+	})
+	trace.videoFormat("playback.decoder-input", media.VideoFormat{Codec: "h264", Width: 640, Height: 360, FrameRate: 23.976})
+	trace.videoFormat("playback.decoder-input", media.VideoFormat{Codec: "https://private-secret", FrameRate: -1})
+	log.Close()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var source, request, delivery map[string]any
+	var inputs []map[string]any
+	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		var e map[string]any
+		if err := json.Unmarshal([]byte(line), &e); err != nil {
+			t.Fatal(err)
+		}
+		switch e["msg"] {
+		case "playback.source":
+			source = e
+		case "playback.prepared":
+			request = e
+		case "playback.delivery":
+			delivery = e
+		case "playback.decoder-input":
+			inputs = append(inputs, e)
+		}
+	}
+	if source["width"] != float64(3840) || source["video_codec"] != "hevc" || request["maxWidth"] != float64(720) {
+		t.Fatalf("source/request mixed: %v %v", source, request)
+	}
+	if delivery["server_video_decision"] != "unknown" || delivery["address_class"] != "unknown" {
+		t.Fatal(delivery)
+	}
+	if len(inputs) != 3 || inputs[0]["width"] != nil || inputs[1]["width"] != float64(640) || inputs[2]["frame_rate"] != nil {
+		t.Fatal(inputs)
+	}
+	if strings.Contains(string(data), "private-") || strings.Contains(string(data), "selected") {
+		t.Fatal("private data in logs")
 	}
 }

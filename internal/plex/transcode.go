@@ -2,6 +2,7 @@ package plex
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -49,17 +50,39 @@ func (c *Client) videoQuery(path, session string, fps float64) (url.Values, medi
 }
 
 // decideVideo registers the playback identity before opening the stream.
-func (c *Client) decideVideo(ctx context.Context, q url.Values) error {
+func (c *Client) decideVideo(ctx context.Context, q url.Values) (media.StreamDelivery, error) {
+	delivery := media.Delivery("plex", "transcode", c.Config.Server)
 	var decision struct {
 		Container *struct {
-			Code int `json:"generalDecisionCode"`
+			Code     int             `json:"generalDecisionCode"`
+			Metadata json.RawMessage `json:"Metadata"`
 		} `json:"MediaContainer"`
 	}
 	if err := c.json(ctx, "/video/:/transcode/universal/decision", q, &decision); err != nil {
-		return err
+		return delivery, err
 	}
 	if decision.Container == nil || decision.Container.Code < 1000 || decision.Container.Code >= 2000 {
-		return media.ErrConversion
+		return delivery, media.ErrConversion
 	}
-	return nil
+	var entries []metadata
+	if json.Unmarshal(decision.Container.Metadata, &entries) == nil && len(entries) > 0 && len(entries[0].Media) > 0 {
+		v := entries[0].Media[0]
+		if v.VideoDecision != "" {
+			delivery.VideoDecision = media.DiagnosticDecision(v.VideoDecision)
+		}
+		if v.AudioDecision != "" {
+			delivery.AudioDecision = media.DiagnosticDecision(v.AudioDecision)
+		}
+		for _, p := range v.Part {
+			for _, stream := range p.Streams {
+				if stream.Type == 1 && delivery.VideoDecision == "" {
+					delivery.VideoDecision = media.DiagnosticDecision(stream.Decision)
+				}
+				if stream.Type == 2 && delivery.AudioDecision == "" {
+					delivery.AudioDecision = media.DiagnosticDecision(stream.Decision)
+				}
+			}
+		}
+	}
+	return delivery, nil
 }

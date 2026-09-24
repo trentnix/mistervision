@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"mistervision/internal/media"
 	playerapi "mistervision/internal/player"
 )
 
@@ -25,6 +26,7 @@ type playerProcess struct {
 	levels       chan AudioLevels
 	buffering    chan bool
 	videoStarted chan struct{}
+	videoFormat  chan media.VideoFormat
 	pictures     chan PictureResult
 	captions     chan string
 	done         chan error
@@ -51,6 +53,7 @@ func startProcess(ctx context.Context, executable string, args []string, source 
 	cmd.ExtraFiles = []*os.File{reader}
 	p := &playerProcess{decoder: decoder, cmd: cmd, writer: writer, source: source, positions: make(chan float64, 16), buffering: make(chan bool, 16), done: make(chan error, 1), copyDone: make(chan struct{})}
 	p.videoStarted = make(chan struct{}, 1)
+	p.videoFormat = make(chan media.VideoFormat, 1)
 	p.levels = make(chan AudioLevels, 1)
 	p.pictures = make(chan PictureResult, 16)
 	p.captions = make(chan string, 1)

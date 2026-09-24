@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"math"
+	"mistervision/internal/media"
 	"os/exec"
 	"sync/atomic"
 	"syscall"
@@ -83,6 +85,38 @@ func (t *playbackTrace) prepared(s *playbackSession) {
 	if t == nil {
 		return
 	}
+	delivery := s.stream.Delivery
+	t.record("playback.delivery", slog.String("provider", known(delivery.Provider, "plex", "jellyfin")),
+		slog.String("requested_method", known(delivery.RequestedMethod, "transcode", "direct")),
+		slog.String("server_video_decision", media.DiagnosticDecision(delivery.VideoDecision)),
+		slog.String("server_audio_decision", media.DiagnosticDecision(delivery.AudioDecision)),
+		slog.String("address_class", known(delivery.AddressClass, "private", "public", "loopback")), slog.Bool("tls", delivery.TLS))
+	streams := s.item.MediaStreams
+	if s.liveTV {
+		streams = s.stream.Streams
+	} else if s.stream.SourceID != "" {
+		streams = nil
+		for _, source := range s.item.MediaSources {
+			if source.ID == s.stream.SourceID {
+				streams = source.MediaStreams
+				break
+			}
+		}
+	}
+	var format media.VideoFormat
+	for _, stream := range streams {
+		if stream.Type != "Video" {
+			continue
+		}
+		fps := stream.RealFrameRate
+		if fps <= 0 || math.IsNaN(fps) || math.IsInf(fps, 0) {
+			fps = stream.AverageFrameRate
+		}
+		format = media.VideoFormat{Codec: stream.Codec, Width: stream.Width, Height: stream.Height, FrameRate: fps, BitRate: stream.BitRate}
+		break
+	}
+	t.videoFormat("playback.source", format)
+	t.videoFormat("playback.decoder-input", media.VideoFormat{})
 	limits := s.stream.Limits
 	t.record("playback.prepared", slog.Int64("start_ticks", s.start), slog.Bool("live", s.liveTV),
 		slog.Float64("maxWidth", limits.MaxWidth), slog.Float64("maxHeight", limits.MaxHeight),
@@ -115,4 +149,28 @@ func (t *playbackTrace) decoderExit(err error) {
 		}
 	}
 	t.record("playback.decoder-exit", slog.Int("exit_code", code), slog.Int("signal", signal), slog.Bool("failed", err != nil))
+}
+
+// videoFormat logs bounded observations only. Unknown values are explicit nulls,
+// never requested maxima or measurements of displayed FPS.
+func (t *playbackTrace) videoFormat(event string, format media.VideoFormat) {
+	t.record(event, slog.String("video_codec", media.DiagnosticCodec(format.Codec)),
+		slog.Any("width", observed(float64(format.Width), 16384)), slog.Any("height", observed(float64(format.Height), 16384)),
+		slog.Any("frame_rate", observed(format.FrameRate, 1000)), slog.Any("bit_rate", observed(float64(format.BitRate), 10000000000)))
+}
+
+func observed(value, maximum float64) any {
+	if value <= 0 || value > maximum || math.IsNaN(value) || math.IsInf(value, 0) {
+		return nil
+	}
+	return value
+}
+
+func known(value string, allowed ...string) string {
+	for _, candidate := range allowed {
+		if value == candidate {
+			return value
+		}
+	}
+	return "unknown"
 }

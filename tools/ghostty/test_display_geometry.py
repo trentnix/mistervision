@@ -91,6 +91,12 @@ class DisplayGeometryTests(BrowserFixture):
     def test_scaled_720p_canvas(self):
         self.exercise_preview("640x360", native_check=True)
 
+    def test_vga_1280x480_reduced_canvas(self):
+        self.exercise_preview("640x240", native_check=True)
+
+    def test_vga_720x480_reduced_canvas(self):
+        self.exercise_preview("360x240", native_check=True)
+
     def test_720p_preview_composes_and_clears_controls(self):
         self.exercise_preview("1280x720")
 
@@ -118,7 +124,7 @@ class DisplayGeometryTests(BrowserFixture):
             time.sleep(.02)
         # Check actual decoded pixels, including overrides for non-square displays.
         sw, sh = map(int, source_size.split("x"))
-        target = 4 / 3 if dimensions == "640x480" else width / height
+        target = 4 / 3 if dimensions in ("640x240", "640x288", "640x480", "640x576") else width / height
         if display_aspect == "4:3":
             target = 4 / 3
         elif display_aspect == "16:9":
@@ -136,6 +142,14 @@ class DisplayGeometryTests(BrowserFixture):
         self.capture(dimensions + "-decoded", frame)
         self.key(b"a")
         self.wait_event("playback.end", failed=False)
+
+    @unittest.skipUnless(shutil.which("ffmpeg"), "FFmpeg required")
+    def test_real_video_on_vga_super_resolution(self):
+        self.exercise_decoded_preview("640x240", "320x240")
+
+    @unittest.skipUnless(shutil.which("ffmpeg"), "FFmpeg required")
+    def test_wide_video_on_vga_super_resolution(self):
+        self.exercise_decoded_preview("640x240")
 
     @unittest.skipUnless(shutil.which("ffmpeg"), "FFmpeg required")
     def test_real_video_at_480_lines(self):

@@ -2,9 +2,17 @@
 
 Diagnostics records startup, requests, and playback milestones. It is off by default and uses the same implementation on MiSTer and desktop.
 
+## Automatic launcher log
+
+The shipped MiSTer launcher captures early errors without enabling application diagnostics or editing JSON. After a failed launch, attach `/media/fat/mistervision/startup-error.log`. The file includes the installed package version, captured output, and launcher exit status. It survives menu restoration and later successful launches. A later failed launch replaces it. The version comes from the installed `VERSION` file and can differ from a manually replaced binary.
+
+During a run, `startup.log` and `startup.log.1` hold at most 64 KiB each. The last-failure copy holds at most 128 KiB. If the application hangs or the machine resets before the launcher records an exit, collect the rolling pair instead. Recent output is flushed at least once per second while the logger can write. An abrupt power loss can still lose filesystem buffers. If the installation directory cannot be written at startup, the launcher uses `/tmp/mistervision-startup.log` and `/tmp/mistervision-startup-error.log`. Those temporary files do not survive reboot.
+
+Review launcher logs before posting them. They capture raw process output, unlike the filtered application diagnostics below. Startup capture does not read settings or saved credentials. Logging failures do not prevent the application from running. The updated launcher can also capture failures from an installed v1.5.1 binary. Replace only `Scripts/MiSTerVision.sh` to use it with that release.
+
 ## Enable and collect logs
 
-Add this section to `settings.json`, restart, reproduce the issue, then exit normally:
+Merge the `diagnostics` section below into the existing object in `settings.json`. Keep the existing connection and display settings. Separate adjacent sections with a comma. Do not paste a second JSON object after the existing one. Restart, reproduce the issue, then exit normally:
 
 ```json
 {
@@ -86,3 +94,13 @@ A 128-entry queue and one writer keep disk I/O off playback and UI loops. A full
 Logs exclude server origins, queries, authorization, response bodies, raw network/player errors, media titles, captions, and Quick Connect secrets. They can contain item/user identifiers in endpoint paths, device names, build details, numeric display settings, and playback timing. Review logs before sharing. Files request owner-only permissions where supported.
 
 Diagnostics does not measure dropped frames, rendered FPS, decoder load, or A/V drift. Those require player instrumentation and hardware checks. Position and buffering events alone cannot establish smooth playback.
+
+## Stream details
+
+`playback.source` records the selected source video's codec, dimensions, frame rate, and bitrate from server metadata. `playback.prepared` records requested transcode limits, not the delivered format. `playback.delivery` records the provider, requested method, and separate server-reported video/audio decisions. Plex decisions come from its existing negotiation response. A successful negotiation without explicit decisions leaves those fields `unknown`. Jellyfin's generated transcode request is identified as a request, not a server-confirmed decision.
+
+`playback.decoder-input` records MPlayer's identification of the received video before client-side scaling: codec, dimensions, frame rate, and bitrate when reported. Initial unknown fields are replaced by cumulative observations as MPlayer opens the stream. This works with the existing bundled player and does not require a replacement decoder. Other decoder implementations currently leave these fields unknown. Frame rate is stream metadata, not measured rendering speed. Bitrate may be absent or estimated by the decoder. These events do not measure tearing or dropped frames.
+
+Missing or invalid numeric observations are `null`. Unrecognized codec and decision identifiers are `unknown`. Titles, source IDs, file paths, addresses, and authentication values are excluded from these events. Codec names and decisions use allowlists instead of accepting arbitrary server/player text.
+
+Delivery also includes `tls` and `address_class`. Literal IP addresses are classified as `private`, `public`, or `loopback`. Hostnames and unclassifiable addresses remain `unknown`. Private addresses do not prove the server is on the local network, and public addresses do not prove the connection crosses the internet. No DNS lookup is added for diagnostics.

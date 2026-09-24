@@ -163,3 +163,11 @@ I check carousel and list navigation, preview text, playback, seeking, controls 
 Automated tests exercise display negotiation, aspect ratios, framebuffer presentation, overlay composition, interlaced page ownership, startup recovery, and decoder timing. Headless tests run locally and in CI. Release checks verify the packaged binaries, checksums, and updater recovery. An isolated MiSTer smoke check runs the packaged client and player without changing the installed application or display settings.
 
 The composite 240p setup uses `vga_scaler=1` and `composite_sync=0` in `[Menu]`, with a 15 kHz timing. Interlaced output uses the bundled core and its scoped settings. Hardware, adapters, and televisions vary, so reports should include the connection and relevant `MiSTer.ini` settings.
+
+## VGA PC monitors and startup validation
+
+A VGA PC monitor needs its own supported scan timing. Do not use a television's 240p or 480i timing merely because both displays are CRTs. Start with `display.interlaced: false`, `fb_terminal=1`, and `vga_scaler=1` for analog framebuffer output. Apply the timing in the active INI profile's `[Menu]` section. Keep other cores' settings unchanged.
+
+The client checks the active Menu configuration before opening the normal framebuffer. If `fb_terminal=0`, startup stops with the INI filename and instructions to enable the framebuffer. The check uses the existing profile and section parser, including alternate INI profiles and Menu overrides. ConsoleMode and interlaced supervisors prepare their own settings. `vga_scaler=0` is not rejected because HDMI can use that setting. The client cannot infer a connected monitor's supported timings from its framebuffer dimensions.
+
+With default framebuffer limits, a 720×480 signal produces a 360×240 playback framebuffer, while 1280×480 produces 640×240. The latter uses the established 4:3 non-square-pixel raster. The signal dimensions alone do not describe the physical screen's aspect ratio. Set `display.aspect_ratio` explicitly if automatic selection does not match the screen. These timings are examples for diagnosis, not universal VGA monitor presets.
