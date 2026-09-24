@@ -101,7 +101,8 @@ func (c *Client) PrepareLive(ctx context.Context, request media.LiveRequest) (pr
 	q.Set("X-Plex-Client-Identifier", session)
 	q.Set("offset", "-1")
 	q.Set("hasMDE", "1")
-	if err := c.decideVideo(ctx, q); err != nil {
+	delivery, err := c.decideVideo(ctx, q)
+	if err != nil {
 		return prepared, err
 	}
 	var streams []media.MediaStream
@@ -123,7 +124,7 @@ func (c *Client) PrepareLive(ctx context.Context, request media.LiveRequest) (pr
 			streams = append(streams, track)
 		}
 	}
-	return media.PreparedStream{URL: c.Config.Server + "/video/:/transcode/universal/start.mkv?" + q.Encode(), SessionID: session, SourceID: source.UUID, Streams: streams, LiveAudio: liveAudio, Limits: limits, Reports: live, Release: live.release}, nil
+	return media.PreparedStream{Delivery: delivery, URL: c.Config.Server + "/video/:/transcode/universal/start.mkv?" + q.Encode(), SessionID: session, SourceID: source.UUID, Streams: streams, LiveAudio: liveAudio, Limits: limits, Reports: live, Release: live.release}, nil
 }
 
 // tune uses the negotiation deadline instead of the metadata client's shorter

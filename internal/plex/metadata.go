@@ -100,6 +100,8 @@ func (m *metadata) UnmarshalJSON(data []byte) error {
 }
 
 type version struct {
+	VideoDecision string     `json:"videoDecision"`
+	AudioDecision string     `json:"audioDecision"`
 	ID            identifier `json:"id"`
 	Width, Height int
 	AspectRatio   float64 `json:"aspectRatio"`
@@ -119,6 +121,9 @@ type stream struct {
 	Selected               bool
 	Key                    string
 	Width, Height          int
+	FrameRate              json.Number `json:"frameRate"`
+	Bitrate                int64       `json:"bitrate"`
+	Decision               string      `json:"decision"`
 }
 
 func (m metadata) item() media.Item {
@@ -203,6 +208,10 @@ func (m metadata) item() media.Item {
 				continue
 			}
 			track := media.MediaStream{Type: kind, Index: s.ID, Codec: s.Codec, Language: s.Language, Title: s.Title, DisplayTitle: s.DisplayTitle, IsDefault: s.Default || s.Selected, IsForced: s.Forced, IsExternal: s.Key != "", Width: s.Width, Height: s.Height}
+			track.RealFrameRate, _ = s.FrameRate.Float64()
+			if s.Bitrate > 0 && s.Bitrate <= 10000000 {
+				track.BitRate = s.Bitrate * 1000
+			}
 			// Plex exports sidecar text, but embedded subtitles require server
 			// rendering. Preserve the codec and advertise that delivery constraint.
 			track.RequiresBurnIn = kind == "Subtitle" && s.Key == ""

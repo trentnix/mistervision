@@ -75,5 +75,5 @@ func (c *Client) PrepareAudio(ctx context.Context, item media.Item, session stri
 	if !strings.HasPrefix(path, "/library/parts/") || strings.ContainsAny(path, "?#\\") {
 		return media.PreparedStream{}, errors.New("invalid Plex audio path")
 	}
-	return media.PreparedStream{URL: c.Config.Server + path + "?" + url.Values{"X-Plex-Session-Identifier": {session}}.Encode(), SessionID: session, Reports: playbackReports{client: c, duration: entry.Duration * 10000}}, nil
+	return media.PreparedStream{Delivery: media.Delivery("plex", "direct", c.Config.Server), URL: c.Config.Server + path + "?" + url.Values{"X-Plex-Session-Identifier": {session}}.Encode(), SessionID: session, Reports: playbackReports{client: c, duration: entry.Duration * 10000}}, nil
 }

@@ -109,8 +109,10 @@ type PreparedStream struct {
 	Streams                  []MediaStream
 	LiveAudio                bool // The server can select audio on subsequent live preparations.
 	Limits                   StreamLimits
-	Reports                  Progress
-	Release                  func(context.Context) error
+	// Delivery records adapter intent and server-reported decisions separately.
+	Delivery StreamDelivery
+	Reports  Progress
+	Release  func(context.Context) error
 }
 
 // StreamLimits contains numeric transcode limits for diagnostics, not a

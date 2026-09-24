@@ -73,7 +73,7 @@ func (d Decoder) Args(item media.Item, source string) []string {
 		autosync = "1"
 		decodeOptions += ":mistervision-captions"
 	}
-	return []string{"-slave", "-quiet", "-nojoystick", "-noconsolecontrols", "-vo", "fbdev:" + d.Device, "-ao", "alsa", "-osdlevel", "0", "-framedrop", "-autosync", autosync, "-demuxer", "lavf", "-cache", "8192", "-cache-min", cacheMinimum, "-sws", "0", "-vf", filter, "-lavdopts", decodeOptions, "-af", "volume=-3", source}
+	return []string{"-slave", "-quiet", "-identify", "-nojoystick", "-noconsolecontrols", "-vo", "fbdev:" + d.Device, "-ao", "alsa", "-osdlevel", "0", "-framedrop", "-autosync", autosync, "-demuxer", "lavf", "-cache", "8192", "-cache-min", cacheMinimum, "-sws", "0", "-vf", filter, "-lavdopts", decodeOptions, "-af", "volume=-3", source}
 }
 
 // Pause sends MPlayer's toggle command. The paused argument is not encoded.

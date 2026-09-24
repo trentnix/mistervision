@@ -43,7 +43,8 @@ func (c *Client) PrepareVideo(ctx context.Context, request media.VideoRequest) (
 	return media.PreparedStream{
 		URL:       c.Config.Server + "/Videos/" + url.PathEscape(request.Item.ID) + "/stream?" + q.Encode(),
 		SessionID: request.SessionID, SourceID: request.SourceID, Reports: c,
-		Limits: media.StreamLimits{MaxWidth: float64(profile.MaxWidth), MaxHeight: float64(profile.MaxHeight), VideoBitrate: float64(profile.VideoBitrate), MaxFrameRate: float64(fps)},
+		Delivery: media.Delivery("jellyfin", "transcode", c.Config.Server),
+		Limits:   media.StreamLimits{MaxWidth: float64(profile.MaxWidth), MaxHeight: float64(profile.MaxHeight), VideoBitrate: float64(profile.VideoBitrate), MaxFrameRate: float64(fps)},
 	}, nil
 }
 
@@ -56,6 +57,7 @@ func (c *Client) PrepareAudio(ctx context.Context, item media.Item, session stri
 	return media.PreparedStream{
 		URL:       c.Config.Server + "/Audio/" + url.PathEscape(item.ID) + "/stream?" + q.Encode(),
 		SessionID: session, Reports: c,
+		Delivery: media.Delivery("jellyfin", "direct", c.Config.Server),
 	}, nil
 }
 

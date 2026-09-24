@@ -138,7 +138,7 @@ func (c *Client) PrepareLive(ctx context.Context, request media.LiveRequest) (me
 	if err != nil {
 		return media.PreparedStream{}, err
 	}
-	return media.PreparedStream{URL: live.StreamURL, Limits: streamLimits(live.StreamURL), SessionID: live.PlaySessionID, SourceID: live.MediaSourceID, Streams: live.MediaStreams,
+	return media.PreparedStream{Delivery: media.Delivery("jellyfin", "unknown", c.Config.Server), URL: live.StreamURL, Limits: streamLimits(live.StreamURL), SessionID: live.PlaySessionID, SourceID: live.MediaSourceID, Streams: live.MediaStreams,
 		Reports: liveReports{Client: c, id: live.LiveStreamID}, Release: func(ctx context.Context) error { return c.closeLive(ctx, live.LiveStreamID) }}, nil
 }
 

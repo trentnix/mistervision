@@ -13,7 +13,10 @@ type MediaStream struct {
 	// RequiresBurnIn marks subtitles the server cannot export as standalone text.
 	// The zero value preserves codec-based selection for existing providers.
 	RequiresBurnIn bool `json:"RequiresBurnIn,omitempty"`
-	Width, Height  int
+	// Frame rates and bitrate describe server source metadata, not decoder output.
+	RealFrameRate, AverageFrameRate float64
+	BitRate                         int64
+	Width, Height                   int
 }
 
 // MediaSource identifies the file whose stream indexes server exposes.

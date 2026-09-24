@@ -53,6 +53,8 @@ HDMI scaling and automatic aspect handling are available starting with v1.5.0.
 
 MiSTer video setups vary widely. I appreciate feedback on what works and what needs adjustment. When reporting a display issue, include your MiSTer hardware, display, cable or adapter, and relevant video settings.
 
+If startup returns immediately to the menu, attach `/media/fat/mistervision/startup-error.log` to your report. The launcher saves this log automatically. See [startup logs](docs/GO_DIAGNOSTICS.md#automatic-launcher-log) for hangs, missing logs, and privacy guidance.
+
 ### CRT
 
 Start with your working CRT timing and leave `display.interlaced` off. Analog output must show the Linux framebuffer through the scaler, using `vga_scaler=1` with timing and sync settings appropriate for your CRT and adapter. A working game-core picture alone does not verify the framebuffer route.

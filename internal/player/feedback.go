@@ -1,5 +1,7 @@
 package player
 
+import "mistervision/internal/media"
+
 // FeedbackKind identifies normalized decoder feedback. Unknown output is discarded
 // by the decoder before it reaches playback.
 type FeedbackKind uint8
@@ -10,18 +12,20 @@ const (
 	FeedbackBuffering                            // Buffering is the current cache-wait state.
 	FeedbackVideoStarted                         // The decoder has presented its first video frame.
 	FeedbackPicture                              // Picture acknowledges a requested picture-mode change.
+	FeedbackVideoFormat                          // VideoFormat describes the stream the decoder opened.
 	FeedbackCaption                              // Caption replaces the entire closed-caption screen, including clears.
 )
 
 // Feedback carries one observation. Kind identifies the populated field. Decoder
-// diagnostics, raw command output, and media URLs must not be included.
+// Raw command output, arbitrary diagnostic text, and media URLs must not be included.
 type Feedback struct {
-	Kind      FeedbackKind
-	Position  float64
-	Levels    AudioLevels
-	Buffering bool
-	Picture   PictureResult
-	Caption   string
+	VideoFormat media.VideoFormat
+	Kind        FeedbackKind
+	Position    float64
+	Levels      AudioLevels
+	Buffering   bool
+	Picture     PictureResult
+	Caption     string
 }
 
 // PictureResult acknowledges one live request. Err leaves the preceding mode active.

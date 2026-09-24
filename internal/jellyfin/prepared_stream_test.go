@@ -178,3 +178,15 @@ func TestRequestStreamReusesConnectionsAndRestrictsHeaders(t *testing.T) {
 		t.Fatal("accepted a stream outside the configured server")
 	}
 }
+
+func TestSourceMetadataRetainsFrameRateAndBitrate(t *testing.T) {
+	var item media.Item
+	err := json.Unmarshal([]byte(`{"MediaSources":[{"Id":"source","MediaStreams":[{"Type":"Video","Codec":"hevc","Width":3840,"Height":2160,"RealFrameRate":23.976,"AverageFrameRate":23.976,"BitRate":40000000}]}]}`), &item)
+	if err != nil {
+		t.Fatal(err)
+	}
+	video := item.MediaSources[0].MediaStreams[0]
+	if video.RealFrameRate != 23.976 || video.BitRate != 40000000 || video.Width != 3840 {
+		t.Fatalf("lost source metadata: %+v", video)
+	}
+}

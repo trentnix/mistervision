@@ -74,14 +74,15 @@ func (c *Client) PrepareVideo(ctx context.Context, request media.VideoRequest) (
 	// Without this decision request Plex rejects an explicit session identity.
 	// Omitting the identity lets an old timeline stop terminate a replacement
 	// stream during seeking, even when the transcode session IDs differ.
-	if err := c.decideVideo(ctx, q); err != nil {
+	delivery, err := c.decideVideo(ctx, q)
+	if err != nil {
 		return media.PreparedStream{}, err
 	}
 	return media.PreparedStream{
 		URL:       c.Config.Server + "/video/:/transcode/universal/start.mkv?" + q.Encode(),
 		SessionID: session, SourceID: source,
 		Reports: playbackReports{client: c, duration: item.RunTimeTicks},
-		Limits:  limits,
+		Limits:  limits, Delivery: delivery, Streams: streams,
 		Release: func(ctx context.Context) error { return c.stopTranscode(ctx, session) }}, nil
 }
 

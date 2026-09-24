@@ -234,6 +234,8 @@ func (s *playbackSession) monitor(ctx context.Context, cancel context.CancelFunc
 			if request.Callbacks.Levels != nil {
 				request.Callbacks.Levels(levels)
 			}
+		case format := <-p.videoFormat:
+			s.trace.videoFormat("playback.decoder-input", format)
 		case <-videoStarted:
 			videoStarted = nil
 			s.trace.record("playback.first-frame")
@@ -298,6 +300,8 @@ func (s *playbackSession) monitor(ctx context.Context, cancel context.CancelFunc
 func (s *playbackSession) drain(p *playerProcess, position func(int64), startup *time.Timer) {
 	for {
 		select {
+		case format := <-p.videoFormat:
+			s.trace.videoFormat("playback.decoder-input", format)
 		case seconds := <-p.positions:
 			s.update(seconds, position, startup)
 		default:

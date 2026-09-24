@@ -7,6 +7,8 @@ import "mistervision/internal/player"
 // while captions and picture acknowledgments retain the newest queued state.
 func (p *playerProcess) publishFeedback(value player.Feedback) {
 	switch value.Kind {
+	case player.FeedbackVideoFormat:
+		publishLatest(p.videoFormat, value.VideoFormat)
 	case player.FeedbackPosition:
 		select {
 		case p.positions <- value.Position:
