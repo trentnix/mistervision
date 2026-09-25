@@ -78,7 +78,7 @@ Simultaneous display therefore requires both displays to accept the output timin
 
 ## HDMI framebuffer scaling
 
-On non-CRT framebuffers, the client asks Main to reduce the framebuffer while the FPGA scaler enlarges it across the existing output. HDMI timing stays unchanged. The default ceiling is 640×480. Both 1280×720 and 1920×1080 signals use a 640×360 framebuffer, with a centered 4:3 browsing viewport. Video fills the screen according to `display.aspect_ratio`. Overlays retain their proportions within a centered 4:3 area. Native 640×240, 640×288, 640×480, and 640×576 CRT rasters keep their existing paths, including full-height interlaced playback.
+On non-CRT framebuffers, the client asks Main to reduce the framebuffer while the FPGA scaler enlarges it across the existing output. HDMI timing stays unchanged. The default ceiling is 640×480. Both 1280×720 and 1920×1080 signals use a 640×360 framebuffer, with a centered 4:3 browsing viewport. Video fills the screen according to `display.aspect_ratio`. Overlays retain their proportions within a centered 4:3 area. Native 640×240, 640×288, 640×480, and 640×576 CRT rasters keep their dimensions, including full-height interlaced playback.
 
 Keep the default limits for initial use. On the maintainer’s 1080p HDMI setup, Live TV dropped frames with a 960×540 framebuffer and became much smoother after returning to 640×360. The smaller framebuffer also produced satisfactory browsing and overlay quality. One framebuffer size applies to the entire application, including browsing and all video playback.
 
@@ -94,7 +94,7 @@ Higher limits are experimental. They increase work for both browsing and playbac
 
 The application does not yet switch to a smaller framebuffer when video starts. Keep the defaults unless you have checked Live TV, movies, overlays, and audio sync at the larger size.
 
-The session first probes at one-quarter signal dimensions to avoid allocating a full HD or larger framebuffer. It uses Main's [`fb_cmd0` command](https://github.com/MiSTer-devel/Main_MiSTer/blob/master/video.cpp), waits for the kernel to acknowledge the dimensions, and starts the client only afterward. It writes no persistent display configuration. Exit restores Menu. A supervisor stops orphaned decoders before restoring hardware after a failure. Use the matching updated application and MPlayer together.
+The session first probes at one-quarter signal dimensions to avoid allocating a full HD or larger framebuffer. It uses Main's [`fb_cmd0` command](https://github.com/MiSTer-devel/Main_MiSTer/blob/master/video.cpp), waits for the kernel to acknowledge the dimensions, and starts the client only afterward. It writes no persistent display configuration. After configuration, the supervisor pauses Main so the client and player have exclusive access to the FPGA scanout controls. Progressive CRT output uses the same supervisor without changing framebuffer dimensions. Exit resumes Main and restores Menu. A supervisor stops orphaned decoders before restoring hardware after a failure. Use the matching updated application and MPlayer together.
 
 Local tests cover negotiation, rejected settings, native picture geometry, real desktop decoding, and overlay composition. On a MiSTer connected through an HDMI connection to a monitor, 720p and 1080p tests both negotiated a 640×360 framebuffer and played video successfully. The 1080p test also had responsive menus. Playback diagnostics showed steady position advancement, which does not measure visible frame drops. Returning from the 720p application restored the 1280×720 menu framebuffer. The higher 960×540 limit was tested and reduced Live TV smoothness. The scaler does not fix an analog route that cannot display the Linux framebuffer. Do not infer connector type or CRT capability from framebuffer dimensions alone.
 
@@ -150,7 +150,7 @@ Native output requires a kernel with working framebuffer mapping and VSync suppo
 
 The UI layout remains 640×240 or 640×288. Interlaced video uses all 640×480 or 640×576 pixels. Letterboxing and shared overlays are centered in that full framebuffer. Original/Zoom, subtitles, captions, pause, and seeking retain their normal controls.
 
-MPlayer prepares a back page before its presentation deadline, then submits the flip at that deadline. A kernel field counter prevents reuse while a flip is pending. Paused redraws use the same ownership rules. The loading indicator clears on the first presented frame, not while a frame is merely being prepared.
+Both progressive and interlaced MPlayer output use page flipping to avoid writing into the displayed video frame. MPlayer prepares a back page before its presentation deadline, then submits the flip at that deadline. A kernel field counter prevents reuse while a flip is pending. Paused redraws use the same ownership rules. The loading indicator clears on the first presented frame, not while a frame is merely being prepared.
 
 For 480i Live TV, Jellyfin and Plex conversion is capped at 30000/1001 fps. Progressive NTSC uses 30 fps and PAL uses 25 fps. Slower sources are not forced to those rates. The player retains audio-clock correction and does not force playback speed. Interlaced output does not recover source fields lost during conversion or add 50/60 fps transcoding. Film-rate material can retain normal 3:2 cadence, and thin detail can show interline flicker.
 
@@ -160,7 +160,7 @@ I test on a MiSTer Multisystem 2 with a consumer 4:3 CRT and an HDMI monitor. CR
 
 I check carousel and list navigation, preview text, playback, seeking, controls shown and dismissed, picture changes, and return to the MiSTer menu. I compare Live TV motion and audio synchronization while choosing framebuffer defaults. A 640×360 framebuffer kept Live TV smoother than 960×540 on the tested HDMI setup. Jellyfin and Plex are both used for testing, including Jellyfin 12.
 
-Automated tests exercise display negotiation, aspect ratios, framebuffer presentation, overlay composition, interlaced page ownership, startup recovery, and decoder timing. Headless tests run locally and in CI. Release checks verify the packaged binaries, checksums, and updater recovery. An isolated MiSTer smoke check runs the packaged client and player without changing the installed application or display settings.
+Automated tests exercise display negotiation, aspect ratios, framebuffer presentation, overlay composition, progressive and interlaced page ownership, startup recovery, and decoder timing. Headless tests run locally and in CI. Release checks verify the packaged binaries, checksums, and updater recovery. An isolated MiSTer smoke check runs the packaged client and player without changing the installed application or display settings.
 
 The composite 240p setup uses `vga_scaler=1` and `composite_sync=0` in `[Menu]`, with a 15 kHz timing. Interlaced output uses the bundled core and its scoped settings. Hardware, adapters, and televisions vary, so reports should include the connection and relevant `MiSTer.ini` settings.
 

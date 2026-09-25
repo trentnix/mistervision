@@ -732,6 +732,15 @@ static void pf_flip_to(int n)
     *pf_gpo = gpo & ~PF_SSPI_IO_EN;
 }
 
+/* Only a display supervisor that owns SPI access enables page flipping. */
+static int pageflip_enabled(void)
+{
+    const char *interlaced = getenv("MISTERVISION_INTERLACED");
+    const char *progressive = getenv("MISTERVISION_PROGRESSIVE_PAGEFLIP");
+    return (interlaced && !strcmp(interlaced, "1")) ||
+           (progressive && !strcmp(progressive, "1"));
+}
+
 /* The second page must be written through the fb DRIVER's mapping — it
  * memremaps its whole region write-through (~1.5 GB/s measured), while a
  * /dev/mem mapping of the same physical bytes is uncached (~60 MB/s, which

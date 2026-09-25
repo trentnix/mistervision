@@ -89,7 +89,7 @@ func TestFramebufferNegotiation(t *testing.T) {
 			}}
 			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 			defer cancel()
-			err := f.configure(ctx, Config{})
+			err := f.configureProgressive(ctx, Config{})
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("error %v", err)
 			}
@@ -127,6 +127,30 @@ func TestAspectConfiguration(t *testing.T) {
 	for _, value := range []string{`{"aspect_ratio":"wide"}`, `{"aspect_ratio":16}`} {
 		if _, err := Parse(settings.Section{Data: []byte(value)}); err == nil {
 			t.Fatalf("accepted %s", value)
+		}
+	}
+}
+
+func TestProgressiveSupervisorRunsOnlyOnce(t *testing.T) {
+	t.Setenv(scaledEnv, "")
+	if !NeedsProgressiveSupervisor() {
+		t.Fatal("unsupervised progressive output")
+	}
+	t.Setenv(scaledEnv, "1")
+	if NeedsProgressiveSupervisor() {
+		t.Fatal("recursive progressive supervisor")
+	}
+}
+
+func TestProgressivePreservesCRTRasters(t *testing.T) {
+	for _, height := range []int{240, 288, 480, 576} {
+		path := filepath.Join(t.TempDir(), "mode")
+		if err := os.WriteFile(path, []byte(fmt.Sprintf("8888 1 640 %d 2560", height)), 0600); err != nil {
+			t.Fatal(err)
+		}
+		f := framebufferControl{modePath: path, send: func(context.Context, string) error { t.Fatal("CRT scaling command"); return nil }}
+		if err := f.configureProgressive(context.Background(), Config{}); err != nil {
+			t.Fatal(err)
 		}
 	}
 }
