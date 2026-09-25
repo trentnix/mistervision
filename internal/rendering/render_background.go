@@ -33,6 +33,12 @@ func drawCustomBackground(c *ui.Canvas, source image.Image) {
 }
 
 func drawCustomBackgroundAspect(c *ui.Canvas, source image.Image, aspect float64) {
+	drawBackgroundAspect(c, source, aspect)
+	c.Shade(0, 0, c.Width, c.Height, 145)
+}
+
+// drawBackgroundAspect fills the physical display while preserving image proportions.
+func drawBackgroundAspect(c *ui.Canvas, source image.Image, aspect float64) {
 	b := source.Bounds()
 	if b.Empty() {
 		return
@@ -42,5 +48,4 @@ func drawCustomBackgroundAspect(c *ui.Canvas, source image.Image, aspect float64
 	w := int(math.Ceil(float64(b.Dx()) * scale))
 	h := int(math.Ceil(float64(b.Dy()) * scale / par))
 	c.Blit(source, (c.Width-w)/2, (c.Height-h)/2, w, h)
-	c.Shade(0, 0, c.Width, c.Height, 145)
 }

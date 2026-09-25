@@ -81,6 +81,8 @@ type metadata struct {
 	Composite        string     `json:"composite"`
 	Thumb            string     `json:"thumb"`
 	Art              string     `json:"art"`
+	ParentArt        string     `json:"parentArt"`
+	GrandparentArt   string     `json:"grandparentArt"`
 	ParentThumb      string     `json:"parentThumb"`
 	GrandparentThumb string     `json:"grandparentThumb"`
 	Media            []version  `json:"Media"`
@@ -174,8 +176,15 @@ func (m metadata) item() media.Item {
 	if thumb != "" {
 		item.ImageTags["Primary"] = thumb
 	}
-	if m.Art != "" {
-		item.BackdropImageTags = []string{m.Art}
+	art := m.Art
+	if art == "" {
+		art = m.ParentArt
+	}
+	if art == "" {
+		art = m.GrandparentArt
+	}
+	if art != "" {
+		item.BackdropImageTags = []string{art}
 	}
 	switch m.Type {
 	case "track":

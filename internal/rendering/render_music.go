@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"mistervision/internal/input/control"
+	"mistervision/internal/musicviz"
 	"mistervision/internal/ui"
 )
 
@@ -26,29 +27,35 @@ func (p *screenPainter) music() {
 		hint(s.Controls, control.TrackPrevious, "Previous"), hint(s.Controls, control.TrackNext, "Next"),
 		hint(s.Controls, control.SeekBackward, "-10s"), hint(s.Controls, control.SeekForward, "+10s"),
 	}, actions)
-	menuTop := bottom - max(0, len(rows)-1)*controlRowHeight - 6
-	progressY := menuTop - 12
-	meterY := progressY - 15
-	meters := s.Music != nil && s.Music.Config.Meters && p.visualizer != nil
-	if meters {
-		progressY -= 20
+	// Use the bottom safe area when controls are hidden. Reserve their space
+	// only while the listener has opened the controls overlay.
+	progressY := bottom - 3
+	if s.Playback.ControlsVisible {
+		progressY = controlsTop(bottom, rows) - 10
 	}
-	titleY := progressY - 32
-	artist := strings.Join(v.Detail.Artists, ", ")
-	if v.Detail.Album != "" {
-		if artist != "" {
-			artist += " - "
+	info := p.musicInfo()
+	titleY := progressY - 10
+	for _, line := range info {
+		titleY -= line.Bounds().Dy() + musicInfoGap
+	}
+	artworkBottom := titleY - musicArtworkGap
+	titleY += 6
+	// Only transient background feedback needs a header strip.
+	labelY := sy + 10
+	headerBottom := 0
+	if s.MusicLabel || s.MusicMessage != "" {
+		headerBottom = labelY + 12
+		if s.MusicMessage != "" {
+			headerBottom += 12
 		}
-		artist += v.Detail.Album
-	}
-	if artist != "" {
-		titleY -= 10
 	}
 	spinning := false
 	if s.Music != nil && p.visualizer != nil {
-		s.MusicFrame.ArtworkBounds = image.Rect(24, sy+28, w-24, max(sy+29, titleY-10))
+		s.MusicFrame.ArtworkBounds = image.Rect(24, sy+28, w-24, max(sy+29, artworkBottom))
 		rw, rh := c.RasterSize()
-		if rw != w || rh != h {
+		if p.background != nil {
+			p.background.drawMusic(c, p.visualizer, s.Music, s.MusicIndex, s.MusicFrame, art.Backdrop, headerBottom, titleY-8, progressY+15)
+		} else if rw != w || rh != h {
 			if p.cache.musicCanvas == nil {
 				p.cache.musicCanvas = ui.New(w, h)
 			}
@@ -58,32 +65,34 @@ func (p *screenPainter) music() {
 		} else {
 			p.visualizer.Draw(c, s.Music, s.MusicIndex, s.MusicFrame)
 		}
-		spinning = s.Music.Config.Backgrounds[s.MusicIndex].Type == "spinning"
-		c.Shade(0, 0, w, sy+22, 155)
-		c.Shade(0, titleY-4, w, h-titleY+4, 175)
-	}
-	if meters {
-		p.visualizer.Meters(c, 24, meterY, w-48)
-	}
-	title := "Now playing"
-	if s.Shuffle {
-		title = "Shuffle"
+		spinning = s.MusicIndex >= 0 && s.Music.Config.Backgrounds[s.MusicIndex].Type == "spinning"
+		if s.MusicIndex == musicviz.ArtworkBackground && art.Backdrop != nil && p.background == nil {
+			p.cache.customBackground(c, art.Backdrop)
+		}
+		if p.background == nil {
+			c.Shade(0, 0, w, headerBottom, 155)
+			c.Shade(0, titleY-8, w, progressY+15-(titleY-8), 175)
+		}
 	}
 	if s.MusicLabel && s.Music != nil {
-		title = s.Music.Config.Backgrounds[s.MusicIndex].Name
+		title := musicBackdropLabel(v.Detail.Artists, v.Detail.Album)
+		if s.MusicIndex >= 0 {
+			title = s.Music.Config.Backgrounds[s.MusicIndex].Name
+		}
+		c.Text(24, labelY, truncate(title, w-48, 1), titleColor, w-24)
 	}
-	p.header(title, p.safeY)
 	if s.MusicMessage != "" {
-		center(c, sy+19, s.MusicMessage, dimColor, 1)
+		c.Text(24, labelY+12, truncate(s.MusicMessage, w-48, 1), dimColor, w-24)
 	}
 	if !spinning {
-		c.Image(art.Primary, 24, sy+28, w-48, max(1, titleY-10-(sy+28)))
+		c.Image(art.Primary, 24, sy+28, w-48, max(1, artworkBottom-(sy+28)))
 	}
-	center(c, titleY, truncate(v.Detail.Name, w-48, 1), titleColor, 1)
-	if artist != "" {
-		center(c, progressY-28, truncate(artist, w-48, 1), dimColor, 1)
+	y := titleY
+	for _, line := range info {
+		box := line.Bounds()
+		c.Blit(line, (w-box.Dx())/2, y, box.Dx(), box.Dy())
+		y += box.Dy() + musicInfoGap
 	}
-	center(c, progressY-16, runtime(s.Playback.PositionTicks)+" / "+runtime(v.Detail.RunTimeTicks), dimColor, 1)
 	c.Rect(24, progressY, w-48, 3, 0x303030)
 	if v.Detail.RunTimeTicks > 0 {
 		c.Rect(24, progressY, int(min(s.Playback.PositionTicks, v.Detail.RunTimeTicks)*int64(w-48)/v.Detail.RunTimeTicks), 3, titleColor)
@@ -96,4 +105,43 @@ func (p *screenPainter) music() {
 	if s.Notice != "" {
 		drawNotice(c, "", s.Notice, -1, 6)
 	}
+}
+
+// musicBackdropLabel identifies the server artwork without exposing a preset name.
+func musicBackdropLabel(artists []string, album string) string {
+	if name := strings.TrimSpace(strings.Join(artists, ", ")); name != "" {
+		return name
+	}
+	if name := strings.TrimSpace(album); name != "" {
+		return name
+	}
+	return "Background"
+}
+
+const (
+	musicInfoGap    = 4
+	musicArtworkGap = 34
+)
+
+// musicInfo lays out each metadata field separately using the shared list font.
+// Empty artist and album fields do not reserve rows. Timing always remains visible.
+func (p *screenPainter) musicInfo() []*ui.RasterImage {
+	item := p.scene.Content.Detail
+	var lines []*ui.RasterImage
+	for _, field := range []struct {
+		text  string
+		size  int
+		color uint32
+		bold  bool
+	}{
+		{item.Name, 20, titleColor, true},
+		{strings.Join(item.Artists, ", "), 16, 0xffffff, false},
+		{item.Album, 16, 0xffffff, false},
+		{runtime(p.scene.Playback.PositionTicks) + " / " + runtime(item.RunTimeTicks), 16, 0xffffff, false},
+	} {
+		if line := p.listText(field.text, p.width-48, field.size, field.color, field.bold); line != nil {
+			lines = append(lines, line)
+		}
+	}
+	return lines
 }

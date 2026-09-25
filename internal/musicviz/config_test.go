@@ -33,7 +33,7 @@ func TestConfigAndAnimationAssets(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := l.Config.Backgrounds[0]
-	if l.Config.Meters || len(p.frames) != 2 {
+	if len(p.frames) != 2 {
 		t.Fatalf("bad configuration: %+v", l.Config)
 	}
 	if assetFrame(p, 150*time.Millisecond) != p.frames[1] || assetFrame(p, 350*time.Millisecond) != p.frames[0] {
@@ -80,9 +80,8 @@ func TestEffectsAndMeterPause(t *testing.T) {
 			frame.Now = frame.Now.Add(100 * time.Millisecond)
 			r.Draw(c, l, i, frame)
 			if r.levels[0] >= before {
-				t.Fatal("paused meters did not decay")
+				t.Fatal("paused meters did not clear")
 			}
-			r.Meters(c, 24, 180, 592)
 		})
 	}
 }
@@ -177,9 +176,6 @@ func TestPartialMusicSettingsKeepAvailableDefaults(t *testing.T) {
 		if library.Index(library.Config.Default) < 0 || len(library.Config.Backgrounds) < 6 {
 			t.Fatal("lost built-in defaults")
 		}
-		if data != `{}` && library.Config.Meters {
-			t.Fatal("explicit false ignored")
-		}
 	}
 	for _, data := range []string{`null`, `[]`, `{"default":"Toasty","backgrounds":[{"name":"Toasty","type":"sprites"}]}`} {
 		if err := os.WriteFile(path, []byte(data), 0600); err != nil {
@@ -192,7 +188,7 @@ func TestPartialMusicSettingsKeepAvailableDefaults(t *testing.T) {
 }
 
 // TestDescriptiveVisualSettings verifies the documented names and legacy aliases
-// preserve explicit false values without changing the selected background.
+// accept retired meter settings without changing the selected background.
 func TestDescriptiveVisualSettings(t *testing.T) {
 	for _, data := range []string{
 		`{"default_background":"Off","show_audio_meters":false}`,
@@ -203,7 +199,7 @@ func TestDescriptiveVisualSettings(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if library.Config.Default != "Off" || library.Config.Meters {
+		if library.Config.Default != "Off" {
 			t.Fatalf("lost explicit visual settings: %+v", library.Config)
 		}
 	}
@@ -219,7 +215,53 @@ func TestMusicVisualFieldsRejectInvalidTypesAndHonorNull(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if library.Config.Default != "Starfield" || !library.Config.Meters {
+	if library.Config.Default != "Starfield" {
 		t.Fatal("explicit null did not select defaults")
+	}
+}
+
+func TestStoppedAndPausedMetersClearImmediately(t *testing.T) {
+	for _, stopped := range []bool{false, true} {
+		var r Renderer
+		library := &Library{Config: Defaults()}
+		canvas := ui.New(640, 240)
+		frame := Frame{Now: time.Unix(100, 0), Levels: [2]float64{1, .8}}
+		r.Draw(canvas, library, ArtworkBackground, frame)
+		frame.Now = frame.Now.Add(100 * time.Millisecond)
+		r.Draw(canvas, library, ArtworkBackground, frame)
+		if r.levels[0] == 0 {
+			t.Fatal("test did not establish active meters")
+		}
+		frame.Stopped, frame.Paused = stopped, !stopped
+		// Even fresh, nonzero samples cannot keep a stopped meter active.
+		r.Draw(canvas, library, ArtworkBackground, frame)
+		if r.levels != [2]float64{} {
+			t.Fatal("meters retained stopped audio", r.levels)
+		}
+		frame.Stopped, frame.Paused = false, false
+		frame.Now = frame.Now.Add(100 * time.Millisecond)
+		r.Draw(canvas, library, ArtworkBackground, frame)
+		if r.levels[0] == 0 {
+			t.Fatal("meters did not resume")
+		}
+	}
+}
+
+func TestMeterTracksSamplesWithoutAdditionalDelay(t *testing.T) {
+	for _, step := range []time.Duration{time.Second / 30, time.Second / 60} {
+		var r Renderer
+		library := &Library{Config: Defaults()}
+		canvas := ui.New(640, 240)
+		frame := Frame{Now: time.Unix(100, 0), Levels: [2]float64{1, .5}}
+		r.Draw(canvas, library, ArtworkBackground, frame)
+		if r.levels != frame.Levels {
+			t.Fatal("attack delayed", r.levels)
+		}
+		frame.Levels = [2]float64{}
+		frame.Now = frame.Now.Add(step)
+		r.Draw(canvas, library, ArtworkBackground, frame)
+		if r.levels != [2]float64{} {
+			t.Fatal("meter trails silence", r.levels)
+		}
 	}
 }

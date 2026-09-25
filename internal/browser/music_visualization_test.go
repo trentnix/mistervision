@@ -3,6 +3,7 @@ package browser
 import (
 	"encoding/json"
 	"fmt"
+	"image"
 	"os"
 	"path/filepath"
 	"strings"
@@ -112,5 +113,52 @@ func TestMusicFallbacksPreservePlayback(t *testing.T) {
 				t.Fatal("music fallback exposed private data")
 			}
 		})
+	}
+}
+
+// Artwork can arrive asynchronously. A manual choice must not be overwritten.
+func TestMusicArtworkBackgroundCycle(t *testing.T) {
+	s := testSession(t)
+	library, err := musicviz.Load(filepath.Join(t.TempDir(), "missing.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.music.library = library
+	s.music.index = library.Index(library.Config.Default)
+	if got := s.music.backgroundIndex(true, false); got != s.music.index {
+		t.Fatal("missing artwork did not use preset")
+	}
+	s.selection.current.artwork.Backdrop = image.NewRGBA(image.Rect(0, 0, 16, 9))
+	if got := s.music.backgroundIndex(true, true); got != musicviz.ArtworkBackground {
+		t.Fatal("available artwork not preferred")
+	}
+	// Avoid asynchronous preset asset work. Selection is independent of loading.
+	s.music.loading = true
+	for i := range len(library.Config.Backgrounds) {
+		s.cycleMusicBackground()
+		if got := s.music.backgroundIndex(true, true); got != i {
+			t.Fatalf("cycle %d: got %d", i, got)
+		}
+	}
+	s.cycleMusicBackground()
+	if got := s.music.backgroundIndex(true, true); got != musicviz.ArtworkBackground {
+		t.Fatal("artwork missing from cycle")
+	}
+	s.selection.current.artwork.Backdrop = nil
+	if got := s.music.backgroundIndex(true, false); got < 0 {
+		t.Fatal("unavailable artwork selected")
+	}
+	for range len(library.Config.Backgrounds) + 1 {
+		s.cycleMusicBackground()
+		if got := s.music.backgroundIndex(true, false); got < 0 {
+			t.Fatal("missing artwork added to cycle")
+		}
+	}
+	if got := s.music.backgroundIndex(true, true); got < 0 {
+		t.Fatal("late artwork replaced manual choice")
+	}
+	s.music.backgroundIndex(false, false)
+	if got := s.music.backgroundIndex(true, true); got != musicviz.ArtworkBackground {
+		t.Fatal("new playback did not prefer artwork")
 	}
 }
