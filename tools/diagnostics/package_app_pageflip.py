@@ -46,6 +46,6 @@ path.chmod(0o755)
 shutil.copyfile(root/'tools/diagnostics/APP-PAGEFLIP.md',dest/'README.md')
 files = sorted(p for p in dest.rglob('*') if p.is_file() and p != dest/'SHA256SUMS')
 (dest/'SHA256SUMS').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.relative_to(dest).as_posix()+'\n' for p in files))
-with zipfile.ZipFile(dest.with_suffix('.zip'), 'w', zipfile.ZIP_DEFLATED) as z:
+with zipfile.ZipFile(dest.parent / (dest.name + '.zip'), 'w', zipfile.ZIP_DEFLATED) as z:
     for p in sorted(dest.rglob('*')):
         if p.is_file(): z.write(p,p.relative_to(dest))
