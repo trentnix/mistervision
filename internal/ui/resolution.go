@@ -103,3 +103,25 @@ func (c *Canvas) CopyRows(src *Canvas, sourceX, destY int) {
 		}
 	}
 }
+
+// BlitInViewport draws using a centered viewport's logical coordinates and pixel
+// density, but clips at this canvas's edges. This lets content extend beyond the
+// viewport without stretching its text or changing its position within it.
+func (c *Canvas) BlitInViewport(viewport *Canvas, im image.Image, x, y, w, h int) {
+	if im == nil {
+		return
+	}
+	if viewport.raster != nil {
+		if dense, ok := im.(*RasterImage); ok {
+			im = dense.Source
+		}
+	}
+	x, y, w, h = viewport.rasterBox(x, y, w, h)
+	vw, vh := viewport.RasterSize()
+	cw, ch := c.RasterSize()
+	destination := c
+	if c.raster != nil {
+		destination = c.raster
+	}
+	destination.Blit(im, x+(cw-vw)/2, y+(ch-vh)/2, w, h)
+}

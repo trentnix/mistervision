@@ -61,3 +61,27 @@ func TestBlitEmptyRasterCropPreservesDestination(t *testing.T) {
 		t.Fatal("empty source crop changed the destination")
 	}
 }
+
+func TestBlitInViewportPreservesCenterAndExtendsClipping(t *testing.T) {
+	viewport := NewRaster(640, 288, 480, 360)
+	wide := NewRaster(640, 288, 641, 360)
+	im := image.NewRGBA(image.Rect(0, 0, 100, 20))
+	for i := range im.Pix {
+		im.Pix[i] = 255
+	}
+	// A negative coordinate exercises rounding and clipping at the left edge.
+	viewport.Blit(im, -23, 103, 100, 20)
+	wide.BlitInViewport(viewport, im, -23, 103, 100, 20)
+	for y := 0; y < 360; y++ {
+		for x := 0; x < 480; x++ {
+			for channel := 0; channel < 4; channel++ {
+				if viewport.Pixels[(y*480+x)*4+channel] != wide.Pixels[(y*641+x+80)*4+channel] {
+					t.Fatalf("center changed at %d,%d", x, y)
+				}
+			}
+		}
+	}
+	if wide.Pixels[(130*641+70)*4] == 0 {
+		t.Fatal("image did not extend outside viewport")
+	}
+}
