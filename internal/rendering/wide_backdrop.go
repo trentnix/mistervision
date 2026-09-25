@@ -61,9 +61,15 @@ func (b *wideBackdrop) draw(foreground *ui.Canvas, s Scene, anim Animation) {
 
 // copyCenter seeds the centered foreground with its part of the full background.
 func (b *wideBackdrop) copyCenter(foreground *ui.Canvas) {
+	_, rh := foreground.RasterSize()
+	b.copyCenterRows(foreground, 0, rh)
+}
+
+// copyCenterRows copies a raster row range without redrawing its text or artwork.
+func (b *wideBackdrop) copyCenterRows(foreground *ui.Canvas, first, end int) {
 	rw, rh := foreground.RasterSize()
 	left, top := (b.width-rw)/2, (b.height-rh)/2
-	for y := 0; y < rh; y++ {
+	for y := max(0, first); y < min(rh, end); y++ {
 		copy(foreground.Pixels[y*rw*4:(y+1)*rw*4], b.full.Pixels[((top+y)*b.width+left)*4:((top+y)*b.width+left+rw)*4])
 	}
 }

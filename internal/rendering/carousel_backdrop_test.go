@@ -19,6 +19,8 @@ func TestWideCarouselPreservesForeground(t *testing.T) {
 		}
 	}
 	scene := Scene{Root: true, Background: artwork, Now: time.Unix(100, 0), Content: Content{Page: media.Page{Items: []media.Item{{Name: "Movies"}, {Name: "TV Shows"}}}}}
+	count := 123
+	scene.LibraryCount = &count
 	normal := NewRendererForRaster(480, 360).Render(640, 288, scene)
 	renderer := NewRendererForRaster(480, 360)
 	renderer.SetDisplayAspect(16.0 / 9)
@@ -98,5 +100,46 @@ func TestWideCustomBackgroundKeepsMatchingImageEdges(t *testing.T) {
 	frame = renderer.Render(640, 288, scene)
 	if frame.UI[(180*640)*4+2] == 0 {
 		t.Fatal("background did not survive a screen transition")
+	}
+}
+
+func TestWideCarouselExtendsNamesOnly(t *testing.T) {
+	scene := Scene{Root: true, Now: time.Unix(100, 0), Content: Content{
+		Selected: 2,
+		Page:     media.Page{Items: []media.Item{{Name: "Movies"}, {Name: "Television"}, {Name: "Music"}, {Name: "Collections"}, {Name: "Photos"}}},
+	}}
+	renderer := NewRendererForRaster(480, 360)
+	renderer.SetDisplayAspect(16.0 / 9)
+	renderer.animation.value.Selection = float64(scene.Content.Selected)
+	frame := renderer.Render(640, 288, scene)
+	// With no artwork, bright pixels outside the centered viewport must be
+	// neighboring library names. Both sides should use the newly available space.
+	for _, span := range [][2]int{{0, 80}, {560, 640}} {
+		found := false
+		for y := 140; y < 200; y++ {
+			for x := span[0]; x < span[1]; x++ {
+				at := (y*640 + x) * 4
+				if frame.UI[at] > 180 && frame.UI[at+1] > 180 && frame.UI[at+2] > 180 {
+					found = true
+				}
+			}
+		}
+		if !found {
+			t.Fatalf("no neighboring name in side area %v", span)
+		}
+	}
+	// Returning to another screen must not leave carousel names at the edges.
+	scene.ListMode = true
+	frame = renderer.Render(640, 288, scene)
+	for y := 140; y < 200; y++ {
+		for x := 0; x < 640; x++ {
+			if x >= 80 && x < 560 {
+				continue
+			}
+			at := (y*640 + x) * 4
+			if frame.UI[at] > 180 && frame.UI[at+1] > 180 && frame.UI[at+2] > 180 {
+				t.Fatal("carousel names remained after switching to list")
+			}
+		}
 	}
 }

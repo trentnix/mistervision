@@ -1,6 +1,7 @@
 package rendering
 
 import (
+	"math"
 	"mistervision/internal/input/control"
 	"mistervision/internal/ui"
 )
@@ -42,22 +43,34 @@ func (p *screenPainter) carousel() [][]controlHint {
 		hi := min(lo+1, len(centers)-1)
 		origin := centers[lo] + (centers[hi]-centers[lo])*(pos-float64(lo))
 		cy := (sy + 24 + h - sy - 28) / 2
+		rowHeight := 0
 		for i, name := range names {
 			x := w/2 + int(centers[i]-origin) - labelWidth(name)/2
 			if name != nil {
-				c.Blit(name, x, cy-14, name.Bounds().Dx(), name.Bounds().Dy())
-			}
-			if i == v.Selected {
-				text := ""
-				if p.scene.LibraryLoading {
-					text = "Loading..."
-				} else if p.scene.LibraryCount != nil {
-					text = libraryCountText(v.Page.Items[i], *p.scene.LibraryCount)
-				}
-				if label := p.primaryText(text, w-48, 18, 1, dimColor); label != nil {
-					c.Blit(label, (w-label.Bounds().Dx())/2, cy+12, label.Bounds().Dx(), label.Bounds().Dy())
+				rowHeight = max(rowHeight, name.Bounds().Dy())
+				if p.background != nil {
+					p.background.full.BlitInViewport(c, name, x, cy-14, name.Bounds().Dx(), name.Bounds().Dy())
+				} else {
+					c.Blit(name, x, cy-14, name.Bounds().Dx(), name.Bounds().Dy())
 				}
 			}
+		}
+		if p.background != nil {
+			// Draw each name once, then copy only the shared row into the
+			// foreground so final composition preserves the complete carousel.
+			_, sy := c.Density()
+			top := int(math.Round(float64(cy-14) * sy))
+			bottom := int(math.Round(float64(cy-14+rowHeight) * sy))
+			p.background.copyCenterRows(c, top, bottom)
+		}
+		text := ""
+		if p.scene.LibraryLoading {
+			text = "Loading..."
+		} else if p.scene.LibraryCount != nil && v.Item() != nil {
+			text = libraryCountText(*v.Item(), *p.scene.LibraryCount)
+		}
+		if label := p.primaryText(text, w-48, 18, 1, dimColor); label != nil {
+			c.Blit(label, (w-label.Bounds().Dx())/2, cy+12, label.Bounds().Dx(), label.Bounds().Dy())
 		}
 	}
 	labels := p.scene.Controls

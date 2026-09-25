@@ -62,3 +62,23 @@ func BenchmarkCustomBackgroundFrame(b *testing.B) {
 		})
 	}
 }
+
+// BenchmarkWidescreenCarousel measures steady-state animated HDMI browsing.
+func BenchmarkWidescreenCarousel(b *testing.B) {
+	m, art := benchmarkScene()
+	m.Content.Page.Items = append(m.Content.Page.Items, m.Content.Page.Items...)
+	m.Content.Selected = 2
+	scene := testScene(m, PlaybackPresentation{}, SetupPresentation{}, art, "", time.Unix(100, 0))
+	renderer := NewRendererForRaster(960, 720)
+	renderer.SetDisplayAspect(16.0 / 9)
+	for i := 0; i < 60; i++ {
+		scene.Now = scene.Now.Add(time.Second / 60)
+		renderer.Render(640, 288, scene)
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		scene.Now = scene.Now.Add(time.Second / 60)
+		renderer.Render(640, 288, scene)
+	}
+}
