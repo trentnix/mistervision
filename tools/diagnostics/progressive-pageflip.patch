@@ -1,0 +1,65 @@
+--- a/libvo/vo_fbdev.c
++++ b/libvo/vo_fbdev.c
+@@ -738,7 +738,8 @@
+ static void pf_release_page(void)
+ {
+     if (!pf_pending) return;
+-    int64_t deadline = av_gettime_relative() + 60000;
++    int64_t started = av_gettime_relative();
++    int64_t deadline = started + 60000;
+     while (pf_field() == pf_submitted_field) {
+         if (av_gettime_relative() >= deadline) {
+             mp_msg(MSGT_VO, MSGL_ERR, "Interlaced page release timed out\n");
+@@ -746,6 +747,7 @@
+         }
+         av_usleep(500);
+     }
++    mv_trace("release", av_gettime_relative() - started, pf_submitted_field, pf_field());
+     pf_pending = 0;
+ }
+ static int      pf_active;      /* page-flip mode engaged for this playback */
+@@ -1327,6 +1329,15 @@
+ static int go_output_fd = -1;
+ static int go_video_announced;
+ 
++/* Diagnostic only: the test launcher must stop Main before enabling this.
++ * Production progressive playback never opts in. Interlaced supervision is
++ * unchanged. Require the exact value so accidental environment text is inert. */
++static int progressive_pageflip_test(void)
++{
++    const char *value = getenv("MISTERVISION_PROGRESSIVE_PAGEFLIP");
++    return value && !strcmp(value, "1");
++}
++
+ /* Go continues animating while the decoder buffers. Claim scanout only when
+  * the first video frame is ready. Waiting here serializes that one handoff
+  * with any in-progress Go presentation. Later frames do not lock or wait. */
+@@ -1346,8 +1357,9 @@
+     go_output_fd = fd;
+     mv_trace("output", fb_xres, fb_yres, access("/tmp/misterdvd_vsync", F_OK) == 0);
+     const char *interlaced = getenv("MISTERVISION_INTERLACED");
+-    if (interlaced && !strcmp(interlaced, "1")) {
+-        if ((fb_yres != 480 && fb_yres != 576) || !pf_init()) {
++    int interlaced_mode = interlaced && !strcmp(interlaced, "1");
++    if (interlaced_mode || progressive_pageflip_test()) {
++        if ((interlaced_mode && fb_yres != 480 && fb_yres != 576) || !pf_init()) {
+             mp_msg(MSGT_VO, MSGL_ERR, "Cannot initialize interlaced page flipping\n");
+             exit(1);
+         }
+@@ -1741,6 +1753,7 @@
+     if (pf_active) {
+         pf_flip_to(pf_back);
+         pf_submitted_field = pf_field();
++        mv_trace("flip", pf_back, pf_submitted_field, 0);
+         pf_pending = 1;
+         pf_prepared = 0;
+         pf_back ^= 1;
+@@ -1767,7 +1780,7 @@
+     /* MPlayer calls draw_osd after filters and before its audio-clock wait.
+      * vf_extra_flip also calls it for paused redraws and picture changes. */
+     const char *interlaced = getenv("MISTERVISION_INTERLACED");
+-    if (interlaced && !strcmp(interlaced, "1")) prepare_frame();
++    if ((interlaced && !strcmp(interlaced, "1")) || progressive_pageflip_test()) prepare_frame();
+ }
+ 
+ static void uninit(void)

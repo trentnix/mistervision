@@ -107,6 +107,7 @@ func (f framebufferControl) waitChanged(ctx context.Context, revision []byte) er
 // RunScaled supervises a non-CRT framebuffer session. Main sets both kernel and
 // FPGA dimensions without changing video timings or persistent configuration.
 // All children stop before restoring Menu, including after a client failure.
+// The diagnostic progressive test also pauses Main for exclusive SPI access.
 func RunScaled(ctx context.Context, c Config, args []string) (err error) {
 	lock, err := os.OpenFile("/tmp/mistervision-display.lock", os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
@@ -121,8 +122,12 @@ func RunScaled(ctx context.Context, c Config, args []string) (err error) {
 		return errors.New("start scaled playback from the normal MiSTer menu")
 	}
 	owner := strconv.Itoa(os.Getpid())
+	var mainPID int
 	defer func() {
 		err = errors.Join(err, stopOrphans(owner))
+		if mainPID > 0 {
+			err = errors.Join(err, syscall.Kill(mainPID, syscall.SIGCONT))
+		}
 		if err == nil && os.Getenv(LauncherEnv) == "1" {
 			return
 		}
@@ -140,10 +145,29 @@ func RunScaled(ctx context.Context, c Config, args []string) (err error) {
 	}()
 	setup, cancel := context.WithTimeout(ctx, 8*time.Second)
 	defer cancel()
-	if err = nativeFramebufferControl().configure(setup, c); err != nil {
+	test := ProgressiveTestRequested()
+	f := nativeFramebufferControl()
+	w, h, err := f.read()
+	if err != nil {
 		return err
 	}
-	return runChild(ctx, args, scaledEnv+"=1", ownerEnv+"="+owner)
+	if !test || !crtFramebuffer(w, h) {
+		if test {
+			c.FramebufferMaxWidth, c.FramebufferMaxHeight = 640, 480
+		}
+		if err = f.configure(setup, c); err != nil {
+			return err
+		}
+	}
+	environment := []string{scaledEnv + "=1", ownerEnv + "=" + owner}
+	if test {
+		mainPID, err = stopMain(setup)
+		if err != nil {
+			return err
+		}
+		environment = append(environment, "MISTERVISION_PROGRESSIVE_PAGEFLIP=1")
+	}
+	return runChild(ctx, args, environment...)
 }
 
 // configure waits for both Main and the kernel before a child can map pixels.

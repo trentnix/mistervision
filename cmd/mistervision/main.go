@@ -44,6 +44,10 @@ func run() (err error) {
 	interlaced := os.Getenv(displaymode.ActiveEnv) == "1"
 	mode, loadErr := displaymode.Parse(source.Section("display"))
 	consoleMode := o.headless == "" && !interlaced && displaymode.ConsoleModeActive()
+	pageflipTest := o.headless == "" && displaymode.ProgressiveTestRequested()
+	if pageflipTest && (mode.Interlaced || consoleMode) {
+		return errors.New("page-flipping test requires progressive output from the standard MiSTer menu")
+	}
 	var scaled bool
 	if o.headless == "" && !interlaced && !mode.Interlaced && !consoleMode && loadErr == nil {
 		loadErr = displaymode.ValidateMenuFramebuffer()
@@ -51,6 +55,7 @@ func run() (err error) {
 			scaled, loadErr = displaymode.NeedsFramebufferScaling()
 		}
 	}
+	scaled = scaled || pageflipTest
 	supervised := o.headless == "" && !interlaced && (mode.Interlaced || scaled || consoleMode) && loadErr == nil
 	trace, err := openStartupDiagnostics(o, supervised, source)
 	if err != nil {

@@ -118,8 +118,11 @@ int mf_open(mf_display **out, const char *device, int width, int height)
         error = clear_console(d->tty_fd);
         if (error) goto fail;
         memset(d->mem, 0, d->size);
-        if (interlaced_active) {
-            if (width != 640 || (height != 480 && height != 576)) { error = ENOTSUP; goto fail; }
+        const char *pageflip = getenv("MISTERVISION_PROGRESSIVE_PAGEFLIP");
+        int progressive_test = pageflip && !strcmp(pageflip, "1");
+        if (interlaced_active || progressive_test) {
+            if (interlaced_active && (width != 640 || (height != 480 && height != 576))) { error = ENOTSUP; goto fail; }
+            if (progressive_test && (width > 640 || height > 480)) { error = ENOTSUP; goto fail; }
             error = scanout_open(&d->scanout, d->fd);
             if (error) goto fail;
         }
