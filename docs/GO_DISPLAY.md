@@ -138,7 +138,7 @@ The application writes `Interlaced.mgl` beside `settings.json` and a marked `[Mi
 
 Existing sections remain intact. An unmarked section with the same name causes an error instead of being overwritten. Disabling interlacing leaves the isolated section available for later use.
 
-The scoped section inherits RGB/component and PAL/NTSC settings. RGB enables `direct_video` and `forced_scandoubler`. Component enables `direct_video` without forcing the scandoubler. These rules do not establish compatibility with every cable or DAC.
+The scoped section inherits RGB/component and PAL/NTSC settings. Both RGB and component enable `direct_video` and `forced_scandoubler` in this section. The bundled core requires the double-height framebuffer selected by `forced_scandoubler` and converts that timing to 15 kHz interlaced output. These rules do not establish compatibility with every cable or DAC.
 
 The supervisor waits for the expected framebuffer, manages console modes, and pauses Main while the child owns hardware. It stops orphaned decoders, restores consoles, and resumes Main. The Scripts launcher reloads the menu after successful exit in either mode. The supervisor reloads the menu after a failure, before an update restart, or when run without the launcher.
 
