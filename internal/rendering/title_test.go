@@ -73,3 +73,19 @@ func TestEmptyTitleHidesHeadingAndKeepsClock(t *testing.T) {
 		}
 	}
 }
+
+func TestScrollingHeadingCompletesCycleAcrossRasterDensities(t *testing.T) {
+	for _, size := range [][2]int{{640, 240}, {640, 480}, {480, 360}, {960, 720}} {
+		canvas := ui.NewRaster(640, 240, size[0], size[1])
+		p := screenPainter{canvas: canvas, width: 640, height: 240, safeY: safeY(640, 240)}
+		title := "Boards of Canada / Music Has The Right To Children"
+		advance := p.headingText(title, 4096, 28, 1, titleColor).Bounds().Dx()
+		if advance <= 640-84-24 {
+			t.Fatal("test heading must scroll")
+		}
+		for offset := 0; offset <= advance+40; offset++ {
+			p.animation.TitleSeconds = (float64(offset) + 0.25) / 15
+			p.header(title, p.safeY+4)
+		}
+	}
+}

@@ -45,3 +45,19 @@ func TestRasterImageKeepsDetailAndLogicalCrop(t *testing.T) {
 		t.Fatalf("high-resolution crop lost detail: %v", c.Pixels)
 	}
 }
+
+func TestBlitEmptyRasterCropPreservesDestination(t *testing.T) {
+	// A one-unit logical crop can contain no source pixels at fractional density.
+	im := &RasterImage{
+		RGBA:   image.NewRGBA(image.Rect(0, 0, 4, 2)),
+		Source: image.NewRGBA(image.Rect(0, 0, 3, 2)),
+	}
+	crop := im.SubImage(image.Rect(0, 0, 1, 2))
+	c := NewRaster(4, 2, 3, 2)
+	c.Rect(0, 0, 4, 2, 0x123456)
+	before := bytes.Clone(c.Pixels)
+	c.Blit(crop, 1, 0, 1, 2)
+	if !bytes.Equal(before, c.Pixels) {
+		t.Fatal("empty source crop changed the destination")
+	}
+}
