@@ -12,7 +12,7 @@ import (
 // Effects keep their 4:3 drawing coordinates and run at logical resolution, so
 // HDMI raster density does not multiply animation work. Artwork bounds compensate
 // for the crop, keeping the rotating album in the centered foreground viewport.
-func (b *wideBackdrop) drawMusic(foreground *ui.Canvas, renderer *musicviz.Renderer, library *musicviz.Library, index int, frame musicviz.Frame, backdrop image.Image, headerBottom, textTop, textBottom int) {
+func (b *wideBackdrop) drawMusic(foreground *ui.Canvas, renderer *musicviz.Renderer, library *musicviz.Library, index int, frame musicviz.Frame, backdrop image.Image, headerBottom int) {
 	w, h := foreground.Width, foreground.Height
 	if b.music == nil || b.music.Width != w || b.music.Height != h {
 		b.music = ui.New(w, h)
@@ -33,6 +33,5 @@ func (b *wideBackdrop) drawMusic(foreground *ui.Canvas, renderer *musicviz.Rende
 		b.cache.customBackgroundAspect(b.full, backdrop, float64(b.width)/float64(rw)*(4.0/3))
 	}
 	b.full.Shade(0, 0, w, headerBottom, 155)
-	b.full.Shade(0, textTop, w, textBottom-textTop, 175)
 	b.copyCenter(foreground)
 }

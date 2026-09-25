@@ -116,7 +116,7 @@ func TestMusicFallbacksPreservePlayback(t *testing.T) {
 	}
 }
 
-// Artwork can arrive asynchronously. A manual choice must not be overwritten.
+// Artwork availability changes the cycle without changing the stored preference.
 func TestMusicArtworkBackgroundCycle(t *testing.T) {
 	s := testSession(t)
 	library, err := musicviz.Load(filepath.Join(t.TempDir(), "missing.json"))
@@ -125,40 +125,89 @@ func TestMusicArtworkBackgroundCycle(t *testing.T) {
 	}
 	s.music.library = library
 	s.music.index = library.Index(library.Config.Default)
-	if got := s.music.backgroundIndex(true, false); got != s.music.index {
-		t.Fatal("missing artwork did not use preset")
+	s.music.loading = true // Keep asset workers out of selection tests.
+	art := image.NewRGBA(image.Rect(0, 0, 16, 9))
+	s.selection.current.artwork.Backdrop = art
+	s.selection.current.artwork.Primary = art
+	if got := s.music.backgroundIndex(true, true, false); got != musicviz.ArtworkBackground {
+		t.Fatal("artwork was not the initial background")
 	}
-	s.selection.current.artwork.Backdrop = image.NewRGBA(image.Rect(0, 0, 16, 9))
-	if got := s.music.backgroundIndex(true, true); got != musicviz.ArtworkBackground {
-		t.Fatal("available artwork not preferred")
-	}
-	// Avoid asynchronous preset asset work. Selection is independent of loading.
-	s.music.loading = true
 	for i := range len(library.Config.Backgrounds) {
 		s.cycleMusicBackground()
-		if got := s.music.backgroundIndex(true, true); got != i {
+		if got := s.music.backgroundIndex(true, true, false); got != i {
 			t.Fatalf("cycle %d: got %d", i, got)
 		}
 	}
 	s.cycleMusicBackground()
-	if got := s.music.backgroundIndex(true, true); got != musicviz.ArtworkBackground {
-		t.Fatal("artwork missing from cycle")
+	if got := s.music.backgroundIndex(true, true, false); got != musicviz.ArtworkBackground {
+		t.Fatal("cycle did not return to artwork")
 	}
+	// Without either image, cycle from the default effect through each usable
+	// preset exactly once. No extra blank artwork slot or spinning disc appears.
 	s.selection.current.artwork.Backdrop = nil
-	if got := s.music.backgroundIndex(true, false); got < 0 {
-		t.Fatal("unavailable artwork selected")
-	}
-	for range len(library.Config.Backgrounds) + 1 {
+	s.selection.current.artwork.Primary = nil
+	seen := map[int]bool{}
+	for range len(library.Config.Backgrounds) - 1 {
 		s.cycleMusicBackground()
-		if got := s.music.backgroundIndex(true, false); got < 0 {
-			t.Fatal("missing artwork added to cycle")
+		got := s.music.backgroundIndex(false, false, false)
+		if got < 0 || library.Config.Backgrounds[got].Type == "spinning" || seen[got] {
+			t.Fatalf("unavailable or duplicate option: %d", got)
+		}
+		seen[got] = true
+	}
+}
+
+func TestMusicBackgroundRemembersChoiceAcrossPlayback(t *testing.T) {
+	library, err := musicviz.Load(filepath.Join(t.TempDir(), "missing.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, preset := range library.Config.Backgrounds {
+		if preset.Type == "spinning" {
+			continue
+		}
+		m := musicPresentation{library: library, index: i, manual: true}
+		for _, available := range []bool{true, false, true} {
+			if got := m.backgroundIndex(available, available, false); got != i {
+				t.Fatalf("%s changed after stopping or selecting another song", preset.Name)
+			}
+		}
+		if got := m.backgroundIndex(false, false, true); got != i {
+			t.Fatal("pending artwork replaced a remembered effect")
 		}
 	}
-	if got := s.music.backgroundIndex(true, true); got < 0 {
-		t.Fatal("late artwork replaced manual choice")
+	m := musicPresentation{library: library, manual: true, backdrop: true}
+	if got := m.backgroundIndex(false, false, true); got != musicviz.ArtworkBackground {
+		t.Fatal("artwork loading flashed an effect")
 	}
-	s.music.backgroundIndex(false, false)
-	if got := s.music.backgroundIndex(true, true); got != musicviz.ArtworkBackground {
-		t.Fatal("new playback did not prefer artwork")
+	if got := m.backgroundIndex(false, false, false); got != library.Index(library.Config.Default) {
+		t.Fatal("missing background did not use the default effect")
+	}
+	if got := m.backgroundIndex(true, false, false); got != musicviz.ArtworkBackground {
+		t.Fatal("fallback erased the artwork preference")
+	}
+}
+
+func TestMusicSpinningRequiresCoverNotBackdrop(t *testing.T) {
+	library, err := musicviz.Load(filepath.Join(t.TempDir(), "missing.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := musicPresentation{library: library, index: 0, manual: true}
+	if got := m.backgroundIndex(false, true, false); got != 0 {
+		t.Fatal("spinning with a cover incorrectly required a backdrop")
+	}
+	if got := m.backgroundIndex(true, false, false); got != musicviz.ArtworkBackground {
+		t.Fatal("missing cover did not fall back to available backdrop")
+	}
+	if got := m.backgroundIndex(false, false, false); got != library.Index(library.Config.Default) {
+		t.Fatal("missing cover did not fall back to default effect")
+	}
+	if got := m.backgroundIndex(true, true, false); got != 0 {
+		t.Fatal("fallback erased the spinning preference")
+	}
+	library.Config.Default = "Now Spinning"
+	if got := m.backgroundIndex(false, false, false); got < 0 || library.Config.Backgrounds[got].Type == "spinning" {
+		t.Fatal("unavailable configured default did not fall back safely")
 	}
 }

@@ -96,3 +96,32 @@ func TestArtworkFallbackPreservesOtherErrors(t *testing.T) {
 		t.Fatal("artwork fallback hid authentication failure")
 	}
 }
+
+func TestMusicBackdropCompletionReleasesPendingState(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		image image.Image
+		err   error
+	}{
+		{"available", image.NewRGBA(image.Rect(0, 0, 16, 9)), nil},
+		{"absent", nil, nil},
+		{"failed", nil, errors.New("unavailable")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := testSession(t)
+			s.selection.generation = 2
+			s.selection.backdropPending = true
+			result := selectionResult{generation: 1, update: selectionUpdate{kind: selectionArtwork, art: artUpdate{kind: "Backdrop", image: tc.image}, err: tc.err}}
+			if s.handleSelection(result) || !s.selection.backdropPending {
+				t.Fatal("stale artwork changed the current background")
+			}
+			result.generation = 2
+			if !s.handleSelection(result) || s.selection.backdropPending {
+				t.Fatal("completed backdrop did not request a redraw")
+			}
+			if s.selection.err != "" || s.selection.current.artwork.Backdrop != tc.image {
+				t.Fatal("unexpected backdrop or error banner")
+			}
+		})
+	}
+}
