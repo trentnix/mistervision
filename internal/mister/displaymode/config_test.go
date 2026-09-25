@@ -12,8 +12,8 @@ import (
 func TestCoreConfigPreservesOtherModes(t *testing.T) {
 	for _, tc := range []struct{ name, setting, want string }{
 		{"rgb", "ypbpr=0", "forced_scandoubler=1"},
-		{"component", "ypbpr=1", "forced_scandoubler=0"},
-		{"component-name", "vga_mode=ypbpr", "forced_scandoubler=0"},
+		{"component", "ypbpr=1", "forced_scandoubler=1"},
+		{"component-name", "vga_mode=ypbpr", "forced_scandoubler=1"},
 		{"new-key-precedence", "ypbpr=1\nvga_mode=rgb", "forced_scandoubler=1"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -122,9 +122,22 @@ func TestCoreConfigComponentGroups(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !bytes.HasPrefix(got, original) || !bytes.Contains(got, []byte("forced_scandoubler=0\n")) {
+			if !bytes.HasPrefix(got, original) || !bytes.Contains(got, []byte("forced_scandoubler=1\n")) {
 				t.Fatalf("component routing lost: %s", got)
 			}
 		})
+	}
+}
+
+// Existing component installations must receive the corrected framebuffer setting.
+func TestCoreConfigRepairsComponentFramebuffer(t *testing.T) {
+	original := "[MiSTer]\nvga_mode=ypbpr\nvga_sog=1\nforced_scandoubler=0\n"
+	old := original + blockStart + "\n[MiSTerVisionInterlaced]\nforced_scandoubler=0\n" + blockEnd + "\n"
+	got, err := CoreConfig([]byte(old))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(string(got), original) || !strings.Contains(string(got), "[MiSTerVisionInterlaced]\nmain=MiSTer\ndirect_video=1\nforced_scandoubler=1\n") {
+		t.Fatalf("component framebuffer was not repaired without changing global settings: %s", got)
 	}
 }

@@ -73,18 +73,14 @@ func CoreConfig(data []byte) ([]byte, error) {
 		return nil, errors.New("MiSTerVisionInterlaced INI section already exists outside the managed block")
 	}
 	values := menuSettings([]byte(text), coreName)
-	scandoubler := 1
-	component := values["ypbpr"] == "1"
 	if mode := values["vga_mode"]; mode != "" {
 		if mode != "rgb" && mode != "ypbpr" {
 			return nil, errors.New("interlaced output currently supports RGB or component vga_mode")
 		}
-		component = mode == "ypbpr"
 	}
-	if component {
-		scandoubler = 0
-	}
-	block := fmt.Sprintf("%s\n[%s]\nmain=MiSTer\ndirect_video=1\nforced_scandoubler=%d\nfb_size=1\nfb_terminal=1\nlog_file_entry=1\n%s\n", blockStart, coreName, scandoubler, blockEnd)
+	// The pinned core needs a double-height framebuffer for both RGB and component.
+	// It converts the forced-scandoubler timing into 15 kHz interlaced output.
+	block := fmt.Sprintf("%s\n[%s]\nmain=MiSTer\ndirect_video=1\nforced_scandoubler=1\nfb_size=1\nfb_terminal=1\nlog_file_entry=1\n%s\n", blockStart, coreName, blockEnd)
 	if text != "" && !strings.HasSuffix(text, "\n") {
 		text += "\n"
 	}
