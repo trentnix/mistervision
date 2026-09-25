@@ -854,7 +854,15 @@ class BrowseIntegrationTests(BrowserFixture):
             time.sleep(0.02)
         time.sleep(0.1)
         if clean_footer:
-            self.assertEqual(self.read_frame()[220 * 640 * 4:], bytes(20 * 640 * 4))
+            # Music artwork can extend behind the controls. Hiding the overlay
+            # must restore that background rather than requiring a black footer.
+            footer = self.read_frame()[220 * 640 * 4:]
+            self.key(b"\x1b[A")
+            time.sleep(0.1)
+            self.assertNotEqual(self.read_frame()[220 * 640 * 4:], footer)
+            self.key(b"\x1b[A")
+            time.sleep(0.1)
+            self.assertEqual(self.read_frame()[220 * 640 * 4:], footer)
         self.key(b"b")
         time.sleep(0.1)
         self.key(b"]")  # Hidden controls must not consume navigation.
