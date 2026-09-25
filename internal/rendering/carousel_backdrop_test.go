@@ -43,8 +43,8 @@ func TestWideCarouselPreservesForeground(t *testing.T) {
 	}
 	scene.ListMode = true
 	list := renderer.Render(640, 288, scene)
-	if list.FullScreen || list.UIWidth != 480 || list.UIHeight != 360 {
-		t.Fatal("list viewport changed")
+	if !list.FullScreen || list.UIWidth != 640 || list.UIHeight != 360 {
+		t.Fatal("list background did not fill the display")
 	}
 	scene.ListMode = false
 	scene.Background = nil

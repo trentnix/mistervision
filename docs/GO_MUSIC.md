@@ -8,19 +8,22 @@ On a music library's artist list, SELECT/Tab starts shuffle. The selected server
 
 Jellyfin remote queues also support shuffle and repeat. See [remote control](GO_REMOTE.md). These queue states are separate from visual settings.
 
+On widescreen displays, artist and album artwork and music playback backgrounds fill the display. Animated backgrounds use the same proportional center crop as the carousel. Album artwork, track information, and controls keep their centered layout. Effects render at logical resolution before scaling, so higher HDMI resolution does not increase effect simulation work.
+
 ## Built-in backgrounds
 
-SELECT/Tab cycles backgrounds during music playback and briefly shows the name. The choice lasts across tracks for the current application session. Restarting selects the configured default.
+SELECT/Tab cycles backgrounds during music playback and briefly shows the name in a top strip. The strip disappears with the name. Music playback has no persistent header or clock. The artwork background label shows the artist name, or the album name if no artist is available. Available album or artist backdrop artwork is selected when starting a music queue. If no backdrop loads, playback uses the configured default and omits Artwork from the cycle. A manual selection lasts across tracks in the queue. Starting another queue prefers artwork again.
 
 | Background | Behavior |
 | --- | --- |
+| Artwork | Uses the album or artist backdrop, when available. |
+| Now Spinning | Rotating album art and stereo-reactive bars. The disc stops when paused. |
 | Starfield | Stars travel outward. |
 | Rain | Falling blue streaks. |
 | Nebula | Plasma motion responds to audio level. |
-| Now Spinning | Rotating album art and stereo-reactive bars. The disc stops when paused. |
 | Tunnel | Audio-reactive wireframe rings. |
 | Toasty Squadron | Layered flying sprite sequences. |
-| Off | Plain background. Meters remain separately configurable. |
+| Off | Plain background. |
 
 Effects use the shared Go renderer and do not reproduce every detail of the C visualizers. The default cycle omits Toasty when its optional assets are absent. Asset discovery checks `assets/toasty` beside the configuration, then in the working directory, `/media/fat/mistervision/toasty`, and the legacy `/media/fat/misterfin/toasty` directory.
 
@@ -30,8 +33,7 @@ Effects use the shared Go renderer and do not reproduce every detail of the C vi
 
 | Field | Default and limits |
 | --- | --- |
-| `default_background` | `Starfield`. Must name a preset in the cycle. |
-| `show_audio_meters` | `true`. |
+| `default_background` | `Starfield`. Used when no album or artist backdrop is available. Must name a preset in the cycle. |
 | `backgrounds` | Built-in cycle. A custom cycle contains 1–16 presets. |
 | Preset `name` | Unique label, 1–32 characters. |
 | `type` | `none`, `starfield`, `rain`, `nebula`, `spinning`, `tunnel`, `sprites`, or `image`. |
@@ -46,7 +48,6 @@ Effects use the shared Go renderer and do not reproduce every detail of the C vi
 {
   "music_visuals": {
     "default_background": "Night",
-    "show_audio_meters": true,
     "backgrounds": [
       {
         "name": "Night",
@@ -72,14 +73,12 @@ Effects use the shared Go renderer and do not reproduce every detail of the C vi
 }
 ```
 
-Image presets fit PNG, JPEG, or GIF without stretching. Multiple paths play in order. Sprite presets repeat their sequence across moving sprites. Video backgrounds are not supported. A new procedural effect requires a `musicviz.Effect` implementation.
+Image presets fit PNG, JPEG, or GIF without stretching. Widescreen presentation crops the background to fill the display. Multiple paths play in order. Sprite presets repeat their sequence across moving sprites. Video backgrounds are not supported. A new procedural effect requires a `musicviz.Effect` implementation.
 
 Files are limited to 4 MiB and 1024 pixels per axis. A preset allows at most 128 decoded frames. GIFs must fit within 32 MiB before resizing, and the full decoded asset library is limited to 32 MiB. Backgrounds shrink to at most 640 pixels on the longest side, sprites to 96 pixels.
 
 Assets load on a worker at first selection and remain cached for the session. Invalid settings disable backgrounds with a notice. A failed custom asset displays “Background unavailable. Check music assets.” Another preset can still be selected, and music remains playable.
 
-## Audio meters
+## Audio-reactive effects
 
-MPlayer exports a small PCM window sampled at 20 Hz. The Python/libmpv helper supplies stereo RMS measurements. FFplay has no meter feedback. Measurements never block decoding, and stale values decay toward silence. Meters use a visual −48 dB floor with green/yellow/red zones. They do not adjust volume and are not calibrated analog VU instruments.
-
-`RasterRenderer` owns `musicviz.Renderer` and its effect state. The browser supplies immutable presets and copied levels. File loading, decoding, and output selection remain outside effects. See [architecture](GO_RENDERING.md).
+MPlayer exports a small PCM window sampled at 20 Hz. The Python/libmpv helper supplies stereo RMS measurements. Effects can react to those measurements. FFplay has no audio-level feedback. MiSTerVision does not display audio meters. The retired `show_audio_meters` setting and its `meters` alias are accepted but have no effect.

@@ -30,18 +30,22 @@ func (s *browserSession) draw() error {
 	scene.Message = s.message.MessagePresentation
 	scene.About = s.about
 	scene.Controls = s.controls
-	scene.Music, scene.MusicIndex = s.music.library, s.music.index
+	scene.Music = s.music.library
+	scene.MusicIndex = s.music.backgroundIndex(scene.Audio, scene.Artwork.Backdrop != nil)
 	scene.Shuffle = s.shuffle.library != "" || (s.playbackQueue.active && s.playbackQueue.queue.Shuffled())
 	scene.MusicMessage = s.music.error
 	if s.music.library != nil && !s.music.library.Ready(s.music.index) && s.music.loading {
 		scene.MusicMessage = "Loading background..."
+	}
+	if scene.MusicIndex == musicviz.ArtworkBackground {
+		scene.MusicMessage = ""
 	}
 	scene.MusicLabel = now.Before(s.music.labelUntil)
 	levels := [2]float64(s.music.levels)
 	if now.Sub(s.music.levelTime) > 250*time.Millisecond || !s.controller.running {
 		levels = [2]float64{}
 	}
-	scene.MusicFrame = musicviz.Frame{Now: now, Levels: levels, Paused: scene.Playback.Paused, Artwork: scene.Artwork.Primary}
+	scene.MusicFrame = musicviz.Frame{Now: now, Levels: levels, Paused: scene.Playback.Paused, Stopped: !scene.Playback.Active, Artwork: scene.Artwork.Primary}
 	interval := s.output.FrameInterval(scene.Video)
 	if interval != s.frameInterval {
 		s.frameInterval = interval

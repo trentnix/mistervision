@@ -18,7 +18,6 @@ import (
 // A missing configuration uses Defaults. Assets are relative to the config file.
 type Config struct {
 	Default     string   `json:"default_background"`
-	Meters      bool     `json:"show_audio_meters"`
 	Backgrounds []Preset `json:"backgrounds"`
 }
 
@@ -46,9 +45,9 @@ type Library struct{ Config Config }
 
 // Defaults supplies the built-in cycle. Toasty uses the existing C sprite assets.
 func Defaults() Config {
-	return Config{Default: "Starfield", Meters: true, Backgrounds: []Preset{
-		{Name: "Starfield", Type: "starfield"}, {Name: "Rain", Type: "rain"},
-		{Name: "Nebula", Type: "nebula"}, {Name: "Now Spinning", Type: "spinning"},
+	return Config{Default: "Starfield", Backgrounds: []Preset{
+		{Name: "Now Spinning", Type: "spinning"}, {Name: "Starfield", Type: "starfield"},
+		{Name: "Rain", Type: "rain"}, {Name: "Nebula", Type: "nebula"},
 		{Name: "Tunnel", Type: "tunnel"}, {Name: "Toasty Squadron", Type: "sprites"},
 		{Name: "Off", Type: "none"},
 	}}
@@ -76,7 +75,7 @@ func parse(source settings.Section, decode bool) (*Library, error) {
 	config := Defaults()
 	var overrides struct {
 		Default     *string   `json:"default_background"`
-		Meters      *bool     `json:"show_audio_meters"`
+		Meters      *bool     `json:"show_audio_meters"` // Accepted for older configurations. Meters are no longer displayed.
 		Backgrounds *[]Preset `json:"backgrounds"`
 	}
 	if err := settings.MusicVisuals(source).Decode(&overrides); err != nil {
@@ -84,9 +83,6 @@ func parse(source settings.Section, decode bool) (*Library, error) {
 	}
 	if overrides.Default != nil {
 		config.Default = *overrides.Default
-	}
-	if overrides.Meters != nil {
-		config.Meters = *overrides.Meters
 	}
 
 	explicitBackgrounds := overrides.Backgrounds != nil

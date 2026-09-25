@@ -116,3 +116,20 @@ func TestNavigationHintsKeepBitmapFont(t *testing.T) {
 		t.Fatal("new typeface changed navigation hint pixels")
 	}
 }
+
+func TestListTextRetainsDenseInk(t *testing.T) {
+	for _, size := range []struct{ w, h int }{{480, 360}, {640, 480}, {960, 720}, {640, 240}} {
+		c := ui.NewRaster(640, 288, size.w, size.h)
+		p := screenPainter{canvas: c, cache: &sceneCache{}, width: 640, height: 288}
+		for _, text := range []string{"Boards of Canada", "Music", "TEST", "gyp", "Aphex Twin"} {
+			im := p.listText(text, 400, 18, 0xffffff, true)
+			key := primaryTextKey{text: text, width: 400, size: 18, lines: 1, color: 0xffffff, scaleY: .6, bold: true}
+			sx, sy := c.Density()
+			full := p.cache.text.denseImage(key, sx, sy)
+			ink := textInk(full.Source)
+			if !ink.In(im.Source.Bounds()) {
+				t.Errorf("%dx%d %q: ink %v clipped to %v", size.w, size.h, text, ink, im.Source.Bounds())
+			}
+		}
+	}
+}

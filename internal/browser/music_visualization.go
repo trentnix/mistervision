@@ -12,6 +12,8 @@ import (
 type musicPresentation struct {
 	library    *musicviz.Library
 	index      int
+	manual     bool // A user-selected effect persists across tracks in the queue.
+	backdrop   bool
 	labelUntil time.Time
 	levels     playback.AudioLevels
 	levelTime  time.Time
@@ -23,10 +25,30 @@ func (s *browserSession) cycleMusicBackground() {
 	if s.music.library == nil {
 		return
 	}
-	s.music.index = (s.music.index + 1) % len(s.music.library.Config.Backgrounds)
+	available := s.selection.current.artwork.Backdrop != nil
+	if available && (!s.music.manual || s.music.backdrop) {
+		s.music.index = 0
+		s.music.backdrop = false
+	} else {
+		s.music.index = (s.music.index + 1) % len(s.music.library.Config.Backgrounds)
+		s.music.backdrop = available && s.music.index == 0
+	}
+	s.music.manual = true
 	s.music.labelUntil = time.Now().Add(1500 * time.Millisecond)
 	s.music.error = ""
 	s.loadMusicAssets()
+}
+
+// backgroundIndex prefers available artwork until the listener selects an effect.
+// Missing artwork falls back to the configured effect without adding an empty slot.
+func (m *musicPresentation) backgroundIndex(audio, available bool) int {
+	if !audio {
+		m.manual, m.backdrop = false, false
+	}
+	if audio && available && (!m.manual || m.backdrop) {
+		return musicviz.ArtworkBackground
+	}
+	return m.index
 }
 
 func (s *browserSession) loadMusicAssets() {

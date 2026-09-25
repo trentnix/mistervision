@@ -49,7 +49,9 @@ func (p *screenPainter) list() [][]controlHint {
 	artBox := image.Rect(w-24-listSideWidth, top, w-24, max(top+1, controlsTop(p.bottom, controls)-12))
 
 	cache.backdrop(c, art, false, s.Background, artBox, func(layer *ui.Canvas) {
-		if s.Background != nil {
+		if p.background != nil {
+			copy(layer.Pixels, c.Pixels)
+		} else if s.Background != nil {
 			cache.customBackground(layer, s.Background)
 		} else if art.Backdrop != nil {
 			heroHeight := h * 3 / 4

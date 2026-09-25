@@ -15,11 +15,13 @@ func (p *screenPainter) carousel() [][]controlHint {
 	anim := p.animation
 	v := &p.scene.Content
 
-	if p.scene.Background != nil {
-		cache.customBackground(c, p.scene.Background)
-	} else if len(art.Covers) > 0 {
-		music := v.Item() != nil && v.Item().CollectionType == "music"
-		cache.mosaic(c, art.Covers, music, anim.Seconds)
+	if p.background == nil {
+		if p.scene.Background != nil {
+			cache.customBackground(c, p.scene.Background)
+		} else if len(art.Covers) > 0 {
+			music := v.Item() != nil && v.Item().CollectionType == "music"
+			cache.mosaic(c, art.Covers, music, anim.Seconds)
+		}
 	}
 	p.homeHeader()
 	centers := make([]float64, len(v.Page.Items))

@@ -70,6 +70,7 @@ func runtime(ticks int64) string {
 // It computes shared CRT layout once and dispatches drawing without owning
 // persistent state. Methods run synchronously during Render.
 type screenPainter struct {
+	background                   *wideBackdrop
 	visualizer                   *musicviz.Renderer
 	canvas                       *ui.Canvas
 	cache                        *sceneCache
@@ -147,22 +148,20 @@ func (p *screenPainter) footer(controls [][]controlHint) {
 	}
 	if s.ExitConfirm {
 		rows := controlRows(w, []controlHint{hint(s.Controls, control.Open, "Exit"), hint(s.Controls, control.Back, "Cancel")})
-		// Use visible glyph bounds so font padding cannot unbalance the stripe.
-		title, _ := c.Typeface.Rasterize("Exit?", w-48, 2, titleColor)
-		var ink image.Rectangle
-		for y := range title.Rect.Dy() {
-			for x := range title.Rect.Dx() {
-				if title.Pix[y*title.Stride+x*4+3] != 0 {
-					ink = ink.Union(image.Rect(x, y, x+1, y+1))
-				}
-			}
-		}
+		// Use the shared dense list text path to retain sharp outlines and ink
+		// bounds at both native CRT and HDMI raster densities.
+		size := max(8, int(14/(float64(h)*4/float64(w*3))+0.5))
+		title := p.listText("Exit?", w-48, size, titleColor, true)
+		ink := title.Bounds()
 		const padding, gap, badgeHeight = 8, 8, 14
 		controlsHeight := badgeHeight + max(0, len(rows)-1)*controlRowHeight
 		height := padding*2 + ink.Dy() + gap + controlsHeight
 		top := (h - height) / 2
 		c.Shade(0, top, w, height, 210)
-		c.Overlay(title.SubImage(ink).(*image.NRGBA), (w-ink.Dx())/2, top+padding)
+		if p.background != nil {
+			p.background.full.Shade(0, top, w, height, 210)
+		}
+		c.Blit(title, (w-ink.Dx())/2, top+padding, ink.Dx(), ink.Dy())
 		drawControls(c, top+height-padding-badgeHeight+3+controlBottomInset, rows)
 	} else if s.Notice != "" {
 		drawNotice(c, "", s.Notice, -1, 6)

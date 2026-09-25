@@ -47,12 +47,13 @@ func audioExport(path string) player.AudioLevels {
 	defer f.Close()
 	var data [8208]byte
 	n, _ := io.ReadFull(f, data[:])
-	if n < 12 {
+	const headerSize = 16 // Two uint32 fields followed by the uint64 publication counter.
+	if n < headerSize {
 		return levels
 	}
 	channels := int(binary.LittleEndian.Uint32(data[:4]))
 	size := int(binary.LittleEndian.Uint32(data[4:8]))
-	if channels < 1 || channels > 8 || size < 2 || size > n-8 {
+	if channels < 1 || channels > 8 || size < 2 || size > n-headerSize || size%(2*channels) != 0 {
 		return levels
 	}
 	samples := size / 2 / channels
@@ -63,7 +64,7 @@ func audioExport(path string) player.AudioLevels {
 		src := min(ch, channels-1)
 		sum := 0.
 		for i := 0; i < samples; i++ {
-			offset := 8 + (src*samples+i)*2
+			offset := headerSize + (src*samples+i)*2
 			v := float64(int16(binary.LittleEndian.Uint16(data[offset:offset+2]))) / 32768
 			sum += v * v
 		}

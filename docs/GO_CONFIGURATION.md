@@ -182,7 +182,7 @@ Relative image, music-asset, and log paths resolve beside the file that supplied
 
 When `settings.json` exists, omitted application sections use defaults rather than legacy JSON files. The absent `server` section is the compatibility exception: it permits `jellyfin.conf`. Legacy `-input-config`, `-sound-config`, `MISTERVISION_INPUT_CONFIG`, `MISTERVISION_SOUND_CONFIG`, and `MISTERVISION_MUSIC_CONFIG` overrides still replace their sections. Remove those overrides when adopting the shared file.
 
-The old top-level `sounds` and `music` sections remain aliases. Explicit `ui.navigation_sounds` and `music_visuals` take precedence as whole sections, even if empty or invalid. In music settings, `default_background` and `show_audio_meters` replace `default` and `meters`. Explicit current fields win, including null values that select their defaults.
+The old top-level `sounds` and `music` sections remain aliases. Explicit `ui.navigation_sounds` and `music_visuals` take precedence as whole sections, even if empty or invalid. In music settings, `default_background` replaces `default`. Explicit current fields win, including null values that select their defaults. The retired `show_audio_meters` setting and its `meters` alias are accepted but ignored.
 
 ## Migration
 
