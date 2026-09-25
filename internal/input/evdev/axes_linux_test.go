@@ -57,7 +57,7 @@ func TestConfiguredAxes(t *testing.T) {
 		}
 	}
 	// Explicitly disabling a default trigger must beat its autodetected mapping.
-	d := device{held: make(map[uint16]control.Action), triggers: map[uint16]*triggerAxis{2: {min: 0, max: 100}}, bindings: Profile{Axes: map[uint16]Axis{2: {}}}}
+	d := device{held: make(map[uint16]control.Action), triggers: map[uint16]*mappedAxis{2: newMappedAxis(defaultTriggerBinding(2), 0, 100)}, bindings: Profile{Axes: map[uint16]Axis{2: {}}}}
 	if got := d.accept(event{Type: 3, Code: 2, Value: 100}); got != "" {
 		t.Fatal("disabled axis fired", got)
 	}

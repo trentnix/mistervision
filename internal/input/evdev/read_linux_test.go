@@ -136,8 +136,8 @@ func TestPlaybackButtonsAndTriggerHysteresis(t *testing.T) {
 		}
 	}
 	for _, bounds := range [][2]int32{{0, 255}, {0, 1023}, {-32768, 32767}} {
-		axis := &triggerAxis{min: bounds[0], max: bounds[1]}
-		d := device{name: "Xbox", held: make(map[uint16]control.Action), triggers: map[uint16]*triggerAxis{2: axis}}
+		axis := newMappedAxis(defaultTriggerBinding(2), bounds[0], bounds[1])
+		d := device{name: "Xbox", held: make(map[uint16]control.Action), triggers: map[uint16]*mappedAxis{2: axis}}
 		value := func(percent int32) int32 { return bounds[0] + (bounds[1]-bounds[0])*percent/100 }
 		if d.accept(event{Type: 3, Code: 2, Value: value(10)}) != "" {
 			t.Fatal("light touch triggered seek")

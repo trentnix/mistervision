@@ -99,7 +99,7 @@ func (d *device) mappedAction(e event) control.Action {
 		return ""
 	}
 	if e.Type == 3 && d.triggers[e.Code] != nil {
-		return d.triggers[e.Code].action(e.Value, triggerKey(e.Code))
+		return d.triggers[e.Code].action(e.Value)
 	}
 	return action(d.name, e.Type, e.Code, e.Value)
 }

@@ -28,7 +28,7 @@ type device struct {
 	fd       int
 	name     string
 	held     map[uint16]control.Action
-	triggers map[uint16]*triggerAxis
+	triggers map[uint16]*mappedAxis
 	bindings Profile
 	axes     map[uint16]*mappedAxis
 	hats     [2]bool
