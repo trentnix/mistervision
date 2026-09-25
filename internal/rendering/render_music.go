@@ -34,7 +34,8 @@ func (p *screenPainter) music() {
 		progressY = controlsTop(bottom, rows) - 10
 	}
 	info := p.musicInfo()
-	titleY := progressY - 10
+	timing := p.listText(runtime(s.Playback.PositionTicks)+" / "+runtime(v.Detail.RunTimeTicks), w-48, 16, 0xffffff, true)
+	titleY := progressY - 10 - timing.Bounds().Dy() - musicInfoGap
 	for _, line := range info {
 		titleY -= line.Bounds().Dy() + musicInfoGap
 	}
@@ -54,7 +55,7 @@ func (p *screenPainter) music() {
 		s.MusicFrame.ArtworkBounds = image.Rect(24, sy+28, w-24, max(sy+29, artworkBottom))
 		rw, rh := c.RasterSize()
 		if p.background != nil {
-			p.background.drawMusic(c, p.visualizer, s.Music, s.MusicIndex, s.MusicFrame, art.Backdrop, headerBottom, titleY-8, progressY+15)
+			p.background.drawMusic(c, p.visualizer, s.Music, s.MusicIndex, s.MusicFrame, art.Backdrop, headerBottom)
 		} else if rw != w || rh != h {
 			if p.cache.musicCanvas == nil {
 				p.cache.musicCanvas = ui.New(w, h)
@@ -71,7 +72,6 @@ func (p *screenPainter) music() {
 		}
 		if p.background == nil {
 			c.Shade(0, 0, w, headerBottom, 155)
-			c.Shade(0, titleY-8, w, progressY+15-(titleY-8), 175)
 		}
 	}
 	if s.MusicLabel && s.Music != nil {
@@ -90,9 +90,11 @@ func (p *screenPainter) music() {
 	y := titleY
 	for _, line := range info {
 		box := line.Bounds()
-		c.Blit(line, (w-box.Dx())/2, y, box.Dx(), box.Dy())
+		c.Blit(line, 24, y, box.Dx(), box.Dy())
 		y += box.Dy() + musicInfoGap
 	}
+	box := timing.Bounds()
+	c.Blit(timing, w-24-box.Dx(), y, box.Dx(), box.Dy())
 	c.Rect(24, progressY, w-48, 3, 0x303030)
 	if v.Detail.RunTimeTicks > 0 {
 		c.Rect(24, progressY, int(min(s.Playback.PositionTicks, v.Detail.RunTimeTicks)*int64(w-48)/v.Detail.RunTimeTicks), 3, titleColor)
@@ -124,22 +126,16 @@ const (
 )
 
 // musicInfo lays out each metadata field separately using the shared list font.
-// Empty artist and album fields do not reserve rows. Timing always remains visible.
+// Empty artist and album fields do not reserve rows. Timing is drawn separately.
 func (p *screenPainter) musicInfo() []*ui.RasterImage {
 	item := p.scene.Content.Detail
 	var lines []*ui.RasterImage
-	for _, field := range []struct {
-		text  string
-		size  int
-		color uint32
-		bold  bool
-	}{
-		{item.Name, 20, titleColor, true},
-		{strings.Join(item.Artists, ", "), 16, 0xffffff, false},
-		{item.Album, 16, 0xffffff, false},
-		{runtime(p.scene.Playback.PositionTicks) + " / " + runtime(item.RunTimeTicks), 16, 0xffffff, false},
+	for _, text := range []string{
+		strings.Join(item.Artists, ", "),
+		`"` + item.Name + `"`,
+		item.Album,
 	} {
-		if line := p.listText(field.text, p.width-48, field.size, field.color, field.bold); line != nil {
+		if line := p.listText(text, p.width-48, 16, 0xffffff, true); line != nil {
 			lines = append(lines, line)
 		}
 	}

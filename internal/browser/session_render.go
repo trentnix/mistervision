@@ -31,7 +31,7 @@ func (s *browserSession) draw() error {
 	scene.About = s.about
 	scene.Controls = s.controls
 	scene.Music = s.music.library
-	scene.MusicIndex = s.music.backgroundIndex(scene.Audio, scene.Artwork.Backdrop != nil)
+	scene.MusicIndex = s.music.backgroundIndex(scene.Artwork.Backdrop != nil, scene.Artwork.Primary != nil, s.selection.backdropPending)
 	scene.Shuffle = s.shuffle.library != "" || (s.playbackQueue.active && s.playbackQueue.queue.Shuffled())
 	scene.MusicMessage = s.music.error
 	if s.music.library != nil && !s.music.library.Ready(s.music.index) && s.music.loading {

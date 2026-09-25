@@ -201,8 +201,8 @@ func TestMusicInfoFitsBothCRTLayouts(t *testing.T) {
 		p := screenPainter{canvas: ui.New(640, height), cache: &sceneCache{}, width: 640, height: height}
 		p.scene.Content.Detail = &media.Item{Name: "Roygbiv", Artists: []string{"Boards of Canada"}, Album: "Music Has the Right to Children", RunTimeTicks: 1800000000}
 		lines := p.musicInfo()
-		if len(lines) != 4 {
-			t.Fatalf("expected separate title, artist, album, timing; got %d", len(lines))
+		if len(lines) != 3 {
+			t.Fatalf("expected separate title, artist, album; got %d", len(lines))
 		}
 		total := 0
 		for _, line := range lines {
@@ -211,12 +211,16 @@ func TestMusicInfoFitsBothCRTLayouts(t *testing.T) {
 		if total > height*2/5 {
 			t.Fatalf("metadata crowds artwork: %d of %d", total, height)
 		}
-		if lines[0].Bounds().Dy() <= lines[1].Bounds().Dy() {
-			t.Fatal("track title is not larger than artist")
+		want := []string{"Boards of Canada", `"Roygbiv"`, "Music Has the Right to Children"}
+		for i, text := range want {
+			label := p.listText(text, 592, 16, 0xffffff, true)
+			if !bytes.Equal(lines[i].Pix, label.Pix) {
+				t.Fatalf("metadata order or style differs for %q", text)
+			}
 		}
 		p.scene.Content.Detail.Artists = nil
 		p.scene.Content.Detail.Album = ""
-		if got := len(p.musicInfo()); got != 2 {
+		if got := len(p.musicInfo()); got != 1 {
 			t.Fatalf("empty metadata left blank rows: %d", got)
 		}
 	}
