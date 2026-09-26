@@ -184,3 +184,22 @@ func TestSingleSeasonRequiresCompleteSuccessfulSeasonListing(t *testing.T) {
 		})
 	}
 }
+
+func TestArtistNavigationRequestsAlbumsThenTracks(t *testing.T) {
+	m := New()
+	m.Current().Location = media.Location{Kind: "items", ParentID: "music", Collection: "music"}
+	m.Current().Page.Items = []media.Item{{ID: "artist", Name: "Artist", Type: "MusicArtist", IsFolder: true}}
+	albums := m.Key(control.Open)
+	if albums == nil || albums.Location.Kind != "albums" || albums.Location.ParentID != "artist" || albums.Location.Collection != "music" {
+		t.Fatalf("artist navigation: %+v", albums)
+	}
+	m.Apply(*albums, media.Page{Items: []media.Item{{ID: "album", Name: "Album", Type: "MusicAlbum", IsFolder: true}}}, nil)
+	tracks := m.Key(control.Open)
+	if tracks == nil || tracks.Location.Kind != "items" || tracks.Location.ParentID != "album" {
+		t.Fatalf("album navigation: %+v", tracks)
+	}
+	m.Key(control.Back)
+	if m.Current().Location != albums.Location {
+		t.Fatal("Back did not restore artist albums")
+	}
+}
