@@ -132,7 +132,7 @@ Omitted fields use defaults. Preserve other sections when editing. Explicit empt
 | `background` | Carousel mosaics and item artwork. | Restore normal artwork with a notice. |
 | [`display`](GO_DISPLAY.md) | `interlaced: false`, `aspect_ratio: "auto"`, `framebuffer_max_width: 640`, `framebuffer_max_height: 480`. Limits apply to non-CRT framebuffer scaling. | Invalid settings stop startup. |
 | [`input`](GO_INPUT.md) | Built-in device bindings. | Invalid settings stop startup. |
-| [`music_visuals`](GO_MUSIC.md) | Starfield, stereo meters enabled. | Invalid settings disable backgrounds. Missing custom assets leave music playable. |
+| [`music_visuals`](GO_MUSIC.md) | Artwork when available, otherwise Starfield. Manual background choices last until exit. No separate audio meters. | Invalid settings disable backgrounds. Missing custom assets leave music playable. |
 | [`diagnostics`](GO_DIAGNOSTICS.md) | Off. Legacy `DEBUGLOG` applies only without `server`. `debug.log`, 1 MiB per file. | Disable logging and report the failure. |
 
 Title, carousel option, and sound failures recover independently. An invalid entire `ui` object restores the title, enables nonempty collections and playlists, and disables sounds.
@@ -164,7 +164,7 @@ Values must be booleans. A mistyped value or `null` falls back to `true`, shows 
 
 `background.image` selects one static image for the carousel and browsing lists. An omitted or empty value keeps mosaics and item artwork. Posters, details, About, setup, photos, and playback retain their own presentation.
 
-PNG and JPEG are supported, up to 4 MiB and 2048 pixels per axis. A 4:3 image fits best. The renderer preserves proportions, crops from the center, dims the image, and composites transparency over black. Relative paths resolve beside the settings file. Absolute paths also work.
+PNG and JPEG are supported, up to 4 MiB and 2048 pixels per axis. Use an image suited to your display’s 4:3 or 16:9 proportions. The renderer preserves proportions, crops from the center to fill the display, dims the image, and composites transparency over black. Relative paths resolve beside the settings file. Absolute paths also work.
 
 The client checks image contents, not the extension. Missing files, text, video, unsupported formats, and corrupt images fall back to normal artwork with a notice. The image decodes once at startup. Prepared pixels are cached, and hidden mosaic/backdrop downloads are skipped. Music backgrounds use `music_visuals` instead.
 
