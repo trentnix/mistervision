@@ -60,7 +60,7 @@ func preparePlayback(ctx context.Context, c media.Playback, config Config, reque
 			burn = sub.Index
 			tracks.Text = nil
 		}
-		stream, err = c.PrepareVideo(ctx, media.VideoRequest{Item: item, SessionID: session, StartTicks: start, NTSC: !config.Timing.PAL, SourceID: tracks.SourceID, Tracks: tracks.Selection, BurnSubtitle: burn})
+		stream, err = c.PrepareVideo(ctx, media.VideoRequest{Size: config.VideoSize, Item: item, SessionID: session, StartTicks: start, NTSC: !config.Timing.PAL, SourceID: tracks.SourceID, Tracks: tracks.Selection, BurnSubtitle: burn})
 		if err != nil {
 			return nil, err
 		}
@@ -74,7 +74,7 @@ func preparePlayback(ctx context.Context, c media.Playback, config Config, reque
 		if choices.explicit != nil {
 			audioIndex = choices.explicit.Selection.AudioIndex
 		}
-		stream, err = live.PrepareLive(ctx, media.LiveRequest{ChannelID: item.ID, MaxFrameRate: config.Timing.liveFrameRate(), AudioIndex: audioIndex})
+		stream, err = live.PrepareLive(ctx, media.LiveRequest{Size: config.VideoSize, ChannelID: item.ID, MaxFrameRate: config.Timing.liveFrameRate(), AudioIndex: audioIndex})
 		if err != nil {
 			if ctx.Err() != nil {
 				return nil, nil

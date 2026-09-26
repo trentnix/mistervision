@@ -2,7 +2,7 @@
 
 This document records missing features, current limitations, and intentional exclusions for Jellyfin and Plex without assigning priorities. MiSTerVision targets personal media on a consumer CRT and also supports HDMI displays. Both providers are supported, but matching every feature of either ecosystem is not the goal.
 
-Implementation status was reviewed September 26, 2026 for v1.6.1. Comparisons with other clients retain the September 19 documentation review.
+Implementation status was reviewed September 26, 2026 for v1.6.2. Comparisons with other clients retain the September 19 documentation review.
 
 ## Current baseline
 
@@ -14,14 +14,16 @@ The interface supports progressive and interlaced CRT output, HDMI framebuffer s
 
 ### Fixes in v1.6.1
 
-- [Progressive page flipping (PR #38)](https://github.com/trentnix/mistervision/pull/38) addresses tearing by preparing video in a back page and presenting it under exclusive scanout ownership. Remaining SuperStation One stutter is still under investigation.
+- [Progressive page flipping (PR #38)](https://github.com/trentnix/mistervision/pull/38) addresses tearing by preparing video in a back page and presenting it under exclusive scanout ownership. The separate playback sizing improvement is included in v1.6.2.
 - [Complete Plex artist albums (PR #39)](https://github.com/trentnix/mistervision/pull/39) replaces an artist-children query that omitted some compilations, EPs, and other releases. Jellyfin’s existing query is unchanged.
 
 Both fixes are included in v1.6.1.
 
-### Pending experiments
+### Playback sizing in v1.6.2
 
-`feat/output-sized-transcoding` requests server conversion dimensions suited to the playback framebuffer. It is committed and pushed but unmerged. Controlled local encodes used less CPU on the maintainer’s MiSTer. Reporter validation is pending, so it is not a confirmed fix for [SuperStation One stutter (#22)](https://github.com/trentnix/mistervision/issues/22). Current `main` still defaults to a 720×576 transcode ceiling, independent of framebuffer size.
+Plex and Jellyfin now receive transcode limits derived from the playback framebuffer and physical display aspect. Explicit user limits remain caps. Controlled local encodes reduced CPU use on the maintainer’s MiSTer. The [SuperStation One reporter confirmed smooth HDMI playback](https://github.com/trentnix/mistervision/issues/22#issuecomment-5848649234) across Sonic and other shows with the test build. VGA validation of this change remains open.
+
+### Pending experiments
 
 Jellyfin remote control is supported. Plex Companion video control exists only on the parked `feat/plex-companion-prototype` branch. It is not a released capability or a prerequisite for unrelated improvements. See the [Plex remote plan](https://github.com/trentnix/mistervision/blob/feat/plex-companion-prototype/docs/PLEX_REMOTE_PLAN.md) and [forum report](https://forums.plex.tv/t/companion-timeline-stays-stale-pms-proxy-does-not-expose-x-plex-client-identifier/943091).
 
@@ -81,7 +83,7 @@ Live TV timeshifting is absent from both MiSTerVision adapters. Plex provides a 
 
 ## Open compatibility work
 
-- **[SuperStation One (#22)](https://github.com/trentnix/mistervision/issues/22):** ConsoleMode handoff and diagnostics are implemented. Hardware-specific playback investigation remains open. The maintainer has no SS1, so fixes need reporter validation. The merged tearing fix does not establish that remaining stutter is resolved.
+- **[SuperStation One (#22)](https://github.com/trentnix/mistervision/issues/22):** ConsoleMode handoff and diagnostics are implemented. The reporter confirmed the tearing fix on HDMI and VGA, then reported smooth HDMI playback with the output-sized transcoding change in v1.6.2. VGA testing of the sizing change remains open. The maintainer has no SS1 and relies on reporter validation.
 - **[Xbox trigger mappings (#30)](https://github.com/trentnix/mistervision/issues/30):** Some controllers report trigger rest positions that cause unintended seeking. A candidate fix is saved on `fix/controller-trigger-mapping` but is not merged. This is separate from automatic controller recognition.
 - **[PAL validation (#28)](https://github.com/trentnix/mistervision/issues/28):** PAL code paths exist, but 288p/576i output needs validation by someone with suitable hardware.
 

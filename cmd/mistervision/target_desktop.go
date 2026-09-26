@@ -39,7 +39,7 @@ func desktopTarget(d platform.Presenter, o launchOptions) browserTarget {
 // player executable was supplied.
 func desktopPlayback(o launchOptions, g platform.Geometry) playback.Config {
 	decoder := ffplay.Decoder{Player: o.player, DisplayAspect: o.displayAspect}
-	config := playback.Config{VideoDecoder: decoder, AudioDecoder: decoder, Timing: crtPlaybackTiming(g.OutputHeight)}
+	config := playback.Config{VideoDecoder: decoder, AudioDecoder: decoder, Timing: crtPlaybackTiming(g.OutputHeight), VideoSize: targetTranscodeSize(o, g)}
 	if o.terminalPlayer != "" {
 		// Frame files contain logical pixels. The presenter expands them to the
 		// physical framebuffer, including line doubling and pillarboxing.

@@ -21,8 +21,8 @@ type livePlayback struct {
 
 // liveProfile combines configured size/bitrate limits with the C codecs. The caller
 // supplies the frame-rate cap to match its output cadence.
-func (c *Client) liveProfile(maxFrameRate float64) any {
-	profile := c.Config.transcodeProfile()
+func (c *Client) liveProfile(maxFrameRate float64, size media.VideoSize) any {
+	profile := c.Config.transcodeProfile(size)
 	conditions := []any{}
 	for _, limit := range []struct {
 		name  string
@@ -72,7 +72,7 @@ func (c *Client) liveURL(raw string) (string, error) {
 // openLive negotiates a transcoded channel and returns its stream identity.
 // maxFrameRate must be finite and positive. It caps conversion without forcing
 // slower sources to a higher rate. Failed or canceled negotiation releases the tuner.
-func (c *Client) openLive(ctx context.Context, channel string, maxFrameRate float64) (livePlayback, error) {
+func (c *Client) openLive(ctx context.Context, channel string, maxFrameRate float64, size media.VideoSize) (livePlayback, error) {
 	if err := ctx.Err(); err != nil {
 		return livePlayback{}, err
 	}
@@ -92,7 +92,7 @@ func (c *Client) openLive(ctx context.Context, channel string, maxFrameRate floa
 			MediaStreams   []MediaStream
 		}
 	}
-	err := c.json(negotiation, "POST", "/Items/"+url.PathEscape(channel)+"/PlaybackInfo", nil, c.liveProfile(maxFrameRate), &response)
+	err := c.json(negotiation, "POST", "/Items/"+url.PathEscape(channel)+"/PlaybackInfo", nil, c.liveProfile(maxFrameRate, size), &response)
 	var live livePlayback
 	if len(response.MediaSources) > 0 {
 		source := response.MediaSources[0]
@@ -134,7 +134,7 @@ func (c *Client) PrepareLive(ctx context.Context, request media.LiveRequest) (me
 	if request.AudioIndex != -1 {
 		return media.PreparedStream{}, errors.New("Live TV audio selection is not available")
 	}
-	live, err := c.openLive(ctx, request.ChannelID, request.MaxFrameRate)
+	live, err := c.openLive(ctx, request.ChannelID, request.MaxFrameRate, request.Size)
 	if err != nil {
 		return media.PreparedStream{}, err
 	}

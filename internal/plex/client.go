@@ -22,7 +22,8 @@ import (
 
 // Config selects the Plex server, TLS policy, and validated conversion limits.
 // Connector treats an empty Server as account-based discovery.
-// Zero limits use 720×576 at 12 Mbps. Codec selection stays in the adapter.
+// Zero dimension limits follow the playback request. Zero bitrate uses 12 Mbps.
+// Codec selection stays in the adapter.
 type Config struct {
 	Server                            string
 	InsecureTLS                       bool

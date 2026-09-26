@@ -262,7 +262,7 @@ class BrowseIntegrationTests(BrowserFixture):
         self.key(b"b")
         self.wait_request("/Items/movie-tricky-0")
         self.key(b"b")
-        self.wait_request("/Videos/movie-tricky-0/stream", maxWidth=640, maxHeight=480, videoBitRate=8000000)
+        self.wait_request("/Videos/movie-tricky-0/stream", maxWidth=320, maxHeight=240, videoBitRate=8000000)
         self.key(b"a")
         self.wait_request("/Items/movie-tricky-0")
         self.assertIsNone(self.process.poll())
@@ -274,7 +274,7 @@ class BrowseIntegrationTests(BrowserFixture):
         self.key(b"b")
         self.wait_request("/Items/movie-tricky-0")
         self.key(b"b")
-        self.wait_request("/Videos/movie-tricky-0/stream", maxWidth=640, maxHeight=480,
+        self.wait_request("/Videos/movie-tricky-0/stream", maxWidth=320, maxHeight=240,
                           videoBitRate=8000000, maxFramerate=30, allowVideoStreamCopy="false")
         self.assertEqual(len(self.read_frame()), 640 * 240 * 4)
 

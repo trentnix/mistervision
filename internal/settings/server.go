@@ -18,7 +18,8 @@ type Server struct {
 }
 
 // Transcode bounds server-side video conversion. Each adapter chooses codecs
-// and frame-rate limits for its protocol. Dimensions are limits, not an aspect ratio.
+// and frame-rate limits for its protocol. Dimensions cap display-derived
+// limits. Zero selects automatic sizing.
 type Transcode struct {
 	MaxWidth     int `json:"max_width"`
 	MaxHeight    int `json:"max_height"`
@@ -39,7 +40,7 @@ func ParseServer(section Section) (*Server, error) {
 	if section.Data == nil && section.Err == nil {
 		return nil, nil
 	}
-	c := Server{Provider: "jellyfin", Transcode: Transcode{MaxWidth: 720, MaxHeight: 576, VideoBitrate: 12000000}}
+	c := Server{Provider: "jellyfin", Transcode: Transcode{VideoBitrate: 12000000}}
 	if err := section.Decode(&c); err != nil {
 		return nil, errors.New("invalid server settings: check field names and value types")
 	}
@@ -51,11 +52,11 @@ func ParseServer(section Section) (*Server, error) {
 		return nil, errors.New("server.url must be an HTTP or HTTPS address without credentials, query, or fragment")
 	}
 	c.URL = strings.TrimRight(u.String(), "/")
-	if c.Transcode.MaxWidth < 160 || c.Transcode.MaxWidth > 1920 {
-		return nil, errors.New("server.transcode.max_width must be 160–1920")
+	if c.Transcode.MaxWidth != 0 && (c.Transcode.MaxWidth < 160 || c.Transcode.MaxWidth > 1920) {
+		return nil, errors.New("server.transcode.max_width must be 0 (automatic) or 160–1920")
 	}
-	if c.Transcode.MaxHeight < 120 || c.Transcode.MaxHeight > 1080 {
-		return nil, errors.New("server.transcode.max_height must be 120–1080")
+	if c.Transcode.MaxHeight != 0 && (c.Transcode.MaxHeight < 120 || c.Transcode.MaxHeight > 1080) {
+		return nil, errors.New("server.transcode.max_height must be 0 (automatic) or 120–1080")
 	}
 	if c.Transcode.VideoBitrate < 100000 || c.Transcode.VideoBitrate > 50000000 {
 		return nil, errors.New("server.transcode.video_bitrate must be 100000–50000000 bits per second")
