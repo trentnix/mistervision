@@ -69,9 +69,10 @@ type Page struct {
 }
 
 // Location identifies a browsing query. Kind selects views, items, seasons,
-// episodes, livetv, collections, playlists, collection, or playlist. The plural
+// episodes, albums, livetv, collections, playlists, collection, or playlist. The plural
 // collection/playlist kinds list containers. The singular kinds list their members
-// in server order. ParentID identifies the container or season. SeriesID is
+// in server order. Albums lists an artist’s releases. ParentID identifies the
+// container, season, or artist. SeriesID is
 // required for season and episode queries. Collection identifies the library category.
 // The browser owns the synthetic "continue" location and never sends it to List.
 type Location struct{ Kind, ParentID, Collection, SeriesID string }

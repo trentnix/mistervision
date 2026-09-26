@@ -66,6 +66,13 @@ func (c *Client) List(ctx context.Context, loc media.Location, start, limit int)
 	path := ""
 	q := url.Values{}
 	switch loc.Kind {
+	case "albums":
+		if !validID(loc.ParentID) {
+			return media.Page{}, errors.New("invalid Plex artist ID")
+		}
+		// Artist children can omit compilations, EPs, and other release types.
+		// Search by artist ID to include every album without merging hubs.
+		return c.page(ctx, "/library/all", url.Values{"type": {"9"}, "artist.id": {loc.ParentID}, "sort": {"titleSort:asc"}}, start, limit)
 	case "collections":
 		return c.page(ctx, "/library/all", url.Values{"type": {"18"}, "sort": {"titleSort:asc"}}, start, limit)
 	case "playlists":

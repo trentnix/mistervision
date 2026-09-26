@@ -231,3 +231,19 @@ func TestAuthorizationUsesApplicationBuildVersion(t *testing.T) {
 		t.Fatal("version was not quoted")
 	}
 }
+
+func TestArtistAlbumsPreserveMusicFolderQuery(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		want := itemsQuery("user", "artist", "music", 64, 64)
+		if r.URL.Path != "/Items" || !reflect.DeepEqual(r.URL.Query(), want) {
+			t.Errorf("artist album query changed: %s", r.URL)
+		}
+		fmt.Fprint(w, `{"Items":[{"Id":"album","Type":"MusicAlbum","Name":"Album"}],"TotalRecordCount":65}`)
+	}))
+	defer s.Close()
+	c := NewClient(Config{Server: s.URL}, Session{UserID: "user"})
+	page, err := c.List(t.Context(), Location{Kind: "albums", ParentID: "artist", Collection: "music"}, 64, 64)
+	if err != nil || len(page.Items) != 1 || page.Items[0].Type != "MusicAlbum" || page.TotalRecordCount == nil || *page.TotalRecordCount != 65 {
+		t.Fatalf("artist albums: %+v, %v", page, err)
+	}
+}
