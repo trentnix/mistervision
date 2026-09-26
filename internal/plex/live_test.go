@@ -165,7 +165,7 @@ func TestLivePlaybackOwnershipAndReports(t *testing.T) {
 			fmt.Fprint(w, liveReply)
 		case strings.HasSuffix(r.URL.Path, "/decision"):
 			q := r.URL.Query()
-			if q.Get("offset") != "-1" || q.Get("path") != "/livetv/sessions/live-source" || q.Get("protocol") != "http" || !strings.Contains(q.Get("X-Plex-Client-Profile-Extra"), "29.97002997002997") {
+			if q.Get("videoResolution") != "320x240" || q.Get("offset") != "-1" || q.Get("path") != "/livetv/sessions/live-source" || q.Get("protocol") != "http" || !strings.Contains(q.Get("X-Plex-Client-Profile-Extra"), "29.97002997002997") {
 				t.Error("incorrect live transcode")
 			}
 			fmt.Fprint(w, `{"MediaContainer":{"generalDecisionCode":1001}}`)
@@ -186,14 +186,14 @@ func TestLivePlaybackOwnershipAndReports(t *testing.T) {
 			t.Errorf("unexpected request %s", r.URL.Path)
 		}
 	})
-	a, err := c.PrepareLive(t.Context(), media.LiveRequest{ChannelID: liveID("2", "channel"), MaxFrameRate: 30000.0 / 1001, AudioIndex: -1})
+	a, err := c.PrepareLive(t.Context(), media.LiveRequest{Size: media.VideoSize{Width: 320, Height: 240}, ChannelID: liveID("2", "channel"), MaxFrameRate: 30000.0 / 1001, AudioIndex: -1})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if a.Streams[0].AspectRatio != "1.78" || a.Streams[0].Width != 720 || a.Streams[2].Codec != "eia_608" {
 		t.Fatalf("source geometry/captions lost: %+v", a.Streams)
 	}
-	b, err := c.PrepareLive(t.Context(), media.LiveRequest{ChannelID: liveID("2", "channel"), MaxFrameRate: 30000.0 / 1001, AudioIndex: -1})
+	b, err := c.PrepareLive(t.Context(), media.LiveRequest{Size: media.VideoSize{Width: 320, Height: 240}, ChannelID: liveID("2", "channel"), MaxFrameRate: 30000.0 / 1001, AudioIndex: -1})
 	if err != nil {
 		t.Fatal(err)
 	}

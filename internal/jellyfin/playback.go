@@ -15,7 +15,7 @@ func (c *Client) PrepareVideo(ctx context.Context, request media.VideoRequest) (
 	if err := ctx.Err(); err != nil {
 		return media.PreparedStream{}, err
 	}
-	profile := c.Config.transcodeProfile()
+	profile := c.Config.transcodeProfile(request.Size)
 	fps := 25
 	if request.NTSC {
 		fps = 30

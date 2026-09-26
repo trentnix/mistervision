@@ -62,7 +62,7 @@ func (c *Client) PrepareVideo(ctx context.Context, request media.VideoRequest) (
 	if ntsc {
 		fps = 30
 	}
-	q, limits := c.videoQuery("/library/metadata/"+item.ID, session, fps)
+	q, limits := c.videoQuery("/library/metadata/"+item.ID, session, fps, request.Size)
 	q.Set("mediaIndex", index)
 	q.Set("offset", strconv.FormatFloat(float64(max(0, start))/10000000, 'f', 7, 64))
 	if burn >= 0 {

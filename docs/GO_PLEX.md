@@ -79,7 +79,7 @@ Plex saves the linking account, selected profile, and media-server grant togethe
 
 ## Playback and limits
 
-The adapter requests progressive H.264 video with MP3 audio in Matroska, bounded by `server.transcode` (default 720×576 at 12 Mbps) and 30 fps for NTSC or 25 fps for PAL. Go opens the authenticated stream and passes bytes to the selected decoder. Resume and progress use Plex milliseconds translated to the shared timebase. Each prepared stream owns its timeline reporter and transcode cleanup.
+The adapter requests progressive H.264 video with MP3 audio in Matroska, sized to the playback display and capped by explicit `server.transcode` dimensions (default bitrate: 12 Mbps) and 30 fps for NTSC or 25 fps for PAL. Go opens the authenticated stream and passes bytes to the selected decoder. Resume and progress use Plex milliseconds translated to the shared timebase. Each prepared stream owns its timeline reporter and transcode cleanup.
 
 Video preparation registers a Plex playback decision before opening the stream. The decision, stream, timeline reports, and cleanup use the same playback identity. A seek creates a new identity so the old stop report cannot terminate its replacement.
 

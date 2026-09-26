@@ -5,36 +5,34 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"mistervision/internal/media"
 )
 
 // TranscodeProfile limits server-side video conversion. Dimensions are maximums,
-// not an output aspect ratio. Zero fields use the existing defaults. Config files
-// must specify widths of 160–1920, heights of 120–1080, and bitrates of
-// 100,000–50,000,000 bits per second. Programmatic callers must use the same ranges.
+// not an output aspect ratio. Zero dimensions follow the playback display.
+// Explicit caps use widths of 160–1920 and heights of 120–1080. Zero bitrate
+// uses 12 Mbps. Explicit bitrates use 100,000–50,000,000 bits per second.
 // The display pipeline, not this profile, selects the frame-rate cap.
 type TranscodeProfile struct {
 	MaxWidth, MaxHeight int
 	VideoBitrate        int
 }
 
-// DefaultTranscodeProfile preserves the established recorded-video and Live TV
-// limits. Live TV uses VideoBitrate as its negotiated streaming bitrate budget.
+// DefaultTranscodeProfile selects automatic dimensions and a 12 Mbps budget.
+// Live TV uses VideoBitrate as its negotiated streaming bitrate budget.
 func DefaultTranscodeProfile() TranscodeProfile {
-	return TranscodeProfile{MaxWidth: 720, MaxHeight: 576, VideoBitrate: 12000000}
+	return TranscodeProfile{VideoBitrate: 12000000}
 }
 
-// transcodeProfile fills omitted fields for callers that construct Config
-// directly. Parsed profiles are already complete and validated.
-func (c Config) transcodeProfile() TranscodeProfile {
-	p, defaults := c.Transcode, DefaultTranscodeProfile()
-	if p.MaxWidth == 0 {
-		p.MaxWidth = defaults.MaxWidth
-	}
-	if p.MaxHeight == 0 {
-		p.MaxHeight = defaults.MaxHeight
-	}
+// transcodeProfile combines the current playback size with explicit user caps.
+// The client configuration remains immutable across simultaneous requests.
+func (c Config) transcodeProfile(size media.VideoSize) TranscodeProfile {
+	p := c.Transcode
+	size = size.Capped(p.MaxWidth, p.MaxHeight)
+	p.MaxWidth, p.MaxHeight = size.Width, size.Height
 	if p.VideoBitrate == 0 {
-		p.VideoBitrate = defaults.VideoBitrate
+		p.VideoBitrate = DefaultTranscodeProfile().VideoBitrate
 	}
 	return p
 }

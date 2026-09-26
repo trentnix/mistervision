@@ -166,7 +166,7 @@ Connection and application settings live in **`settings.json`**, normally `/medi
 | Setting | Defaults and options | Guide |
 | --- | --- | --- |
 | `connections.profiles` | No configured entries. Discovered connections are remembered automatically. Add up to 16 named server connections. | [Connections](docs/GO_CONFIGURATION.md#multiple-connections) |
-| `server` | Provider: `jellyfin`. URL required when the section exists. TLS verified. Transcode limits: 720×576 at 12 Mbps. | [Connection](docs/GO_CONFIGURATION.md#server-connection) |
+| `server` | Provider: `jellyfin`. URL required when the section exists. TLS verified. Transcode size follows the playback display. Bitrate limit: 12 Mbps. Explicit dimensions cap automatic sizing. | [Connection](docs/GO_CONFIGURATION.md#server-connection) |
 | `ui.title` | Heading: `MiSTerVision`. An explicit empty `title` hides it. Long titles are truncated. | [Title](docs/GO_CONFIGURATION.md#browsing-title) |
 | `ui.show_collections`, `ui.show_playlists` | Both `true`. Show nonempty categories. Set either to `false` to hide its card. | [Carousel](docs/GO_CONFIGURATION.md#carousel-categories) |
 | `ui.navigation_sounds` | `enabled: true`, `volume: 10` out of 100. False or volume zero silences navigation sounds. | [Sounds](docs/GO_CONFIGURATION.md#navigation-sounds) |

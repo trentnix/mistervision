@@ -50,6 +50,14 @@ class DisplayGeometryTests(BrowserFixture):
     def exercise_preview(self, dimensions, native_check=False):
         self.start_browser(Scenario(player="inline", framebuffer=dimensions, mister_display_check=native_check))
         self.open_movie()
+        # The source's aspect ratio is preserved inside these server-side limits.
+        expected = {
+            "640x240": (320, 240), "360x240": (360, 240),
+            "640x480": (640, 480), "480x270": (480, 270),
+            "640x360": (640, 360), "1280x720": (1280, 720),
+            "1920x1080": (1920, 1080),
+        }[dimensions]
+        self.wait_request("/Videos/movie-tricky-0/stream", maxWidth=expected[0], maxHeight=expected[1])
         self.wait_video_ready()
         width, height = map(int, dimensions.split("x"))
         viewport = width

@@ -13,8 +13,8 @@ Both providers use the same connection fields:
     "url": "http://your-jellyfin-server:8096",
     "insecure_tls": false,
     "transcode": {
-      "max_width": 720,
-      "max_height": 576,
+      "max_width": 0,
+      "max_height": 0,
       "video_bitrate": 12000000
     }
   }
@@ -28,8 +28,8 @@ For Plex, set `provider` to `plex` and `url` to your Plex Media Server address, 
 | `provider` | `jellyfin`. Accepts `jellyfin` or `plex`. |
 | `url` | Required when `server` exists. HTTP, HTTPS, and reverse-proxy base paths are supported. No embedded credentials, query, or fragment. |
 | `insecure_tls` | `false`. True disables certificate verification only for the configured media server, including its Jellyfin remote connection. Plex account linking always verifies certificates. |
-| `transcode.max_width` | 720. Range: 160–1920 pixels. |
-| `transcode.max_height` | 576. Range: 120–1080 pixels. |
+| `transcode.max_width` | Automatic (`0` or omitted). Optional cap: 160–1920 pixels. |
+| `transcode.max_height` | Automatic (`0` or omitted). Optional cap: 120–1080 pixels. |
 | `transcode.video_bitrate` | 12,000,000 bits/sec. Range: 100,000–50,000,000. |
 | `jellyfin` | Omitted. Optional `api_key` and `username` must be supplied together. Rejected for Plex. |
 
