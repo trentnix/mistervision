@@ -12,9 +12,9 @@ The browser’s `playbackQueue` owns local and remote queue entries and decoder 
 
 | Player | Current use | Limits |
 | --- | --- | --- |
-| MPlayer | Everyday MiSTer playback with shared CRT overlays. | Requires the matching patched ARM build. |
+| MPlayer | Everyday MiSTer playback with shared CRT and HDMI overlays. | Requires the matching patched ARM build. |
 | Python/libmpv | Inline Ghostty video and controllable desktop music. | Requires Python 3 and libmpv. Terminal uploads can limit smoothness. |
-| FFplay | Alternate desktop video and automated decoding tests. | No shared overlay in its video window, no live picture changes, no audio seeking or meter feedback. |
+| FFplay | Alternate desktop video and automated decoding tests. | No shared overlay in its video window, no live picture changes, no audio seeking or audio-level feedback. |
 
 For video inside Ghostty:
 
@@ -62,7 +62,7 @@ A failed change leaves the previous choice active. The active row has an asteris
 
 ### Picture modes
 
-Original preserves the full encoded frame at its display aspect ratio. Zoom enlarges the center and crops edges. Wider or narrower sources crop to fill 4:3. Near-4:3 sources receive a fixed 4/3 enlargement, allowing removal of bars encoded inside a 4:3 frame. Zoom does not detect black bars and also crops native 4:3 content.
+Original preserves the full encoded frame at its display aspect ratio. Zoom enlarges the center and crops edges to fill the configured screen aspect, either 4:3 or 16:9. Sources that already match the screen receive a fixed 4/3 enlargement, allowing removal of bars encoded inside the frame. Zoom does not detect black bars and also crops content without them. Picture changes happen in the player and do not request a larger server transcode.
 
 MiSTer and inline Ghostty change picture mode within the running player, including while paused on the same frame. Controls and client-rendered subtitles keep their size. FFplay reloads recorded video at the current position for picture changes. Live TV in FFplay offers only Original.
 
@@ -132,7 +132,7 @@ Invalid JSON limits stop startup. Limits apply to recorded video and Live TV for
 
 Existing explicit limits remain caps. Remove them or set them to `0` to use the playback display alone. Callers without display geometry retain the legacy 720×576 fallback. Audio, photos, picture controls, and frame-rate policy are unchanged.
 
-Jellyfin video uses progressive MPEG-2 in MPEG-TS with stereo MP3 at 48 kHz. Recorded video caps at 30 fps for NTSC or 25 fps for PAL. 480i Live TV uses 30000/1001 fps. Target assembly supplies cadence through `playback.Timing` and square-pixel size through `playback.Config.VideoSize`. Preparation passes the size to each provider through `media.VideoRequest` or `media.LiveRequest`. A zero `playback.Timing` uses 30 fps. Current CRT targets select PAL or interlaced NTSC timing explicitly. The player does not force source speed. [Diagnostics](GO_DIAGNOSTICS.md) records requested transcode limits and available decoder-reported stream properties.
+Jellyfin video uses progressive MPEG-2 in MPEG-TS with stereo MP3 at 48 kHz. Recorded video caps at 30 fps for NTSC or 25 fps for PAL. 480i Live TV uses 30000/1001 fps. Target assembly supplies cadence through `playback.Timing` and square-pixel size through `playback.Config.VideoSize`. Preparation passes the size to each provider through `media.VideoRequest` or `media.LiveRequest`. A zero `playback.Timing` uses 30 fps. Current CRT targets select PAL or interlaced NTSC timing explicitly. The player does not force source speed. [Diagnostics](GO_DIAGNOSTICS.md#stream-details) separates requested transcode limits, server source metadata, and the stream properties identified by MPlayer. None of those values measures rendered frame rate.
 
 ## Streams and reporting
 

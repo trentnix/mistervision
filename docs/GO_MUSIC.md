@@ -12,7 +12,7 @@ On widescreen displays, artist and album artwork and music playback backgrounds 
 
 ## Built-in backgrounds
 
-SELECT/Tab cycles backgrounds during music playback and briefly shows the name in a top strip. The strip disappears with the name. Music playback has no persistent header or clock. The artwork background label shows the artist name, or the album name if no artist is available. Available album or artist backdrop artwork is selected when starting a music queue. If no backdrop loads, playback uses the configured default and omits Artwork from the cycle. A manual selection lasts across tracks and after stopping and starting another song, until the app closes. If the selected background needs an unavailable image, playback falls back without erasing the preference. Now Spinning requires an album cover and is omitted without one. The backdrop and album cover are separate images. Missing backdrops do not add an extra blank option. The configured default effect is distinct from Off unless it is itself an Off preset.
+SELECT/Tab cycles backgrounds during music playback and briefly shows the name in a top strip. The strip disappears with the name. Music playback has no persistent header or clock. The artwork background label shows the artist name, or the album name if no artist is available. Before a manual background choice, playback prefers available album or artist backdrop artwork. If no backdrop loads, playback uses the configured default and omits Artwork from the cycle. A manual selection takes precedence across tracks and after stopping and starting another song, until the app closes. If the selected background needs an unavailable image, playback falls back without erasing the preference. Now Spinning requires an album cover and is omitted without one. The backdrop and album cover are separate images. Missing backdrops do not add an extra blank option. The configured default effect is distinct from Off unless it is itself an Off preset.
 
 | Background | Behavior |
 | --- | --- |
@@ -81,4 +81,4 @@ Assets load on a worker at first selection and remain cached for the session. In
 
 ## Audio-reactive effects
 
-MPlayer exports a small PCM window sampled at 20 Hz. The Python/libmpv helper supplies stereo RMS measurements. Effects can react to those measurements. FFplay has no audio-level feedback. MiSTerVision does not display audio meters. The retired `show_audio_meters` setting and its `meters` alias are accepted but have no effect.
+MPlayer exports a small PCM window sampled at 20 Hz. The Python/libmpv helper supplies stereo RMS measurements. Effects can react to those measurements. FFplay has no audio-level feedback. MiSTerVision does not display separate audio meters beside the track information. Background effects can still draw audio-reactive elements. The retired `show_audio_meters` setting and its `meters` alias are accepted but have no effect.

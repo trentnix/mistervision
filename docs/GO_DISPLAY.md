@@ -4,7 +4,7 @@ The default keeps MiSTer's current display, normally 240p for NTSC or 288p for P
 
 ## Choose an output
 
-Install the application package and `display.interlaced: false`. This keeps the current MiSTer display mode. The package includes everything needed to enable interlacing later. Its name does not force 240p or select a connector.
+Install the application package and set `display.interlaced` to `false`. This keeps the current MiSTer display mode. The package includes everything needed to enable interlacing later. Its name does not force 240p or select a connector.
 
 | Connection | Start here |
 | --- | --- |
@@ -150,17 +150,19 @@ Native output requires a kernel with working framebuffer mapping and VSync suppo
 
 The UI layout remains 640×240 or 640×288. Interlaced video uses all 640×480 or 640×576 pixels. Letterboxing and shared overlays are centered in that full framebuffer. Original/Zoom, subtitles, captions, pause, and seeking retain their normal controls.
 
-Both progressive and interlaced MPlayer output use page flipping to avoid writing into the displayed video frame. MPlayer prepares a back page before its presentation deadline, then submits the flip at that deadline. A kernel field counter prevents reuse while a flip is pending. Paused redraws use the same ownership rules. The loading indicator clears on the first presented frame, not while a frame is merely being prepared.
+Starting with v1.6.1, both progressive and interlaced MPlayer output use page flipping to avoid writing into the displayed video frame. MPlayer prepares a back page before its presentation deadline, then submits the flip at that deadline. A kernel field counter prevents reuse while a flip is pending. Paused redraws use the same ownership rules. The loading indicator clears on the first presented frame, not while a frame is merely being prepared.
 
 For 480i Live TV, Jellyfin and Plex conversion is capped at 30000/1001 fps. Progressive NTSC uses 30 fps and PAL uses 25 fps. Slower sources are not forced to those rates. The player retains audio-clock correction and does not force playback speed. Interlaced output does not recover source fields lost during conversion or add 50/60 fps transcoding. Film-rate material can retain normal 3:2 cadence, and thin detail can show interline flicker.
 
 ## How I test display changes
 
-I test on a MiSTer Multisystem 2 with a consumer 4:3 CRT and an HDMI monitor. CRT checks include 240p and 480i, using RGB through a 9-pin Retrovision cable and composite through a Super Video Custard. HDMI checks use 720p and 1080p output with automatic aspect handling and the default framebuffer limits. The latest composite check included 480i video playback.
+I test on a MiSTer Multisystem 2 with a consumer 4:3 CRT and an HDMI monitor. CRT checks include 240p and 480i, using RGB through a 9-pin Retrovision cable, direct YPbPr through a VGA-to-component cable, and composite through a Super Video Custard. HDMI checks use 720p and 1080p output with automatic aspect handling and the default framebuffer limits. Composite checks included 480i video playback. Component checks included progressive and interlaced startup, playback, and return to Menu.
 
 I check carousel and list navigation, preview text, playback, seeking, controls shown and dismissed, picture changes, and return to the MiSTer menu. I compare Live TV motion and audio synchronization while choosing framebuffer defaults. A 640×360 framebuffer kept Live TV smoother than 960×540 on the tested HDMI setup. Jellyfin and Plex are both used for testing, including Jellyfin 12.
 
 Automated tests exercise display negotiation, aspect ratios, framebuffer presentation, overlay composition, progressive and interlaced page ownership, startup recovery, and decoder timing. Headless tests run locally and in CI. Release checks verify the packaged binaries, checksums, and updater recovery. An isolated MiSTer smoke check runs the packaged client and player without changing the installed application or display settings.
+
+PAL 288p/576i and SS1-specific analog paths need contributors with suitable hardware. ConsoleMode was tested on the maintainer’s MiSTer Multisystem 2. That does not establish SS1 compatibility. See [open hardware work](GAP_ANALYSIS.md#open-compatibility-work).
 
 The composite 240p setup uses `vga_scaler=1` and `composite_sync=0` in `[Menu]`, with a 15 kHz timing. Interlaced output uses the bundled core and its scoped settings. Hardware, adapters, and televisions vary, so reports should include the connection and relevant `MiSTer.ini` settings.
 

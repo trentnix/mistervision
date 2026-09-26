@@ -18,7 +18,10 @@ func TestMusicHierarchyAndAudioStream(t *testing.T) {
 		switch r.URL.Path {
 		case "/library/sections/2/all":
 			fmt.Fprint(w, `{"MediaContainer":{"totalSize":1,"Metadata":[{"ratingKey":"10","type":"artist","title":"Artist"}]}}`)
-		case "/library/metadata/10/children":
+		case "/library/all":
+			if q := r.URL.Query(); q.Get("type") != "9" || q.Get("artist.id") != "10" {
+				t.Error("album search lost its artist filter")
+			}
 			fmt.Fprint(w, `{"MediaContainer":{"totalSize":1,"Metadata":[{"ratingKey":"11","type":"album","title":"Album","parentTitle":"Artist"}]}}`)
 		case "/library/metadata/11/children", "/library/metadata/12":
 			fmt.Fprint(w, `{"MediaContainer":{"totalSize":1,"Metadata":[{"ratingKey":"12","type":"track","title":"Track","grandparentTitle":"Artist","parentTitle":"Album","duration":60000,"Media":[{"Part":[{"id":8,"key":"/library/parts/8/file.mp3"}]}]}]}}`)
@@ -37,7 +40,11 @@ func TestMusicHierarchyAndAudioStream(t *testing.T) {
 		}
 	})
 	for _, step := range []struct{ id, kind string }{{"library:2", "MusicArtist"}, {"10", "MusicAlbum"}, {"11", "Audio"}} {
-		page, err := c.List(t.Context(), media.Location{ParentID: step.id, Collection: "music"}, 0, 64)
+		location := media.Location{Kind: "items", ParentID: step.id, Collection: "music"}
+		if step.kind == "MusicAlbum" {
+			location.Kind = "albums"
+		}
+		page, err := c.List(t.Context(), location, 0, 64)
 		if err != nil || len(page.Items) != 1 || page.Items[0].Type != step.kind {
 			t.Fatalf("%s: %+v %v", step.id, page, err)
 		}
@@ -130,5 +137,34 @@ func TestAudioRejectsUnsupportedSources(t *testing.T) {
 				t.Fatalf("unsafe audio source: %v", err)
 			}
 		})
+	}
+}
+
+// Artists with only compilations can have no children. Artists with ordinary
+// albums can also have incomplete children, so an empty-result fallback is insufficient.
+func TestArtistAlbumsIncludeAllReleasesAcrossPages(t *testing.T) {
+	c := testClient(t, func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		if r.URL.Path != "/library/all" || q.Get("type") != "9" || q.Get("artist.id") != "72191" || q.Get("sort") != "titleSort:asc" || q.Get("X-Plex-Container-Size") != "1" {
+			t.Errorf("incorrect artist album query: %s", r.URL.Path)
+			http.Error(w, "unexpected request", http.StatusBadRequest)
+			return
+		}
+		start, _ := strconv.Atoi(q.Get("X-Plex-Container-Start"))
+		albums := []string{"Compilation", "EP", "Studio album"}
+		if start < 0 || start >= len(albums) {
+			t.Errorf("unexpected offset %d", start)
+			return
+		}
+		fmt.Fprintf(w, `{"MediaContainer":{"offset":%d,"totalSize":3,"Metadata":[{"ratingKey":"%d","type":"album","title":%q}]}}`, start, start+1, albums[start])
+	})
+	for i, name := range []string{"Compilation", "EP", "Studio album"} {
+		page, err := c.List(t.Context(), media.Location{Kind: "albums", ParentID: "72191"}, i, 1)
+		if err != nil || len(page.Items) != 1 || page.Items[0].Name != name || page.TotalRecordCount == nil || *page.TotalRecordCount != 3 {
+			t.Fatalf("page %d: %+v, %v", i, page, err)
+		}
+	}
+	if _, err := c.List(t.Context(), media.Location{Kind: "albums", ParentID: "bad/id"}, 0, 1); err == nil {
+		t.Fatal("invalid artist ID accepted")
 	}
 }

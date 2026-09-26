@@ -8,7 +8,7 @@ MiSTerVision is a Jellyfin and Plex client for MiSTer FPGA, designed for CRT tel
 
 Both providers share browsing and playback controls, server discovery, and saved connection switching. Jellyfin can switch saved Quick Connect users. Plex supports Home profiles with avatars and PIN entry. About also lets you forget a Jellyfin user or sign out of Plex on this device.
 
-My goal is a great media experience on CRTs. I use a consumer 4:3 CRT television for everyday testing, including RGB and composite connections. I also test HDMI output. I have tested both server providers, including Jellyfin 12.
+My goal is a great media experience on CRTs. I use a consumer 4:3 CRT television for everyday testing, including RGB, YPbPr component, and composite connections. I also test HDMI output. I have tested both server providers, including Jellyfin 12.
 
 ## Run on MiSTer
 
@@ -88,7 +88,7 @@ The included core loads automatically. The normal menu returns on exit. Set `int
 
 Use an HDMI timing supported by your display. Keep `display.interlaced` off, `display.aspect_ratio` on `"auto"`, and framebuffer limits at their defaults. See the [HDMI settings example](docs/GO_DISPLAY.md#hdmi-output).
 
-At 720p or 1080p HDMI timing, MiSTerVision uses a 640×360 framebuffer. MiSTer’s hardware scaler enlarges it to the HDMI output resolution. This framebuffer serves the entire application, including browsing and playback. The carousel background fills widescreen displays. Browsing controls, text, and playback overlays keep a centered 4:3 layout. Video uses the screen’s aspect without stretching the source.
+At 720p or 1080p HDMI timing, MiSTerVision uses a 640×360 framebuffer. MiSTer’s hardware scaler enlarges it to the HDMI output resolution. This framebuffer serves the entire application, including browsing and playback. Backgrounds fill widescreen displays throughout the interface, and the carousel shows more neighboring libraries across the full width. Other foreground content and playback overlays keep a centered 4:3 layout. Video uses the screen’s aspect without stretching the source.
 
 #### If the picture or playback is wrong
 
@@ -173,7 +173,7 @@ Connection and application settings live in **`settings.json`**, normally `/medi
 | `background` | Generated carousel mosaics and item artwork on lists. `image` selects one custom background. | [Background](docs/GO_CONFIGURATION.md#browsing-background) |
 | `display` | `interlaced: false`, `aspect_ratio: "auto"`, framebuffer ceiling 640×480. Keep these defaults for initial use. | [Display](docs/GO_DISPLAY.md) |
 | `input` | Built-in controller mappings and button labels. Profiles override matching devices. | [Input](docs/GO_INPUT.md) |
-| `music_visuals` | Music playback appearance only. `default_background: "Starfield"`. Missing optional Toasty sprites are omitted. | [Music visuals](docs/GO_MUSIC.md) |
+| `music_visuals` | Music playback appearance only. Artwork first, then `default_background: "Starfield"` when no backdrop is available. Manual choices persist until exit. Missing optional Toasty sprites are omitted. | [Music visuals](docs/GO_MUSIC.md) |
 | `diagnostics` | Off. Legacy `DEBUGLOG` applies only without a `server` section. Path: `debug.log`. Limit: 1 MiB per file. | [Diagnostics](docs/GO_DIAGNOSTICS.md) |
 
 Existing installations can retain legacy settings or [migrate them into one file](docs/GO_CONFIGURATION.md#migration). Migration preserves the original files. Invalid connection settings stop startup, while recoverable UI settings use the defaults documented in the [configuration guide](docs/GO_CONFIGURATION.md#application-settings).
@@ -190,7 +190,7 @@ To use one custom image on the carousel and browsing lists, set `background.imag
 }
 ```
 
-Place the image in the same directory, or use an absolute path. PNG and JPEG are supported, up to 4 MiB and 2048 pixels in either dimension. A 4:3 image fits best. The client crops and dims it to keep the interface readable. Restart to apply changes. An omitted or empty `image` keeps the normal artwork.
+Place the image in the same directory, or use an absolute path. PNG and JPEG are supported, up to 4 MiB and 2048 pixels in either dimension. Use an image that suits your display’s 4:3 or 16:9 proportions. The client crops it to fill the display and dims it to keep the interface readable. Restart to apply changes. An omitted or empty `image` keeps the normal artwork.
 
 The client checks the file contents, not its extension. A video, text file, unsupported image format, or corrupt image is rejected. Missing or invalid image files fall back to the normal artwork with a brief on-screen notice. With diagnostics enabled, the fallback also records a `configuration.fallback` event. Startup continues.
 
@@ -233,7 +233,7 @@ Search, automatic photo slideshows, and photo zoom are not implemented. Plex rel
 See the [Jellyfin and Plex gap analysis](docs/GAP_ANALYSIS.md) for missing features, current limitations, and intentional exclusions.
 
 - **Broader controller support:** Testing more controllers, recognizing controller families, and showing their button labels automatically are potential future improvements. Other controllers may need a custom input profile today.
-- **PAL 288p/576i and direct MiSTer YPbPr validation:** Someone with suitable hardware will need to test these output paths. I do not have that hardware. Tested analog paths include RGB through a Retrovision YPbPr cable and Super Video Custard composite. Those do not validate MiSTer’s direct YPbPr mode.
+- **PAL 288p/576i validation:** Someone with PAL hardware will need to validate output. My hardware testing covers NTSC CRT output, including direct YPbPr component, and HDMI. See [tested display configurations](docs/GO_DISPLAY.md#how-i-test-display-changes).
 - **Zaparoo DDR integration:** Deferred until I have a way to test it. Zaparoo is not required for the supported interlaced output.
 - **MiSTer background-music hardware validation:** Suspension and restoration are implemented and covered by automated tests. Testing with the actual add-on is deferred because I do not use it. This is separate from music played through Jellyfin or Plex.
 
@@ -249,7 +249,7 @@ See the [documentation index](docs/README.md) for all guides and current limits.
 
 ## Screenshots
 
-These images show the v1.4.0 interface. Browsing captures come from the desktop harness. Setup previews use example names, addresses, approval codes, and a sample avatar. Controller and keyboard hints follow the active input device.
+These older captures show the v1.4.0 interface. v1.6.0 adds full-width widescreen backgrounds and carousel navigation, plus a revised music layout. Browsing captures come from the desktop harness. Setup previews use example names, addresses, approval codes, and a sample avatar. Controller and keyboard hints follow the active input device.
 
 ![MiSTerVision library carousel](docs/images/screenshots/home-carousel.png)
 
