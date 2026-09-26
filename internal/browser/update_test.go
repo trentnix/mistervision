@@ -232,7 +232,7 @@ func TestUpdateExitThroughBrowser(t *testing.T) {
 			finished := false
 			installedAt := time.Time{}
 			renderer := &updateTestRenderer{Renderer: rendering.NewRenderer()}
-			started := false
+			started, quitSent := false, false
 			renderer.inspect = func(scene rendering.Scene) {
 				if scene.About.Checked && !started {
 					started = true
@@ -248,7 +248,10 @@ func TestUpdateExitThroughBrowser(t *testing.T) {
 					// Ordinary navigation must not erase the success message.
 					keys <- control.Event{Action: control.Back}
 				}
-				if tc.installErr != nil && !errors.Is(tc.installErr, update.ErrRecovery) && scene.About.Message != "" {
+				if !quitSent && tc.installErr != nil && !errors.Is(tc.installErr, update.ErrRecovery) && scene.About.Message != "" {
+					// Rendering can repeat before input is consumed. Queue one Quit
+					// so this callback cannot fill and block its own event channel.
+					quitSent = true
 					keys <- control.Event{Action: control.Quit}
 				}
 			}
