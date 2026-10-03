@@ -53,8 +53,15 @@ func (s *browserSession) dispatchKey(key control.Action) bool {
 		s.controller.state.HideControls()
 		return s.setPaused(!s.wantsPause())
 	}
-	if playing && !s.controller.picker.visible && menuDirection(key) {
-		key = control.ToggleControls
+	if playing && !s.controller.picker.visible {
+		switch key {
+		case control.Up, control.Down:
+			key = control.ToggleControls
+		case control.Previous:
+			key = control.SeekBackward
+		case control.Next:
+			key = control.SeekForward
+		}
 	}
 	if !playing {
 		// Shoulder keys retain their existing page navigation outside playback.
@@ -74,6 +81,21 @@ func (s *browserSession) dispatchKey(key control.Action) bool {
 		}
 		if s.model.MusicQueueActive() {
 			return s.handleMusicKey(key)
+		}
+		if !s.controller.picker.visible && (key == control.TrackPrevious || key == control.TrackNext) {
+			direction := 1
+			if key == control.TrackPrevious {
+				direction = -1
+			}
+			if s.playbackQueue.active {
+				return s.moveQueue(direction, false)
+			}
+			if s.playlistPlayback() {
+				s.media.nextTrack = direction
+				s.navigateMedia(direction)
+				return true
+			}
+			return false
 		}
 		s.controller.Key(key, time.Now())
 		if !s.controller.running {

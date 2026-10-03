@@ -59,8 +59,6 @@ func (d *device) labels(keys [96]byte) control.Labels {
 				}
 				if axis := d.axes[code]; axis != nil {
 					binding = axis.binding
-				} else if d.triggers[code] != nil {
-					binding = d.triggers[code].binding
 				} else if code == 16 && d.hats[0] {
 					binding = Axis{Negative: control.Previous, Positive: control.Next}
 				} else if code == 17 && d.hats[1] {

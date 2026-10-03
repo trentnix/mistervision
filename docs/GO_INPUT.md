@@ -12,6 +12,8 @@ The default controller layout follows MiSTer: B selects, plays, or pauses and A 
 
 Omitted bindings retain defaults. An empty action disables one binding. `replace: true` clears all inherited bindings first, so a replacement profile must provide every needed action. Buttons use decimal Linux `EV_KEY` codes, which depend on the driver rather than the printed controller labels.
 
+The example below keeps track changes on the shoulders and adds seeking on configured trigger axes. Use it only if the measured input codes match your controller.
+
 ```json
 {
   "input": {
@@ -92,7 +94,7 @@ MiSTerVision does not include a button-identification tool. If `evtest` is unava
 
 `axes` maps decimal Linux `EV_ABS` codes. The driver supplies each range. An empty axis object disables that axis.
 
-Gamepads use the left stick for navigation by default: axis `0` selects left/right, and axis `1` selects up/down. A direction activates at 40% travel and releases below 25%, preventing small stick movements from navigating. Held directions use the same acceleration as the D-pad. Explicit axis bindings override these defaults, and `replace: true` removes them. The right stick is unmapped unless configured.
+Gamepads use the left stick for navigation by default: axis `0` selects left/right, and axis `1` selects up/down. A direction activates at 40% travel and releases below 25%, preventing small stick movements from navigating. Held directions use the same acceleration as the D-pad. Explicit axis bindings override these defaults, and `replace: true` removes them. The right stick and triggers are unmapped unless configured. Drivers can use the same axis codes for different physical inputs. Verify each input before adding an axis binding.
 
 | `rest` | Input | Allowed directions |
 | --- | --- | --- |
@@ -107,8 +109,8 @@ Gamepads use the left stick for navigation by default: axis `0` selects left/rig
 | Action | Meaning |
 | --- | --- |
 | `up`, `down` | Select rows. Toggle controls during video/music. |
-| `previous`, `next` | Change home cards, jump list screens, or navigate photos. Toggle controls during video/music. |
-| `track-previous`, `track-next` | Change music tracks. Navigate list screens/photos outside playback. |
+| `previous`, `next` | Change home cards, jump list screens, or navigate photos. Seek during video/music playback. |
+| `track-previous`, `track-next` | Change music tracks or queued videos. Navigate list screens/photos outside playback. |
 | `seek-backward`, `seek-forward` | Seek music by 10 seconds or recorded video by 30 seconds. Ignored for Live TV. |
 | `open` | Open a selection, apply a choice, or pause/resume. |
 | `back` | Return, dismiss, cancel, or stop playback. |
@@ -117,9 +119,9 @@ Gamepads use the left stick for navigation by default: axis `0` selects left/rig
 | `retry` | Retry or refresh the current request. |
 | `quit` | Exit the application. |
 
-Context determines the action. In video options, directions navigate tabs/rows and seek inputs adjust client-text subtitle timing. Applying a successful choice dismisses the picker. See [video options](GO_PLAYBACK.md#video-options).
+Context determines the action. In video options, directions navigate tabs/rows. Shoulder buttons and explicit seek bindings adjust client-text subtitle timing. Applying a successful choice dismisses the picker. See [video options](GO_PLAYBACK.md#video-options).
 
-Held navigation starts repeating after 350 ms, uses six 110 ms intervals, then accelerates to 45 ms. Held seeks repeat every 250 ms after 350 ms. Menu toggles and track changes act once per press. Supporting terminals report presses, repeats, and releases through the Kitty keyboard protocol. Legacy terminal input cannot distinguish held repeats from repeated presses.
+Held navigation starts repeating after 350 ms, uses six 110 ms intervals, then accelerates to 45 ms. Directional seeks act once per press. Explicit seek bindings repeat every 250 ms after 350 ms. Menu toggles and track changes act once per press. Supporting terminals report presses, repeats, and releases through the Kitty keyboard protocol. Legacy terminal input cannot distinguish held repeats from repeated presses.
 
 [`control.Action`](../internal/input/control/action.go) defines and validates semantic actions. The input readers own physical mapping and repeat timing. Renderers receive resolved labels and perform no device or configuration I/O.
 

@@ -1,6 +1,6 @@
 # Music and visual backgrounds
 
-Selecting a track within an album starts album playback and advances in order, including across pages. Shoulders or brackets change tracks immediately. Triggers or J/L seek ten seconds. Any direction toggles controls. Open pauses/resumes without instructions, and Back returns to the track list. See [playback controls](GO_PLAYBACK.md#playback-controls).
+Selecting a track within an album starts album playback and advances in order, including across pages. Shoulder buttons or brackets change tracks immediately. Left/Right or J/L seek ten seconds. Up/Down toggles controls. Open pauses/resumes without instructions, and Back returns to the track list. See [playback controls](GO_PLAYBACK.md#playback-controls).
 
 ## Whole-library shuffle
 

@@ -137,7 +137,7 @@ Keyboard controls:
 
 - Up and Down select an item.
 - B, Enter, or X opens a library, folder, or item summary. On a video details screen, B starts or resumes playback.
-- During playback, any arrow toggles the menu. J/L seeks backward/forward by 30 seconds for video or 10 seconds for music. Brackets or Page Up/Page Down change music tracks. B/Enter pauses or resumes without showing controls. A/Escape stops playback. Keep focus in Ghostty when using a separate video window.
+- During playback, Up/Down toggles controls. Left/Right or J/L seeks backward/forward by 30 seconds for video or 10 seconds for music. Brackets or Page Up/Page Down change tracks or queued videos. B/Enter pauses or resumes without showing controls. A/Escape stops playback. Keep focus in Ghostty when using a separate video window.
 - Inline video and controllable music require libmpv. Separate-window video requires `ffplay`. See [the playback guide](../../docs/GO_PLAYBACK.md). The mock-server demo provides browsing data, not playable media.
 - A, Escape, Backspace, or Z goes back or cancels loading.
 - Left and Right move between home cards. In lists, Left and Right or Page Up and Page Down jump one screen.

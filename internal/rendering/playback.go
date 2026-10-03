@@ -4,6 +4,8 @@ package rendering
 // mutable shared state or output-specific information. Tracks points to a new,
 // immutable menu snapshot that later controller events cannot change.
 type PlaybackPresentation struct {
+	// QueueNavigation permits previous/next entries in the current playback queue.
+	QueueNavigation bool
 	TracksAvailable bool
 	Tracks          *TrackMenu
 	Subtitle        string

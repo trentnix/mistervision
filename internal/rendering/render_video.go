@@ -79,7 +79,10 @@ func renderVideoOverlayOn(c *ui.Canvas, p PlaybackPresentation, now time.Time, l
 	bottom := h - 8 - sy
 	hints := playbackHints(labels, p.Paused)
 	if p.Seekable {
-		hints = append([]controlHint{hint(labels, control.SeekBackward, "-30s"), hint(labels, control.SeekForward, "+30s")}, hints...)
+		hints = append([]controlHint{hint(labels, control.Previous, "-30s"), hint(labels, control.Next, "+30s")}, hints...)
+	}
+	if p.QueueNavigation {
+		hints = append(hints, hint(labels, control.TrackPrevious, "Previous"), hint(labels, control.TrackNext, "Next"))
 	}
 	if p.TracksAvailable {
 		hints = append(hints, hint(labels, control.Select, "Options"))

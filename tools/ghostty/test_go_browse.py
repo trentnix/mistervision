@@ -402,7 +402,7 @@ class BrowseIntegrationTests(BrowserFixture):
         initial_stream = next(r for r in self.requests
                               if urlparse(r).path == "/Videos/movie-tricky-0/stream")
         initial_session = parse_qs(urlparse(initial_stream).query)["playSessionId"][0]
-        self.key(b"ll")
+        self.key(b"\x1b[C\x1b[C")  # Right seeks even with controls hidden.
         deadline = time.monotonic() + 5
         while not any(path == "/Sessions/Playing/Progress" and body.get("IsPaused") and
                       body.get("PlaySessionId") == initial_session for path, body in self.reports):
@@ -865,7 +865,7 @@ class BrowseIntegrationTests(BrowserFixture):
             self.assertEqual(self.read_frame()[220 * 640 * 4:], footer)
         self.key(b"b")
         time.sleep(0.1)
-        self.key(b"]")  # Hidden controls must not consume navigation.
+        self.key(b"]")  # Shoulder-equivalent track input works with hidden controls.
         self.wait_request("/Audio/artist-000-album0-t02/stream", static="true")
         self.key(b"]")  # The next move must also take one press.
         self.wait_request("/Audio/artist-000-album0-t03/stream", static="true")

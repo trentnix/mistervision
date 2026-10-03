@@ -31,9 +31,9 @@ MiSTer's MPlayer retains an 8 MiB read-ahead cache. Recorded video prefills 20% 
 
 | Action | Xbox controller | Keyboard |
 | --- | --- | --- |
-| Show/hide controls | Any D-pad or left-stick direction | Any arrow |
-| Seek backward/forward | LT / RT | J / L |
-| Previous/next music track | LB / RB | [ / ] or Page Up / Page Down |
+| Show/hide controls | D-pad or left-stick Up/Down | Up / Down |
+| Seek backward/forward | D-pad or left-stick Left/Right | Left / Right or J / L |
+| Previous/next music track or queued video | LB / RB | [ / ] or Page Up / Page Down |
 | Pause/resume | B | Enter or B |
 | Stop and return | A | Escape or A |
 | Video options / music background | Select | Tab |
@@ -42,7 +42,7 @@ MiSTer's MPlayer retains an 8 MiB read-ahead cache. Recorded video prefills 20% 
 
 Changing items with Next or Previous starts playback even if the previous item was paused. An explicit Pause after requesting the change is retained while the next item loads.
 
-Held seeks repeat after 350 ms, then every 250 ms. Video steps are 30 seconds and music steps are 10 seconds. Live TV does not seek. Shoulders have no action during video.
+Directional seeks act once per press. Explicit seek bindings, including J/L, repeat after 350 ms, then every 250 ms. Video steps are 30 seconds and music steps are 10 seconds. Live TV does not seek. Previous/next video requires a playlist or playback queue. Triggers are unassigned by default and can be configured through an input profile.
 
 On an unwatched resumable video's details screen, Open resumes and SELECT/Tab restarts from zero. Restart is a selection-screen action, not an in-playback control. [Photos](GO_BROWSING.md#photos) retain Left/Right navigation and Up for controls. See [music](GO_MUSIC.md) for album queues and shuffle.
 
@@ -72,7 +72,7 @@ Audio lists Server default plus selectable server tracks. Subtitles includes Off
 
 MiSTer and inline Ghostty download text subtitles as SubRip and draw them through the shared overlay. Switching downloadable text tracks or Off normally needs no decoder restart. Plex embedded tracks require server burn-in and reload, while Plex sidecar text uses the shared overlay. A failed download keeps the previous text. FFplay requests server burn-in for text too, because shared overlay pixels cannot reach its separate window.
 
-Client text uses the shared [Unicode caption renderer](GO_RENDERING.md#text-coverage), with font fallback, bidirectional layout, shaping, and up to three outlined lines. Complex ASS styling and positioned signs are not reproduced. With a text track selected in the Subtitles tab, LT/RT or J/L adjusts timing in 0.1-second steps within ±10 seconds. Timing changes last for the current playback session. Server-burned subtitles can be cropped by Zoom and have no client timing control.
+Client text uses the shared [Unicode caption renderer](GO_RENDERING.md#text-coverage), with font fallback, bidirectional layout, shaping, and up to three outlined lines. Complex ASS styling and positioned signs are not reproduced. With a text track selected in the Subtitles tab, LB/RB or J/L adjusts timing in 0.1-second steps within ±10 seconds. Timing changes last for the current playback session. Server-burned subtitles can be cropped by Zoom and have no client timing control.
 
 ### Remembered choices
 

@@ -18,7 +18,7 @@ func advertised(codes ...uint16) [96]byte {
 
 func TestLabelsFollowEffectiveBindings(t *testing.T) {
 	config := Config{Profiles: []Profile{{Match: "Pad", Buttons: map[uint16]control.Action{310: control.SeekBackward, 311: control.SeekForward, 305: "", 307: control.Open}, ButtonLabels: map[uint16]string{310: "L1", 311: "R1", 307: "Square"}}}}
-	d := device{name: "Pad", bindings: config.bindings("Pad"), triggers: map[uint16]*mappedAxis{2: newMappedAxis(defaultTriggerBinding(2), 0, 255), 5: newMappedAxis(defaultTriggerBinding(5), 0, 255)}}
+	d := device{name: "Pad", bindings: config.bindings("Pad")}
 	labels := d.labels(advertised(304, 305, 307, 310, 311))
 	if labels.Name(control.SeekBackward) != "L1" || labels.Name(control.SeekForward) != "R1" || labels.Name(control.Open) != "Square" || labels.Name(control.Back) != "A" {
 		t.Fatal(labels)
@@ -37,7 +37,7 @@ func TestLabelsFollowEffectiveBindings(t *testing.T) {
 
 func TestLabelsRespectReplaceAndAxisNames(t *testing.T) {
 	axis := Axis{Rest: "minimum", Positive: control.SeekForward}
-	d := device{name: "Pad", bindings: Profile{Replace: true, Axes: map[uint16]Axis{4: axis}, AxisLabels: map[uint16]AxisLabels{4: {Positive: "R2"}}}, axes: map[uint16]*mappedAxis{4: newMappedAxis(axis, 0, 255)}, triggers: map[uint16]*mappedAxis{2: newMappedAxis(defaultTriggerBinding(2), 0, 255)}}
+	d := device{name: "Pad", bindings: Profile{Replace: true, Axes: map[uint16]Axis{4: axis}, AxisLabels: map[uint16]AxisLabels{4: {Positive: "R2"}}}, axes: map[uint16]*mappedAxis{4: newMappedAxis(axis, 0, 255)}}
 	labels := d.labels(advertised(304, 305, 310, 311))
 	if len(labels) != 1 || labels.Name(control.SeekForward) != "R2" {
 		t.Fatal(labels)
@@ -56,9 +56,9 @@ func TestLabelsUseKeyboardAndControllerNames(t *testing.T) {
 			t.Errorf("%s: %s", action, labels.Name(action))
 		}
 	}
-	pad := device{name: "Xbox", triggers: map[uint16]*mappedAxis{2: newMappedAxis(defaultTriggerBinding(2), 0, 255), 5: newMappedAxis(defaultTriggerBinding(5), 0, 255)}, hats: [2]bool{true, true}}
+	pad := device{name: "Xbox", hats: [2]bool{true, true}}
 	labels = pad.labels(advertised(304, 305, 310, 311, 314, 315))
-	for action, want := range map[control.Action]string{control.Open: "B", control.Back: "A", control.Select: "Select", control.About: "Start", control.TrackPrevious: "LB", control.TrackNext: "RB", control.SeekBackward: "LT", control.SeekForward: "RT", control.Up: "Up"} {
+	for action, want := range map[control.Action]string{control.Open: "B", control.Back: "A", control.Select: "Select", control.About: "Start", control.TrackPrevious: "LB", control.TrackNext: "RB", control.SeekBackward: "", control.SeekForward: "", control.Up: "Up"} {
 		if labels.Name(action) != want {
 			t.Errorf("%s: %s", action, labels.Name(action))
 		}

@@ -28,7 +28,6 @@ type device struct {
 	fd       int
 	name     string
 	held     map[uint16]control.Action
-	triggers map[uint16]*mappedAxis
 	bindings Profile
 	axes     map[uint16]*mappedAxis
 	hats     [2]bool
@@ -87,10 +86,10 @@ func action(name string, kind, code uint16, value int32) control.Action {
 		return control.TrackPrevious // LB, Page Up, [
 	case 311, 109, 27:
 		return control.TrackNext // RB, Page Down, ]
-	case 312, 36:
-		return control.SeekBackward // Digital LT, J
-	case 313, 38:
-		return control.SeekForward // Digital RT, L
+	case 36:
+		return control.SeekBackward // J
+	case 38:
+		return control.SeekForward // L
 	case 305, 28, 45, 48:
 		return control.Open // Xbox B (BTN_EAST), Enter, X, B
 	case 304, 1, 158, 14, 44, 30:
@@ -210,7 +209,7 @@ func openDevices(devices map[string]*device, config Config, log *diagnostics.Log
 			syscall.Close(fd)
 			continue
 		}
-		devices[path] = &device{fd: fd, name: strings.TrimRight(string(name[:]), "\x00"), held: make(map[uint16]control.Action), triggers: discoverTriggers(fd)}
+		devices[path] = &device{fd: fd, name: strings.TrimRight(string(name[:]), "\x00"), held: make(map[uint16]control.Action)}
 		devices[path].configure(config)
 		if log != nil {
 			d := devices[path]
@@ -220,7 +219,7 @@ func openDevices(devices map[string]*device, config Config, log *diagnostics.Log
 				}
 				return r
 			}, strings.ToValidUTF8(d.name, "?"))
-			log.Record("input.device", slog.String("node", filepath.Base(path)), slog.String("name", name), slog.Bool("virtual", d.name == "MiSTer virtual input"), slog.Bool("replace_bindings", d.bindings.Replace), slog.Int("mapped_buttons", len(d.bindings.Buttons)), slog.Int("mapped_axes", len(d.axes)), slog.Int("triggers", len(d.triggers)))
+			log.Record("input.device", slog.String("node", filepath.Base(path)), slog.String("name", name), slog.Bool("virtual", d.name == "MiSTer virtual input"), slog.Bool("replace_bindings", d.bindings.Replace), slog.Int("mapped_buttons", len(d.bindings.Buttons)), slog.Int("mapped_axes", len(d.axes)))
 		}
 	}
 }

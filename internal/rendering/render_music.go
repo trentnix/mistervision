@@ -25,7 +25,7 @@ func (p *screenPainter) music() {
 	}
 	rows := controlRows(w, []controlHint{
 		hint(s.Controls, control.TrackPrevious, "Previous"), hint(s.Controls, control.TrackNext, "Next"),
-		hint(s.Controls, control.SeekBackward, "-10s"), hint(s.Controls, control.SeekForward, "+10s"),
+		hint(s.Controls, control.Previous, "-10s"), hint(s.Controls, control.Next, "+10s"),
 	}, actions)
 	// Use the bottom safe area when controls are hidden. Reserve their space
 	// only while the listener has opened the controls overlay.
