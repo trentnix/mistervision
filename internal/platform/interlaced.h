@@ -1,4 +1,4 @@
-// MiSTer interlaced scanout control. Main must be stopped before these calls.
+// MiSTer scanout control. Main must be stopped before these calls.
 // Register protocol follows the C client's framebuffer adapter (CC BY-NC 4.0).
 // Copyright © 2026 Pudding Studio. Modifications copyright © 2026 trentnix.
 #include <time.h>

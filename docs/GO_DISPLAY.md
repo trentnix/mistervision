@@ -4,7 +4,7 @@ The default keeps MiSTer's current display, normally 240p for NTSC or 288p for P
 
 ## Choose an output
 
-Install the application package and `display.interlaced: false`. This keeps the current MiSTer display mode. The package includes everything needed to enable interlacing later. Its name does not force 240p or select a connector.
+Install the application package and set `display.interlaced` to `false`. This keeps the current MiSTer display mode. The package includes everything needed to enable interlacing later. Its name does not force 240p or select a connector.
 
 | Connection | Start here |
 | --- | --- |
@@ -78,7 +78,7 @@ Simultaneous display therefore requires both displays to accept the output timin
 
 ## HDMI framebuffer scaling
 
-On non-CRT framebuffers, the client asks Main to reduce the framebuffer while the FPGA scaler enlarges it across the existing output. HDMI timing stays unchanged. The default ceiling is 640×480. Both 1280×720 and 1920×1080 signals use a 640×360 framebuffer, with a centered 4:3 browsing viewport. Video fills the screen according to `display.aspect_ratio`. Overlays retain their proportions within a centered 4:3 area. Native 640×240, 640×288, 640×480, and 640×576 CRT rasters keep their existing paths, including full-height interlaced playback.
+On non-CRT framebuffers, the client asks Main to reduce the framebuffer while the FPGA scaler enlarges it across the existing output. HDMI timing stays unchanged. The default ceiling is 640×480. Both 1280×720 and 1920×1080 signals use a 640×360 framebuffer, with a centered 4:3 browsing viewport. Video fills the screen according to `display.aspect_ratio`. Overlays retain their proportions within a centered 4:3 area. Native 640×240, 640×288, 640×480, and 640×576 CRT rasters keep their dimensions, including full-height interlaced playback.
 
 Keep the default limits for initial use. On the maintainer’s 1080p HDMI setup, Live TV dropped frames with a 960×540 framebuffer and became much smoother after returning to 640×360. The smaller framebuffer also produced satisfactory browsing and overlay quality. One framebuffer size applies to the entire application, including browsing and all video playback.
 
@@ -94,7 +94,7 @@ Higher limits are experimental. They increase work for both browsing and playbac
 
 The application does not yet switch to a smaller framebuffer when video starts. Keep the defaults unless you have checked Live TV, movies, overlays, and audio sync at the larger size.
 
-The session first probes at one-quarter signal dimensions to avoid allocating a full HD or larger framebuffer. It uses Main's [`fb_cmd0` command](https://github.com/MiSTer-devel/Main_MiSTer/blob/master/video.cpp), waits for the kernel to acknowledge the dimensions, and starts the client only afterward. It writes no persistent display configuration. Exit restores Menu. A supervisor stops orphaned decoders before restoring hardware after a failure. Use the matching updated application and MPlayer together.
+The session first probes at one-quarter signal dimensions to avoid allocating a full HD or larger framebuffer. It uses Main's [`fb_cmd0` command](https://github.com/MiSTer-devel/Main_MiSTer/blob/master/video.cpp), waits for the kernel to acknowledge the dimensions, and starts the client only afterward. It writes no persistent display configuration. After configuration, the supervisor pauses Main so the client and player have exclusive access to the FPGA scanout controls. Progressive CRT output uses the same supervisor without changing framebuffer dimensions. Exit resumes Main and restores Menu. A supervisor stops orphaned decoders before restoring hardware after a failure. Use the matching updated application and MPlayer together.
 
 Local tests cover negotiation, rejected settings, native picture geometry, real desktop decoding, and overlay composition. On a MiSTer connected through an HDMI connection to a monitor, 720p and 1080p tests both negotiated a 640×360 framebuffer and played video successfully. The 1080p test also had responsive menus. Playback diagnostics showed steady position advancement, which does not measure visible frame drops. Returning from the 720p application restored the 1280×720 menu framebuffer. The higher 960×540 limit was tested and reduced Live TV smoothness. The scaler does not fix an analog route that cannot display the Linux framebuffer. Do not infer connector type or CRT capability from framebuffer dimensions alone.
 
@@ -104,7 +104,7 @@ Diagnostics also report `browsing_width` and `browsing_height`, independently of
 
 `display.aspect_ratio` accepts `"auto"` (the default), `"4:3"`, or `"16:9"`. Invalid values stop startup. Auto preserves the four native CRT rasters as 4:3 and infers other outputs from framebuffer proportions. Explicit values describe the screen even when its pixels are not square. They do not change signal timing. Restart after changing the setting.
 
-The output layer and decoder receive the same resolved aspect. Native MPlayer and the desktop libmpv helper fit Original to the full video canvas and crop Zoom to the screen aspect. On widescreen displays, the carousel background fills the display. Mosaics and custom images preserve their proportions and crop to fill. The carousel foreground and other browsing screens stay in the centered 4:3 viewport. The presenter keeps those layouts at 4:3, and the output backend centers overlays without stretching their text. A separate full-output presentation method lets video fill the framebuffer without changing browsing geometry. The native filter keeps its four-argument legacy fit for older invocations. Updated clients pass a fifth display-aspect argument and require the matching player.
+The output layer and decoder receive the same resolved aspect. Native MPlayer and the desktop libmpv helper fit Original to the full video canvas and crop Zoom to the screen aspect. On widescreen displays, all UI backgrounds fill the display, including About, connections, sign-in, updates, browsing, and music playback. Mosaics, custom backgrounds, and movie, show, season, and music artwork preserve their proportions and crop to fill. Titles, posters, metadata, and controls stay in the centered 4:3 viewport. The presenter keeps those layouts at 4:3, and the output backend centers overlays without stretching their text. A separate full-output presentation method lets video fill the framebuffer without changing browsing geometry. The native filter keeps its four-argument legacy fit for older invocations. Updated clients pass a fifth display-aspect argument and require the matching player.
 
 Widescreen fitting has local native-filter and real desktop-decoder coverage. Auto aspect has also been visually checked on the maintainer’s CRT and HDMI display.
 
@@ -138,7 +138,7 @@ The application writes `Interlaced.mgl` beside `settings.json` and a marked `[Mi
 
 Existing sections remain intact. An unmarked section with the same name causes an error instead of being overwritten. Disabling interlacing leaves the isolated section available for later use.
 
-The scoped section inherits RGB/component and PAL/NTSC settings. RGB enables `direct_video` and `forced_scandoubler`. Component enables `direct_video` without forcing the scandoubler. These rules do not establish compatibility with every cable or DAC.
+The scoped section inherits RGB/component and PAL/NTSC settings. Both RGB and component enable `direct_video` and `forced_scandoubler` in this section. The bundled core requires the double-height framebuffer selected by `forced_scandoubler` and converts that timing to 15 kHz interlaced output. These rules do not establish compatibility with every cable or DAC.
 
 The supervisor waits for the expected framebuffer, manages console modes, and pauses Main while the child owns hardware. It stops orphaned decoders, restores consoles, and resumes Main. The Scripts launcher reloads the menu after successful exit in either mode. The supervisor reloads the menu after a failure, before an update restart, or when run without the launcher.
 
@@ -150,17 +150,19 @@ Native output requires a kernel with working framebuffer mapping and VSync suppo
 
 The UI layout remains 640×240 or 640×288. Interlaced video uses all 640×480 or 640×576 pixels. Letterboxing and shared overlays are centered in that full framebuffer. Original/Zoom, subtitles, captions, pause, and seeking retain their normal controls.
 
-MPlayer prepares a back page before its presentation deadline, then submits the flip at that deadline. A kernel field counter prevents reuse while a flip is pending. Paused redraws use the same ownership rules. The loading indicator clears on the first presented frame, not while a frame is merely being prepared.
+Starting with v1.6.1, both progressive and interlaced MPlayer output use page flipping to avoid writing into the displayed video frame. MPlayer prepares a back page before its presentation deadline, then submits the flip at that deadline. A kernel field counter prevents reuse while a flip is pending. Paused redraws use the same ownership rules. The loading indicator clears on the first presented frame, not while a frame is merely being prepared.
 
 For 480i Live TV, Jellyfin and Plex conversion is capped at 30000/1001 fps. Progressive NTSC uses 30 fps and PAL uses 25 fps. Slower sources are not forced to those rates. The player retains audio-clock correction and does not force playback speed. Interlaced output does not recover source fields lost during conversion or add 50/60 fps transcoding. Film-rate material can retain normal 3:2 cadence, and thin detail can show interline flicker.
 
 ## How I test display changes
 
-I test on a MiSTer Multisystem 2 with a consumer 4:3 CRT and an HDMI monitor. CRT checks include 240p and 480i, using RGB through a 9-pin Retrovision cable and composite through a Super Video Custard. HDMI checks use 720p and 1080p output with automatic aspect handling and the default framebuffer limits. The latest composite check included 480i video playback.
+I test on a MiSTer Multisystem 2 with a consumer 4:3 CRT and an HDMI monitor. CRT checks include 240p and 480i, using RGB through a 9-pin Retrovision cable, direct YPbPr through a VGA-to-component cable, and composite through a Super Video Custard. HDMI checks use 720p and 1080p output with automatic aspect handling and the default framebuffer limits. Composite checks included 480i video playback. Component checks included progressive and interlaced startup, playback, and return to Menu.
 
 I check carousel and list navigation, preview text, playback, seeking, controls shown and dismissed, picture changes, and return to the MiSTer menu. I compare Live TV motion and audio synchronization while choosing framebuffer defaults. A 640×360 framebuffer kept Live TV smoother than 960×540 on the tested HDMI setup. Jellyfin and Plex are both used for testing, including Jellyfin 12.
 
-Automated tests exercise display negotiation, aspect ratios, framebuffer presentation, overlay composition, interlaced page ownership, startup recovery, and decoder timing. Headless tests run locally and in CI. Release checks verify the packaged binaries, checksums, and updater recovery. An isolated MiSTer smoke check runs the packaged client and player without changing the installed application or display settings.
+Automated tests exercise display negotiation, aspect ratios, framebuffer presentation, overlay composition, progressive and interlaced page ownership, startup recovery, and decoder timing. Headless tests run locally and in CI. Release checks verify the packaged binaries, checksums, and updater recovery. An isolated MiSTer smoke check runs the packaged client and player without changing the installed application or display settings.
+
+PAL 288p/576i and SS1-specific analog paths need contributors with suitable hardware. ConsoleMode was tested on the maintainer’s MiSTer Multisystem 2. That does not establish SS1 compatibility. See [open hardware work](GAP_ANALYSIS.md#open-compatibility-work).
 
 The composite 240p setup uses `vga_scaler=1` and `composite_sync=0` in `[Menu]`, with a 15 kHz timing. Interlaced output uses the bundled core and its scoped settings. Hardware, adapters, and televisions vary, so reports should include the connection and relevant `MiSTer.ini` settings.
 

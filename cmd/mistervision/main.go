@@ -44,14 +44,14 @@ func run() (err error) {
 	interlaced := os.Getenv(displaymode.ActiveEnv) == "1"
 	mode, loadErr := displaymode.Parse(source.Section("display"))
 	consoleMode := o.headless == "" && !interlaced && displaymode.ConsoleModeActive()
-	var scaled bool
+	var progressive bool
 	if o.headless == "" && !interlaced && !mode.Interlaced && !consoleMode && loadErr == nil {
 		loadErr = displaymode.ValidateMenuFramebuffer()
 		if loadErr == nil {
-			scaled, loadErr = displaymode.NeedsFramebufferScaling()
+			progressive = displaymode.NeedsProgressiveSupervisor()
 		}
 	}
-	supervised := o.headless == "" && !interlaced && (mode.Interlaced || scaled || consoleMode) && loadErr == nil
+	supervised := o.headless == "" && !interlaced && (mode.Interlaced || progressive || consoleMode) && loadErr == nil
 	trace, err := openStartupDiagnostics(o, supervised, source)
 	if err != nil {
 		return err
@@ -72,9 +72,9 @@ func run() (err error) {
 		trace.phase("interlaced-supervisor")
 		return displaymode.Run(ctx, filepath.Dir(source.Path), os.Args[1:])
 	}
-	if scaled {
+	if progressive {
 		trace.phase("framebuffer-supervisor")
-		return displaymode.RunScaled(ctx, mode, os.Args[1:])
+		return displaymode.RunProgressive(ctx, mode, os.Args[1:])
 	}
 	trace.phase("display-open")
 	d, err := platform.Open(platform.Options{Device: o.device, Headless: o.headless, Output: o.output, AspectRatio: mode.AspectRatio})

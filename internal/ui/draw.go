@@ -152,9 +152,9 @@ func (c *Canvas) Image(im image.Image, x, y, w, h int) {
 
 // Blit scales the complete image into a box and blends its source alpha into
 // the destination colors. It leaves destination alpha unchanged and is intended
-// for opaque canvases. Nil images and nonpositive boxes are no-ops.
+// for opaque canvases. Nil or empty images and nonpositive boxes are no-ops.
 func (c *Canvas) Blit(im image.Image, x, y, w, h int) {
-	if im == nil || w <= 0 || h <= 0 {
+	if im == nil || w <= 0 || h <= 0 || im.Bounds().Empty() {
 		return
 	}
 	if c.raster != nil {

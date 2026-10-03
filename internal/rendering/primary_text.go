@@ -139,7 +139,14 @@ func (p *screenPainter) listText(text string, width, size int, color uint32, bol
 	dense := p.cache.text.denseImage(key, sx, sy)
 	entry := p.cache.text.images[key]
 	if entry.denseTrimmed == nil {
-		entry.denseTrimmed = dense.SubImage(trimmed.Bounds()).(*ui.RasterImage)
+		// Logical ink bounds are not exact after independently rasterizing at
+		// another density. Crop the source by its own ink so glyph bottoms survive.
+		source := dense.Source
+		ink := textInk(source)
+		if !ink.Empty() {
+			source = source.SubImage(image.Rect(source.Rect.Min.X, ink.Min.Y, source.Rect.Max.X, ink.Max.Y)).(*image.RGBA)
+		}
+		entry.denseTrimmed = &ui.RasterImage{RGBA: trimmed, Source: source}
 	}
 	return entry.denseTrimmed
 }

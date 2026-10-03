@@ -12,14 +12,9 @@ import (
 
 // videoQuery applies one transcode policy to recorded video and tuner streams.
 // Callers add their source offset and ownership identifiers before negotiation.
-func (c *Client) videoQuery(path, session string, fps float64) (url.Values, media.StreamLimits) {
-	width, height, bitrate := c.Config.MaxWidth, c.Config.MaxHeight, c.Config.VideoBitrate
-	if width == 0 {
-		width = 720
-	}
-	if height == 0 {
-		height = 576
-	}
+func (c *Client) videoQuery(path, session string, fps float64, size media.VideoSize) (url.Values, media.StreamLimits) {
+	size = size.Capped(c.Config.MaxWidth, c.Config.MaxHeight)
+	width, height, bitrate := size.Width, size.Height, c.Config.VideoBitrate
 	if bitrate == 0 {
 		bitrate = 12000000
 	}

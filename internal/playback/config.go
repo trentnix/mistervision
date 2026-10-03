@@ -2,6 +2,7 @@ package playback
 
 import (
 	"mistervision/internal/diagnostics"
+	"mistervision/internal/media"
 	"mistervision/internal/player"
 )
 
@@ -23,6 +24,9 @@ type Config struct {
 	AudioDecoder player.Decoder
 	// Timing supplies stream cadence independently of decoder or window dimensions.
 	Timing Timing
+	// VideoSize requests server resizing for the playback raster. It is independent
+	// of browsing resolution, source selection, and local picture mode.
+	VideoSize media.VideoSize
 }
 
 // Timing supplies the target's server-side frame-rate policy. The zero value

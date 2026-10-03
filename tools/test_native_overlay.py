@@ -104,7 +104,9 @@ int main(void) {
             # Include the whole function, including its internal comments.
             start = text.index('static void overlay_frame')
             end = text.index('\n}\n', start) + 3
-            adapter = text[text.index('#define OVERLAY_FILE'):end].replace('"/sys/module/MiSTer_fb/parameters/frame_count"', '"field_count"')
+            helper_start = text.index('static int pageflip_enabled(void)')
+            helper = text[helper_start:text.index('\n}\n', helper_start)+3]
+            adapter = helper + text[text.index('#define OVERLAY_FILE'):end].replace('"/sys/module/MiSTer_fb/parameters/frame_count"', '"field_count"')
             start = text.index('static int draw_slice(')
             end = text.index('\n}\n', start) + 3
             draw = text[start:end]
@@ -224,7 +226,9 @@ int main(int argc, char **argv) {
                 return text[start:end]
             start = text.index('#define OVERLAY_FILE')
             end = text.index('\n}\n', text.index('static void overlay_frame')) + 3
-            adapter = text[start:end].replace('"/tmp/mistervision_overlay"', '"overlay"').replace('"/sys/module/MiSTer_fb/parameters/frame_count"', '"field_count"')
+            helper_start = text.index('static int pageflip_enabled(void)')
+            helper = text[helper_start:text.index('\n}\n', helper_start)+3]
+            adapter = helper + text[start:end].replace('"/tmp/mistervision_overlay"', '"overlay"').replace('"/sys/module/MiSTer_fb/parameters/frame_count"', '"field_count"')
             program = r'''
 #include <stdint.h>
 #include <stdlib.h>
@@ -274,7 +278,17 @@ static void vo_draw_text(int w, int h, int unused) {}
 int main(int argc, char **argv) {
     FILE *counter = fopen("field_count", "w"); assert(counter); fclose(counter);
     int interlaced = argc > 1;
-    if(interlaced) setenv("MISTERVISION_INTERLACED","1",1);
+    if(interlaced) setenv(!strcmp(argv[1],"progressive") ? "MISTERVISION_PROGRESSIVE_PAGEFLIP" : "MISTERVISION_INTERLACED","1",1);
+    if (argc > 2) fb_yres = atoi(argv[2]);
+    if (!interlaced) {
+        const char *invalid[] = {"", "0", "true", "11", "1 "};
+        for (unsigned i=0; i<sizeof(invalid)/sizeof(*invalid); i++) {
+            setenv("MISTERVISION_PROGRESSIVE_PAGEFLIP",invalid[i],1);
+            assert(!pageflip_enabled());
+        }
+        unsetenv("MISTERVISION_PROGRESSIVE_PAGEFLIP");
+    }
+    assert(pageflip_enabled() == interlaced);
     assert(overlay_prepare());
     for(int i=1;i<=100;i++) {
         memset(go_video,i,32);
@@ -301,7 +315,7 @@ int main(int argc, char **argv) {
 '''
             (work / 'test.c').write_text(program)
             subprocess.run(['cc', '-fsanitize=undefined', str(work / 'test.c'), '-o', str(work / 'test')], check=True)
-            for args in ([], ['interlaced']):
+            for args in ([], ['interlaced'], ['progressive', '240'], ['progressive', '360'], ['progressive', '720']):
                 result = subprocess.run([str(work / 'test'), *args], cwd=work, check=True, capture_output=True, text=True)
                 self.assertEqual(result.stdout, 'ANS_VIDEO_STARTED=true\n')
 

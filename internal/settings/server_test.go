@@ -13,11 +13,11 @@ func TestServerDefaultsAndOverrides(t *testing.T) {
 		t.Fatal("absent section must retain legacy configuration")
 	}
 	c, err := ParseServer(Section{Data: []byte(`{"url":" https://server/jellyfin/ "}`)})
-	if err != nil || c.Provider != "jellyfin" || c.URL != "https://server/jellyfin" || c.InsecureTLS || c.Transcode != (Transcode{720, 576, 12000000}) {
+	if err != nil || c.Provider != "jellyfin" || c.URL != "https://server/jellyfin" || c.InsecureTLS || c.Transcode != (Transcode{0, 0, 12000000}) {
 		t.Fatalf("defaults: %+v %v", c, err)
 	}
 	c, err = ParseServer(Section{Data: []byte(`{"provider":"plex","url":"http://server:32400","insecure_tls":true,"transcode":{"max_width":640,"video_bitrate":8000000}}`)})
-	if err != nil || !c.InsecureTLS || c.Transcode != (Transcode{640, 576, 8000000}) {
+	if err != nil || !c.InsecureTLS || c.Transcode != (Transcode{640, 0, 8000000}) {
 		t.Fatalf("override: %+v %v", c, err)
 	}
 }
@@ -26,7 +26,7 @@ func TestInvalidServerCannotFallbackOrExposeValues(t *testing.T) {
 	for _, body := range []string{
 		`null`, `{}`, `{"provider":"private-value","url":"http://server"}`, `{"url":"http://private-value@server"}`, `{"url":"https://server?token=private-value"}`,
 		`{"url":"ftp://private-value"}`, `{"url":"https://server#private-value"}`, `{"url":"https://server","private-value":true}`,
-		`{"url":"https://server","insecure_tls":"private-value"}`, `{"url":"https://server","transcode":{"max_width":0}}`,
+		`{"url":"https://server","insecure_tls":"private-value"}`, `{"url":"https://server","transcode":{"max_width":-1}}`,
 		`{"url":"https://server","transcode":{"max_height":1081}}`, `{"url":"https://server","transcode":{"video_bitrate":50000001}}`,
 		`{"url":"https://server","jellyfin":{"api_key":"private-value"}}`, `{"url":"https://server","jellyfin":{"username":"private-value"}}`,
 		`{"provider":"plex","url":"https://server","jellyfin":{"api_key":"private-value","username":"someone"}}`,
@@ -176,5 +176,14 @@ func TestMigratingDebugLogCannotOverflowDiagnostics(t *testing.T) {
 	after, _ := os.ReadFile(path)
 	if string(after) != original {
 		t.Fatal("failed migration changed original")
+	}
+}
+
+func TestAutomaticTranscodeDimensions(t *testing.T) {
+	for _, body := range []string{`{"url":"http://server","transcode":{}}`, `{"url":"http://server","transcode":{"max_width":0,"max_height":0}}`} {
+		c, err := ParseServer(Section{Data: []byte(body)})
+		if err != nil || c.Transcode.MaxWidth != 0 || c.Transcode.MaxHeight != 0 {
+			t.Fatalf("automatic size: %+v %v", c, err)
+		}
 	}
 }

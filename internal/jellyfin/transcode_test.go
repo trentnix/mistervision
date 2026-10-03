@@ -150,7 +150,7 @@ func TestCustomLiveProfileReachesNegotiationAndStream(t *testing.T) {
 	}))
 	defer server.Close()
 	c := NewClient(Config{Server: server.URL, Transcode: TranscodeProfile{640, 480, 8000000}}, Session{Token: "private"})
-	live, err := c.openLive(context.Background(), "channel", rate)
+	live, err := c.openLive(context.Background(), "channel", rate, media.VideoSize{})
 	if err != nil {
 		t.Fatal(err)
 	}

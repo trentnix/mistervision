@@ -8,10 +8,10 @@ import (
 // renderScene selects exactly one screen. Browsing screens share footer and
 // notice drawing. Media and connection screens supply their own chrome.
 func renderScene(c *ui.Canvas, cache *sceneCache, s Scene, anim Animation) []byte {
-	return renderSceneWithMusic(c, cache, s, anim, nil)
+	return renderSceneWithMusic(c, cache, s, anim, nil, nil)
 }
 
-func renderSceneWithMusic(c *ui.Canvas, cache *sceneCache, s Scene, anim Animation, music *musicviz.Renderer) []byte {
+func renderSceneWithMusic(c *ui.Canvas, cache *sceneCache, s Scene, anim Animation, music *musicviz.Renderer, background *wideBackdrop) []byte {
 	if cache == nil {
 		cache = &sceneCache{}
 	}
@@ -24,7 +24,7 @@ func renderSceneWithMusic(c *ui.Canvas, cache *sceneCache, s Scene, anim Animati
 	}
 	sy := safeY(c.Width, c.Height)
 	p := screenPainter{
-		canvas: c, cache: cache, scene: s, animation: anim, visualizer: music,
+		canvas: c, cache: cache, scene: s, animation: anim, visualizer: music, background: background,
 		width: c.Width, height: c.Height, safeY: sy, bottom: c.Height - 8 - sy,
 	}
 	switch {

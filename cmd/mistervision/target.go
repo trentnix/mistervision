@@ -6,6 +6,7 @@ import (
 	"mistervision/internal/diagnostics"
 	"mistervision/internal/input/control"
 	"mistervision/internal/input/evdev"
+	"mistervision/internal/media"
 	"mistervision/internal/platform"
 	"mistervision/internal/playback"
 	"mistervision/internal/sound"
@@ -51,4 +52,13 @@ func crtPlaybackTiming(height int) playback.Timing {
 	default:
 		return playback.Timing{}
 	}
+}
+
+// targetTranscodeSize uses the playback framebuffer, never the browsing raster.
+func targetTranscodeSize(o launchOptions, g platform.Geometry) media.VideoSize {
+	aspect := o.displayAspect
+	if aspect == 0 {
+		aspect = platform.ResolveAspect("auto", g.OutputWidth, g.OutputHeight)
+	}
+	return playback.TranscodeSize(g.OutputWidth, g.OutputHeight, aspect)
 }

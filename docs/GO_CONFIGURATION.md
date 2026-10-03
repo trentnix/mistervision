@@ -13,8 +13,8 @@ Both providers use the same connection fields:
     "url": "http://your-jellyfin-server:8096",
     "insecure_tls": false,
     "transcode": {
-      "max_width": 720,
-      "max_height": 576,
+      "max_width": 0,
+      "max_height": 0,
       "video_bitrate": 12000000
     }
   }
@@ -28,8 +28,8 @@ For Plex, set `provider` to `plex` and `url` to your Plex Media Server address, 
 | `provider` | `jellyfin`. Accepts `jellyfin` or `plex`. |
 | `url` | Required when `server` exists. HTTP, HTTPS, and reverse-proxy base paths are supported. No embedded credentials, query, or fragment. |
 | `insecure_tls` | `false`. True disables certificate verification only for the configured media server, including its Jellyfin remote connection. Plex account linking always verifies certificates. |
-| `transcode.max_width` | 720. Range: 160–1920 pixels. |
-| `transcode.max_height` | 576. Range: 120–1080 pixels. |
+| `transcode.max_width` | Automatic (`0` or omitted). Optional cap: 160–1920 pixels. |
+| `transcode.max_height` | Automatic (`0` or omitted). Optional cap: 120–1080 pixels. |
 | `transcode.video_bitrate` | 12,000,000 bits/sec. Range: 100,000–50,000,000. |
 | `jellyfin` | Omitted. Optional `api_key` and `username` must be supplied together. Rejected for Plex. |
 
@@ -132,7 +132,7 @@ Omitted fields use defaults. Preserve other sections when editing. Explicit empt
 | `background` | Carousel mosaics and item artwork. | Restore normal artwork with a notice. |
 | [`display`](GO_DISPLAY.md) | `interlaced: false`, `aspect_ratio: "auto"`, `framebuffer_max_width: 640`, `framebuffer_max_height: 480`. Limits apply to non-CRT framebuffer scaling. | Invalid settings stop startup. |
 | [`input`](GO_INPUT.md) | Built-in device bindings. | Invalid settings stop startup. |
-| [`music_visuals`](GO_MUSIC.md) | Starfield, stereo meters enabled. | Invalid settings disable backgrounds. Missing custom assets leave music playable. |
+| [`music_visuals`](GO_MUSIC.md) | Artwork when available, otherwise Starfield. Manual background choices last until exit. No separate audio meters. | Invalid settings disable backgrounds. Missing custom assets leave music playable. |
 | [`diagnostics`](GO_DIAGNOSTICS.md) | Off. Legacy `DEBUGLOG` applies only without `server`. `debug.log`, 1 MiB per file. | Disable logging and report the failure. |
 
 Title, carousel option, and sound failures recover independently. An invalid entire `ui` object restores the title, enables nonempty collections and playlists, and disables sounds.
@@ -164,7 +164,7 @@ Values must be booleans. A mistyped value or `null` falls back to `true`, shows 
 
 `background.image` selects one static image for the carousel and browsing lists. An omitted or empty value keeps mosaics and item artwork. Posters, details, About, setup, photos, and playback retain their own presentation.
 
-PNG and JPEG are supported, up to 4 MiB and 2048 pixels per axis. A 4:3 image fits best. The renderer preserves proportions, crops from the center, dims the image, and composites transparency over black. Relative paths resolve beside the settings file. Absolute paths also work.
+PNG and JPEG are supported, up to 4 MiB and 2048 pixels per axis. Use an image suited to your display’s 4:3 or 16:9 proportions. The renderer preserves proportions, crops from the center to fill the display, dims the image, and composites transparency over black. Relative paths resolve beside the settings file. Absolute paths also work.
 
 The client checks image contents, not the extension. Missing files, text, video, unsupported formats, and corrupt images fall back to normal artwork with a notice. The image decodes once at startup. Prepared pixels are cached, and hidden mosaic/backdrop downloads are skipped. Music backgrounds use `music_visuals` instead.
 
@@ -182,7 +182,7 @@ Relative image, music-asset, and log paths resolve beside the file that supplied
 
 When `settings.json` exists, omitted application sections use defaults rather than legacy JSON files. The absent `server` section is the compatibility exception: it permits `jellyfin.conf`. Legacy `-input-config`, `-sound-config`, `MISTERVISION_INPUT_CONFIG`, `MISTERVISION_SOUND_CONFIG`, and `MISTERVISION_MUSIC_CONFIG` overrides still replace their sections. Remove those overrides when adopting the shared file.
 
-The old top-level `sounds` and `music` sections remain aliases. Explicit `ui.navigation_sounds` and `music_visuals` take precedence as whole sections, even if empty or invalid. In music settings, `default_background` and `show_audio_meters` replace `default` and `meters`. Explicit current fields win, including null values that select their defaults.
+The old top-level `sounds` and `music` sections remain aliases. Explicit `ui.navigation_sounds` and `music_visuals` take precedence as whole sections, even if empty or invalid. In music settings, `default_background` replaces `default`. Explicit current fields win, including null values that select their defaults. The retired `show_audio_meters` setting and its `meters` alias are accepted but ignored.
 
 ## Migration
 

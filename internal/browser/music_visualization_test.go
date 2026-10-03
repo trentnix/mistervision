@@ -3,6 +3,7 @@ package browser
 import (
 	"encoding/json"
 	"fmt"
+	"image"
 	"os"
 	"path/filepath"
 	"strings"
@@ -112,5 +113,101 @@ func TestMusicFallbacksPreservePlayback(t *testing.T) {
 				t.Fatal("music fallback exposed private data")
 			}
 		})
+	}
+}
+
+// Artwork availability changes the cycle without changing the stored preference.
+func TestMusicArtworkBackgroundCycle(t *testing.T) {
+	s := testSession(t)
+	library, err := musicviz.Load(filepath.Join(t.TempDir(), "missing.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.music.library = library
+	s.music.index = library.Index(library.Config.Default)
+	s.music.loading = true // Keep asset workers out of selection tests.
+	art := image.NewRGBA(image.Rect(0, 0, 16, 9))
+	s.selection.current.artwork.Backdrop = art
+	s.selection.current.artwork.Primary = art
+	if got := s.music.backgroundIndex(true, true, false); got != musicviz.ArtworkBackground {
+		t.Fatal("artwork was not the initial background")
+	}
+	for i := range len(library.Config.Backgrounds) {
+		s.cycleMusicBackground()
+		if got := s.music.backgroundIndex(true, true, false); got != i {
+			t.Fatalf("cycle %d: got %d", i, got)
+		}
+	}
+	s.cycleMusicBackground()
+	if got := s.music.backgroundIndex(true, true, false); got != musicviz.ArtworkBackground {
+		t.Fatal("cycle did not return to artwork")
+	}
+	// Without either image, cycle from the default effect through each usable
+	// preset exactly once. No extra blank artwork slot or spinning disc appears.
+	s.selection.current.artwork.Backdrop = nil
+	s.selection.current.artwork.Primary = nil
+	seen := map[int]bool{}
+	for range len(library.Config.Backgrounds) - 1 {
+		s.cycleMusicBackground()
+		got := s.music.backgroundIndex(false, false, false)
+		if got < 0 || library.Config.Backgrounds[got].Type == "spinning" || seen[got] {
+			t.Fatalf("unavailable or duplicate option: %d", got)
+		}
+		seen[got] = true
+	}
+}
+
+func TestMusicBackgroundRemembersChoiceAcrossPlayback(t *testing.T) {
+	library, err := musicviz.Load(filepath.Join(t.TempDir(), "missing.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, preset := range library.Config.Backgrounds {
+		if preset.Type == "spinning" {
+			continue
+		}
+		m := musicPresentation{library: library, index: i, manual: true}
+		for _, available := range []bool{true, false, true} {
+			if got := m.backgroundIndex(available, available, false); got != i {
+				t.Fatalf("%s changed after stopping or selecting another song", preset.Name)
+			}
+		}
+		if got := m.backgroundIndex(false, false, true); got != i {
+			t.Fatal("pending artwork replaced a remembered effect")
+		}
+	}
+	m := musicPresentation{library: library, manual: true, backdrop: true}
+	if got := m.backgroundIndex(false, false, true); got != musicviz.ArtworkBackground {
+		t.Fatal("artwork loading flashed an effect")
+	}
+	if got := m.backgroundIndex(false, false, false); got != library.Index(library.Config.Default) {
+		t.Fatal("missing background did not use the default effect")
+	}
+	if got := m.backgroundIndex(true, false, false); got != musicviz.ArtworkBackground {
+		t.Fatal("fallback erased the artwork preference")
+	}
+}
+
+func TestMusicSpinningRequiresCoverNotBackdrop(t *testing.T) {
+	library, err := musicviz.Load(filepath.Join(t.TempDir(), "missing.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := musicPresentation{library: library, index: 0, manual: true}
+	if got := m.backgroundIndex(false, true, false); got != 0 {
+		t.Fatal("spinning with a cover incorrectly required a backdrop")
+	}
+	if got := m.backgroundIndex(true, false, false); got != musicviz.ArtworkBackground {
+		t.Fatal("missing cover did not fall back to available backdrop")
+	}
+	if got := m.backgroundIndex(false, false, false); got != library.Index(library.Config.Default) {
+		t.Fatal("missing cover did not fall back to default effect")
+	}
+	if got := m.backgroundIndex(true, true, false); got != 0 {
+		t.Fatal("fallback erased the spinning preference")
+	}
+	library.Config.Default = "Now Spinning"
+	if got := m.backgroundIndex(false, false, false); got < 0 || library.Config.Backgrounds[got].Type == "spinning" {
+		t.Fatal("unavailable configured default did not fall back safely")
 	}
 }

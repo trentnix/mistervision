@@ -112,9 +112,9 @@
      }
      go_output_fd = fd;
 +    const char *interlaced = getenv("MISTERVISION_INTERLACED");
-+    if (interlaced && !strcmp(interlaced, "1")) {
-+        if ((fb_yres != 480 && fb_yres != 576) || !pf_init()) {
-+            mp_msg(MSGT_VO, MSGL_ERR, "Cannot initialize interlaced page flipping\n");
++    if (pageflip_enabled()) {
++        if ((interlaced && !strcmp(interlaced, "1") && fb_yres != 480 && fb_yres != 576) || !pf_init()) {
++            mp_msg(MSGT_VO, MSGL_ERR, "Cannot initialize framebuffer page flipping\n");
 +            exit(1);
 +        }
 +        pf_field_fd = open("/sys/module/MiSTer_fb/parameters/frame_count", O_RDONLY);
@@ -211,8 +211,8 @@
      center = output;
 +    /* MPlayer calls draw_osd after filters and before its audio-clock wait.
 +     * vf_extra_flip also calls it for paused redraws and picture changes. */
-+    const char *interlaced = getenv("MISTERVISION_INTERLACED");
-+    if (interlaced && !strcmp(interlaced, "1")) prepare_frame();
++    /* Prepare both progressive and interlaced back pages before clock wait. */
++    if (pageflip_enabled()) prepare_frame();
  }
  
  static void uninit(void)

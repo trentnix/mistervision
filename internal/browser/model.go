@@ -280,6 +280,8 @@ func (m *Model) Key(key control.Action) *Request {
 			if item.SeriesID != "" {
 				next.Location.SeriesID = item.SeriesID
 			}
+		case item.Type == "MusicArtist":
+			next.Location.Kind = "albums"
 		case item.Type == "MusicAlbum":
 			next.Title = v.Title + " / " + item.Name
 		case item.IsFolder || item.Type == "Folder" || item.Type == "PhotoAlbum" || item.Type == "MusicArtist" || item.Type == "MusicAlbum" || item.Type == "BoxSet" || item.Type == "Playlist":

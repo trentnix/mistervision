@@ -17,12 +17,14 @@ func TestAudioExportStereoAndMalformed(t *testing.T) {
 	data := make([]byte, 8+16+8)
 	binary.LittleEndian.PutUint32(data, 2)
 	binary.LittleEndian.PutUint32(data[4:], 16)
+	// Counter bytes must never contribute to either audio channel.
+	binary.LittleEndian.PutUint64(data[8:], ^uint64(0))
 	for i := 0; i < 8; i++ {
 		v := uint16(16384)
 		if i >= 4 {
 			v = 8192
 		}
-		binary.LittleEndian.PutUint16(data[8+i*2:], v)
+		binary.LittleEndian.PutUint16(data[16+i*2:], v)
 	}
 	os.WriteFile(path, data, 0600)
 	levels := audioExport(path)

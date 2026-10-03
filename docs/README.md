@@ -1,6 +1,6 @@
 # Documentation
 
-Start with the [project README](../README.md) for installation and everyday use. These guides describe the current source, including discovery, connection switching, saved Jellyfin users, and Plex Home profiles.
+Start with the [project README](../README.md) for installation and everyday use. These guides describe the current source. The [gap analysis](GAP_ANALYSIS.md#fixes-in-v161) covers v1.6.1 and separates released fixes from pending experiments.
 
 | Guide | Contents |
 | --- | --- |
@@ -9,10 +9,10 @@ Start with the [project README](../README.md) for installation and everyday use.
 | [Display](GO_DISPLAY.md) | Progressive and interlaced output, supported core, recovery, and tested hardware. |
 | [Browsing](GO_BROWSING.md) | Sign-in, Continue Watching, library counts, Live TV guide information, photos, About, and artwork caches. |
 | [Plex](GO_PLEX.md) | Discovery, account linking, Home viewers and PINs, supported libraries, streaming, and Live TV. |
-| [Screenshots](SCREENSHOTS.md) | Current browsing and setup screens, plus instructions for regenerating previews. |
+| [Screenshots](SCREENSHOTS.md) | Versioned browsing and setup captures, plus instructions for regenerating previews. |
 | [Playback](GO_PLAYBACK.md) | Players, controls, seeking, subtitles, audio tracks, picture modes, and Live TV. |
 | [Input](GO_INPUT.md) | Controller profiles, axes, labels, and held-button behavior. |
-| [Music](GO_MUSIC.md) | Queues, shuffle, meters, and custom visual backgrounds. |
+| [Music](GO_MUSIC.md) | Queues, shuffle, track information, and custom visual backgrounds. |
 | [Remote control](GO_REMOTE.md) | Jellyfin commands, queue behavior, and the control interface. |
 | [Gap analysis](GAP_ANALYSIS.md) | Shared Jellyfin/Plex gaps, provider-specific limits, and intentional exclusions. |
 | [Diagnostics](GO_DIAGNOSTICS.md) | Logging, recovery events, privacy, and troubleshooting. |
@@ -29,6 +29,6 @@ Jellyfin Live TV audio-track selection is unavailable. Plex exposes alternate li
 
 The separate-window FFplay fallback has fewer controls than MiSTer and inline Ghostty. See [Plex limits](GO_PLEX.md#playback-and-limits) and the [playback guide](GO_PLAYBACK.md).
 
-PAL 288p/576i, direct MiSTer YPbPr output, and optional MiSTer background-music restoration need testing by someone with suitable hardware. Zaparoo DDR integration is not implemented. See [tested display scope](GO_DISPLAY.md#tested-scope) and [menu music](GO_PLAYBACK.md#mister-menu-music). An in-app screenshot command and exact reproduction of C music visualizers are outside the current scope.
+PAL 288p/576i and optional MiSTer background-music restoration need testing by someone with suitable hardware. Direct YPbPr component output has been tested at 240p and 480i. Zaparoo DDR integration is not implemented. See [tested display scope](GO_DISPLAY.md#how-i-test-display-changes) and [menu music](GO_PLAYBACK.md#mister-menu-music). An in-app screenshot command and exact reproduction of C music visualizers are outside the current scope.
 
 The original port plan and C hardware notes are preserved in Git history. They are not installation instructions for this client. The C reference is the [MiSTerFin integration repository](https://github.com/trentnix/MiSTerFin), branch `local-all-features`, starting at `19d99fa5f479692e45ea7b5dddc42e42fb1782a9`.

@@ -43,6 +43,8 @@ type StreamSource interface {
 // shared timebase and stream IDs into its own protocol. BurnSubtitle is -1 when
 // subtitles are disabled or rendered by the client.
 type VideoRequest struct {
+	// Size bounds square-pixel transcoded video before local display scaling.
+	Size         VideoSize
 	Item         Item
 	SessionID    string
 	StartTicks   int64
@@ -84,6 +86,8 @@ type Progress interface {
 // preceding preparation's Streams, or -1 to use the server default. Adapters
 // must resolve the index against fresh tuner metadata before selecting it.
 type LiveRequest struct {
+	// Size bounds square-pixel transcoded video, independently of tuner geometry.
+	Size         VideoSize
 	ChannelID    string
 	MaxFrameRate float64
 	AudioIndex   int

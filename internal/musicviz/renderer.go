@@ -2,11 +2,14 @@ package musicviz
 
 import (
 	"image"
-	"math"
 	"time"
 
 	"mistervision/internal/ui"
 )
+
+// ArtworkBackground identifies the server backdrop option supplied by the browser.
+// It updates audio levels without drawing a generated effect.
+const ArtworkBackground = -1
 
 // Frame supplies output-independent animation input. Levels are linear stereo
 // amplitudes in [0,1]. Artwork is immutable and borrowed during Draw.
@@ -14,6 +17,7 @@ type Frame struct {
 	Now           time.Time
 	Levels        [2]float64
 	Paused        bool
+	Stopped       bool // Clears audio levels and freezes the effect between playback sessions.
 	Artwork       image.Image
 	ArtworkBounds image.Rectangle
 }
@@ -24,7 +28,7 @@ type Effect interface {
 	Draw(*ui.Canvas, Frame, float64)
 }
 
-// Renderer owns the selected effect and meter smoothing on the render loop.
+// Renderer owns the selected effect and latest audio levels on the render loop.
 // Loading files and acquiring audio samples belong to other components.
 type Renderer struct {
 	library *Library
@@ -37,10 +41,13 @@ type Renderer struct {
 // Draw advances the selected background. Configuration changes replace effect
 // state. A long pause between frames never causes a large animation jump.
 func (r *Renderer) Draw(c *ui.Canvas, l *Library, index int, f Frame) {
-	if l == nil || index < 0 || index >= len(l.Config.Backgrounds) {
+	if l == nil || index < ArtworkBackground || index >= len(l.Config.Backgrounds) {
 		return
 	}
-	p := l.Config.Backgrounds[index]
+	p := Preset{Type: "none", Speed: 1}
+	if index != ArtworkBackground {
+		p = l.Config.Backgrounds[index]
+	}
 	if r.library != l || r.index != index || r.effect == nil {
 		r.library = l
 		r.index = index
@@ -49,42 +56,21 @@ func (r *Renderer) Draw(c *ui.Canvas, l *Library, index int, f Frame) {
 	}
 	dt := min(.1, max(0, f.Now.Sub(r.last).Seconds()))
 	r.last = f.Now
+	if f.Stopped {
+		dt = 0
+	}
 	for i, v := range f.Levels {
-		if f.Paused {
-			v = 0
+		if f.Paused || f.Stopped {
+			r.levels[i] = 0
+			continue
 		}
 		v = min(1, max(0, v))
-		rate := 12.
-		if v < r.levels[i] {
-			rate = 4
-		}
-		r.levels[i] += (v - r.levels[i]) * (1 - math.Exp(-dt*rate))
+		// The decoder already supplies RMS levels. Additional smoothing makes
+		// audio-reactive effects trail the sound, particularly when a note ends.
+		r.levels[i] = v
 	}
 	f.Levels = r.levels
 	r.effect.Draw(c, f, dt*p.Speed)
-}
-
-// Meters paints smoothed stereo levels with fixed green/yellow/red zones.
-func (r *Renderer) Meters(c *ui.Canvas, x, y, w int) {
-	for ch, level := range r.levels {
-		c.Text(x, y+ch*7, []string{"L", "R"}[ch], 0xaaaaaa, x+8)
-		c.Rect(x+16, y+ch*7, w-16, 4, 0x202830)
-		// A -48 dB floor keeps quiet passages visible without treating silence as sound.
-		amount := 0.
-		if level > 0 {
-			amount = max(0, 1+20*math.Log10(level)/48)
-		}
-		for bx := 0; bx < int(float64(w-16)*amount); bx += 6 {
-			color := uint32(0x40cc80)
-			if bx > (w-16)*7/10 {
-				color = 0xffd050
-			}
-			if bx > (w-16)*9/10 {
-				color = 0xff6050
-			}
-			c.Rect(x+16+bx, y+ch*7, 4, 4, color)
-		}
-	}
 }
 
 func newEffect(p Preset) Effect {

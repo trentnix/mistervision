@@ -12,7 +12,7 @@ import (
 // Returned pixels are borrowed until the next Render call.
 type RasterRenderer struct {
 	rasterWidth, rasterHeight int
-	wide                      *carouselBackdrop
+	wide                      *wideBackdrop
 	music                     musicviz.Renderer
 	captions                  caption.Renderer
 	canvas                    *ui.Canvas
@@ -34,14 +34,13 @@ func (r *RasterRenderer) Render(w, h int, s Scene) videoout.Frame {
 	}
 	r.prepare(w, h, rw, rh)
 	anim := r.animation.advance(s, s.listRows(w, h))
-	wide := r.wide != nil && s.Root && !s.ListMode && !s.Video && !s.Audio && !s.About.Visible && s.Setup.Kind == SetupHidden && s.Content.Detail == nil
+	wide := r.wide != nil && !s.Video && (s.About.Visible || s.Setup.Kind != SetupHidden || s.Content.Detail == nil || s.Content.Detail.Type != "Photo")
+	var background *wideBackdrop
 	if wide {
+		background = r.wide
 		r.wide.draw(r.canvas, s, anim)
-		// The backdrop is already painted. The carousel now draws only its foreground.
-		s.Background = nil
-		s.Artwork.Covers = nil
 	}
-	f := videoout.Frame{UIWidth: rw, UIHeight: rh, UI: renderSceneWithMusic(r.canvas, &r.cache, s, anim, &r.music), Video: s.Video}
+	f := videoout.Frame{UIWidth: rw, UIHeight: rh, UI: renderSceneWithMusic(r.canvas, &r.cache, s, anim, &r.music, background), Video: s.Video}
 	if s.Video {
 		r.overlay.Typeface = r.canvas.Typeface
 		clear(r.overlay.Pixels)

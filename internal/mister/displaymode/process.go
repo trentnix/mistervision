@@ -96,7 +96,8 @@ func findMain() (int, error) {
 			continue
 		}
 		name, _ := os.ReadFile(filepath.Join("/proc", entry.Name(), "comm"))
-		if strings.TrimSpace(string(name)) != "MiSTer" {
+		executable, _ := os.Readlink(filepath.Join("/proc", entry.Name(), "exe"))
+		if !isMainProcess(strings.TrimSpace(string(name)), executable) {
 			continue
 		}
 		status, _ := os.ReadFile(filepath.Join("/proc", entry.Name(), "status"))
@@ -130,4 +131,10 @@ func waitStopped(ctx context.Context, pid int) error {
 			return err
 		}
 	}
+}
+
+// isMainProcess recognizes the standard host and the reporter's Physical Disc
+// variant by exact executable path. A truncated process name alone is ambiguous.
+func isMainProcess(name, executable string) bool {
+	return name == "MiSTer" || executable == "/media/fat/MiSTer_Physical-CD"
 }

@@ -94,7 +94,7 @@ The browser must present or copy a renderer's frame before its next render call.
 
 On MiSTer, Go locks each loading presentation. MPlayer acquires the same advisory lock just before its first video frame and retains it until output teardown. Go then publishes overlays without writing video pixels. The lock file must remain in place so both processes use the same inode. `Acquire`/`Release` bracket decoder lifetime, while the backend handles the later first-frame handoff.
 
-MPlayer blends overlays into clean decoded pixels before framebuffer presentation. Paused refresh reuses the clean frame, so repeated overlays do not accumulate alpha or advance playback. Interlaced page preparation and flipping follow the ownership rules in the [display guide](GO_DISPLAY.md#picture-and-timing). Go and MPlayer must implement the same handoff protocol.
+MPlayer blends overlays into clean decoded pixels before framebuffer presentation. Paused refresh reuses the clean frame, so repeated overlays do not accumulate alpha or advance playback. Progressive and interlaced page preparation and flipping follow the ownership rules in the [display guide](GO_DISPLAY.md#picture-and-timing). Go and MPlayer must implement the same handoff protocol.
 
 The frame-file backend watches atomic decoder publications with inotify. Notifications coalesce and wake the shared loop through optional `FrameNotifier`. It never writes overlays into the clean decoder file. The harness watches completed Go output, uploads the next image, and swaps terminal placement in one synchronized update. Upload time counts toward its frame cap. Stalls skip expired slots instead of producing a catch-up burst.
 
@@ -131,7 +131,7 @@ flowchart LR
     Callbacks --> Driver
 ```
 
-[`playback.Config`](../internal/playback/config.go) holds reusable injected audio/video decoders, output height for stream selection, and preferences. [`playback.Request`](../internal/playback/request.go) holds one item's position, choices, controls, and callbacks. `WithPicture` creates request settings without mutating the shared decoder. A missing selected decoder fails before stream preparation.
+[`playback.Config`](../internal/playback/config.go) holds reusable injected audio/video decoders, explicit stream timing policy, and preferences. Decoder configuration owns output geometry. [`playback.Request`](../internal/playback/request.go) holds one item's position, choices, controls, and callbacks. `WithPicture` creates request settings without mutating the shared decoder. A missing selected decoder fails before stream preparation.
 
 [`player.Decoder`](../internal/player/player.go) owns validation, executable arguments, input transport, controls, and feedback parsing. Its implementations live in [`mplayer`](../internal/player/mplayer), [`pythonhelper`](../internal/player/pythonhelper), and [`ffplay`](../internal/player/ffplay). Shared playback imports none of them. Optional `PictureSetter`, `AudioSeeker`, and `LevelConfigurer` interfaces advertise supported capabilities.
 
@@ -159,7 +159,7 @@ Keep the launcher's two-core CPU affinity. Preserve MPlayer's dropped-frame time
 
 Disk reads, invalidation, and pruning stay on workers. Cache hits do not rewrite files. Concurrent processes do not coordinate their cache inventories. See [cache behavior](GO_BROWSING.md#persistent-artwork-cache).
 
-`RasterRenderer` caches prepared backdrops and carousel strips by immutable image identity and geometry. Dynamic drawing handles text, selection, clocks, and controls. Scrolling borrows a clipped canvas instead of copying a whole frame. Music effects own only animation state and drawing. Asset loading stays outside rendering.
+`RasterRenderer` caches prepared backdrops and carousel strips by immutable image identity and geometry. On widescreen displays, `wideBackdrop` prepares full-width backgrounds for all UI pages, including account setup, About, updates, browsing, and music playback, then composites the centered foreground without changing its layout. The carousel names extend into the side areas at the foreground’s pixel density, showing more neighboring libraries without enlarging the text or moving the selected library. Dynamic drawing handles text, selection, clocks, and controls. Scrolling borrows a clipped canvas instead of copying a whole frame. Music effects own only animation state and drawing. Asset loading stays outside rendering.
 
 [`internal/settings`](../internal/settings/settings.go) owns startup snapshots, UI schema, and shared compatibility/migration rules. Components validate their own values. [`sound.Feedback`](../internal/sound/sound.go) receives semantic browsing cues. The sound worker never blocks the UI, bounds pending cues, and releases ALSA before playback. Counted suspensions cover overlapping decoder replacements. Neither settings nor audio-device work belongs in drawing.
 

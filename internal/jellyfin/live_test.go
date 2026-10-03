@@ -11,6 +11,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"mistervision/internal/media"
 )
 
 func TestLiveProfileAndNegotiatedURL(t *testing.T) {
@@ -41,7 +43,7 @@ func TestLiveProfileAndNegotiatedURL(t *testing.T) {
 			}))
 			defer server.Close()
 			c := NewClient(Config{Server: server.URL}, Session{UserID: "user", Token: "private-token"})
-			live, err := c.openLive(context.Background(), "channel", tc.rate)
+			live, err := c.openLive(context.Background(), "channel", tc.rate, media.VideoSize{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -96,7 +98,7 @@ func TestLiveNegotiationReleasesTunerOnFailureOrCancel(t *testing.T) {
 			}))
 			defer server.Close()
 			c := NewClient(Config{Server: server.URL}, Session{})
-			if _, err := c.openLive(ctx, "channel", 30); err == nil {
+			if _, err := c.openLive(ctx, "channel", 30, media.VideoSize{}); err == nil {
 				t.Fatal("missing failure")
 			}
 			select {
@@ -118,7 +120,7 @@ func TestLiveRejectsInvalidFrameRateBeforeRequest(t *testing.T) {
 	defer server.Close()
 	c := NewClient(Config{Server: server.URL}, Session{})
 	for _, rate := range []float64{0, -1, math.NaN(), math.Inf(1), math.Inf(-1)} {
-		if _, err := c.openLive(context.Background(), "channel", rate); err == nil {
+		if _, err := c.openLive(context.Background(), "channel", rate, media.VideoSize{}); err == nil {
 			t.Errorf("accepted invalid frame-rate limit %v", rate)
 		}
 	}

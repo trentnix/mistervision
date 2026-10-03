@@ -30,11 +30,11 @@ func TestLivePreparationPreservesAudioChoice(t *testing.T) {
 			choices.explicit = &TrackOptions{Selection: media.TrackSelection{AudioIndex: index, SubtitleIndex: 9}, Picture: PictureZoom43}
 		}
 		offset := int64(90000000)
-		session, err := preparePlayback(t.Context(), backend, Config{Timing: Timing{LiveFrameRate: 30000.0 / 1001}}, Request{Item: media.Item{ID: "channel", Type: "TvChannel"}, StartTicks: &offset}, choices)
+		session, err := preparePlayback(t.Context(), backend, Config{VideoSize: media.VideoSize{Width: 320, Height: 240}, Timing: Timing{LiveFrameRate: 30000.0 / 1001}}, Request{Item: media.Item{ID: "channel", Type: "TvChannel"}, StartTicks: &offset}, choices)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if backend.request.ChannelID != "channel" || backend.request.AudioIndex != index || backend.request.MaxFrameRate != 30000.0/1001 {
+		if backend.request.Size != (media.VideoSize{Width: 320, Height: 240}) || backend.request.ChannelID != "channel" || backend.request.AudioIndex != index || backend.request.MaxFrameRate != 30000.0/1001 {
 			t.Fatalf("live request: %+v", backend.request)
 		}
 		if !session.tracks.LiveAudio || session.tracks.Selection.AudioIndex != index || session.tracks.Selection.SubtitleIndex != -1 || session.start != 0 || session.state.CanSeek == nil || *session.state.CanSeek {

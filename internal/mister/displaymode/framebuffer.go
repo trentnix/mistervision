@@ -12,6 +12,9 @@ import (
 )
 
 const scaledEnv = "MISTERVISION_SCALED_FRAMEBUFFER"
+
+// ProgressiveEnv marks a child whose supervisor has paused Main for scanout access.
+const ProgressiveEnv = "MISTERVISION_PROGRESSIVE_PAGEFLIP"
 const framebufferMode = "/sys/module/MiSTer_fb/parameters/mode"
 const framebufferRevision = "/sys/module/MiSTer_fb/parameters/res_count"
 
@@ -64,14 +67,10 @@ func (f framebufferControl) read() (int, int, error) {
 	return width, height, nil
 }
 
-// NeedsFramebufferScaling checks the current raster before any mapping. The
-// supervised child skips this check. CRT modes never enter the scaler session.
-func NeedsFramebufferScaling() (bool, error) {
-	if os.Getenv(scaledEnv) == "1" {
-		return false, nil
-	}
-	w, h, err := nativeFramebufferControl().read()
-	return err == nil && !crtFramebuffer(w, h), err
+// NeedsProgressiveSupervisor prevents recursive supervision. Progressive CRT
+// output needs the same exclusive scanout ownership as scaled HDMI output.
+func NeedsProgressiveSupervisor() bool {
+	return os.Getenv(scaledEnv) != "1"
 }
 
 func (f framebufferControl) setDivisor(ctx context.Context, div int) (int, int, error) {
@@ -104,10 +103,11 @@ func (f framebufferControl) waitChanged(ctx context.Context, revision []byte) er
 	}
 }
 
-// RunScaled supervises a non-CRT framebuffer session. Main sets both kernel and
-// FPGA dimensions without changing video timings or persistent configuration.
+// RunProgressive supervises progressive CRT and HDMI output. Main configures
+// non-CRT framebuffer dimensions, then pauses to give the child exclusive SPI
+// access for page flipping. CRT rasters and signal timings remain unchanged.
 // All children stop before restoring Menu, including after a client failure.
-func RunScaled(ctx context.Context, c Config, args []string) (err error) {
+func RunProgressive(ctx context.Context, c Config, args []string) (err error) {
 	lock, err := os.OpenFile("/tmp/mistervision-display.lock", os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
 		return err
@@ -121,8 +121,12 @@ func RunScaled(ctx context.Context, c Config, args []string) (err error) {
 		return errors.New("start scaled playback from the normal MiSTer menu")
 	}
 	owner := strconv.Itoa(os.Getpid())
+	var mainPID int
 	defer func() {
 		err = errors.Join(err, stopOrphans(owner))
+		if mainPID > 0 {
+			err = errors.Join(err, syscall.Kill(mainPID, syscall.SIGCONT))
+		}
 		if err == nil && os.Getenv(LauncherEnv) == "1" {
 			return
 		}
@@ -140,10 +144,26 @@ func RunScaled(ctx context.Context, c Config, args []string) (err error) {
 	}()
 	setup, cancel := context.WithTimeout(ctx, 8*time.Second)
 	defer cancel()
-	if err = nativeFramebufferControl().configure(setup, c); err != nil {
+	if err = nativeFramebufferControl().configureProgressive(setup, c); err != nil {
 		return err
 	}
-	return runChild(ctx, args, scaledEnv+"=1", ownerEnv+"="+owner)
+	mainPID, err = stopMain(setup)
+	if err != nil {
+		return err
+	}
+	return runChild(ctx, args, scaledEnv+"=1", ownerEnv+"="+owner, ProgressiveEnv+"=1")
+}
+
+// configureProgressive preserves CRT timing and honors configured HDMI limits.
+func (f framebufferControl) configureProgressive(ctx context.Context, c Config) error {
+	w, h, err := f.read()
+	if err != nil {
+		return err
+	}
+	if crtFramebuffer(w, h) {
+		return nil
+	}
+	return f.configure(ctx, c)
 }
 
 // configure waits for both Main and the kernel before a child can map pixels.

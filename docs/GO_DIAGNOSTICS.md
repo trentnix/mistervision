@@ -8,7 +8,7 @@ The shipped MiSTer launcher captures early errors without enabling application d
 
 During a run, `startup.log` and `startup.log.1` hold at most 64 KiB each. The last-failure copy holds at most 128 KiB. If the application hangs or the machine resets before the launcher records an exit, collect the rolling pair instead. Recent output is flushed at least once per second while the logger can write. An abrupt power loss can still lose filesystem buffers. If the installation directory cannot be written at startup, the launcher uses `/tmp/mistervision-startup.log` and `/tmp/mistervision-startup-error.log`. Those temporary files do not survive reboot.
 
-Review launcher logs before posting them. They capture raw process output, unlike the filtered application diagnostics below. Startup capture does not read settings or saved credentials. Logging failures do not prevent the application from running. The updated launcher can also capture failures from an installed v1.5.1 binary. Replace only `Scripts/MiSTerVision.sh` to use it with that release.
+Review launcher logs before posting them. They capture raw process output, unlike the filtered application diagnostics below. Startup capture does not read settings or saved credentials. Logging failures do not prevent the application from running. Automatic launcher capture is included starting with v1.5.2.
 
 ## Enable and collect logs
 
@@ -70,7 +70,7 @@ If picture or track choices disappear after restart, look for `playback.preferen
 
 Jellyfin metadata/artwork timings include buffered body reads. Its `/media-stream` event measures opening through response headers, not the whole stream. Its `/audio-stream` event includes one proxy request through completion. Plex labels ordinary API requests `/plex-request` and tune requests `/livetv/dvrs/:dvr/channels/:channel/tune`. Both omit private identifiers, and timing includes the buffered response body. GitHub release checks are outside the media-server request log.
 
-The MiSTer inventory reads numeric display settings from `/media/fat/MiSTer.ini`, preserving section identity. It does not resolve alternate INI files or prove active signal timing. Reads are bounded to 128 KiB and 64 setting events.
+The MiSTer inventory resolves the active INI profile and reads its allowed display settings, preserving known section identity. If profile resolution fails, it logs the failure instead of substituting Main. Recorded settings do not prove active signal timing. Reads are bounded to 128 KiB and 64 setting events.
 
 ## Configuration fallbacks
 

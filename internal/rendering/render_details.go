@@ -38,6 +38,10 @@ func (p *screenPainter) details() [][]controlHint {
 	hero := max(80, min(150, h-88)-extra)
 	full := max(h*3/4, hero)
 	cache.backdrop(c, art, true, nil, image.Rectangle{}, func(layer *ui.Canvas) {
+		if p.background != nil {
+			copy(layer.Pixels, c.Pixels)
+			return
+		}
 		layer.Rect(0, 0, w, full, 0x181818)
 		layer.Blit(art.Backdrop, 0, 0, w, full)
 		for y := 0; y < full; y++ {

@@ -33,3 +33,6 @@ debug.log.1
 
 # Verified upstream source supplied by a release source bundle.
 /docker/MPlayer-source.tar.xz
+
+# Local release announcement images and drafts.
+announcements/

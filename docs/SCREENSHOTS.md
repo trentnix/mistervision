@@ -1,6 +1,6 @@
 # Screenshots
 
-These images show the v1.4.0 interface. Browsing images were captured from the desktop headless client using Jellyfin. Setup images use the production renderer with fictional names, addresses, and approval codes. Alex’s sample avatar is the project logo, not a real account image.
+The browsing and setup gallery below shows v1.4.0. It predates v1.6.0’s full-width widescreen backgrounds, wider carousel, and revised music layout. These captures are historical examples, not a complete preview of the current interface. Browsing images were captured from the desktop headless client using Jellyfin. Setup images use the production renderer with fictional names, addresses, and approval codes. Alex’s sample avatar is the project logo, not a real account image.
 
 The shared UI uses a 640×240 logical frame for NTSC. These PNGs double its rows to show the intended 4:3 proportions at 640×480. They do not show CRT scanout, interlace, animation, or video smoothness. Browsing captures show keyboard hints. Setup previews show the default MiSTer controller hints.
 
@@ -62,10 +62,6 @@ See [Plex Home behavior](GO_PLEX.md#plex-home-profiles) for remembered viewers, 
 
 About keeps its logo, identity block, and navigation hints steady while checking for updates. The checking message stays visible for at least one second. Exit confirmation uses a full-width translucent stripe with equal top and bottom padding.
 
-## Announcement images
-
-The [v1.4.0 announcement images](images/announcements/v1.4.0/README.md) include the Akira, Hackers, and Dungeons & Dragons episode launch screens, plus Kids TV Shows with Dungeons & Dragons selected and the Plex Live TV channel guide.
-
 ## Refreshing previews
 
 From the repository root, regenerate the setup and About images with:
@@ -77,4 +73,6 @@ DOCS_PREVIEW_DIR="$PWD/docs/images/screenshots" \
 
 The [preview fixtures](../internal/rendering/docs_preview_test.go) use the current `RasterRenderer`. The command needs no server, account, credentials, or MiSTer. Ordinary tests skip the exporter. Review each image after changing layouts, and keep fixture text aligned with the connection flow.
 
-The browsing captures require the [desktop harness](../tools/ghostty/README.md) and a media library. Use isolated development state when capturing them. Export complete frames, preserve the physical 4:3 proportions, and check for private account details before adding images to the repository. Do not include real sign-in codes or credential files.
+The browsing captures require the [desktop harness](../tools/ghostty/README.md) and a media library. Use isolated development state when capturing them. Export complete frames, preserve the configured physical 4:3 or 16:9 proportions, and check for private account details before adding images to the repository. Do not include real sign-in codes or credential files.
+
+Keep release announcement images and drafts in `announcements/<version>/` at the repository root. Git ignores that folder. Documentation screenshots belong in `docs/images/screenshots/`.

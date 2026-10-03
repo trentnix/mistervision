@@ -97,7 +97,7 @@ func (c *Client) PrepareLive(ctx context.Context, request media.LiveRequest) (pr
 	}
 	source := video.Media[0]
 	live.key = "/livetv/sessions/" + source.UUID
-	q, limits := c.videoQuery(live.key, session, frameRate)
+	q, limits := c.videoQuery(live.key, session, frameRate, request.Size)
 	q.Set("X-Plex-Client-Identifier", session)
 	q.Set("offset", "-1")
 	q.Set("hasMDE", "1")

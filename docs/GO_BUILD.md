@@ -16,7 +16,7 @@ The outputs are `build/mistervision` and `build/mistervision-arm`. The ARM targe
 Development builds show `dev`, the Git revision, and a modified marker when available. Jellyfin and Plex requests report the same version label, without the revision suffix. Set `VERSION` for a stable release label:
 
 ```sh
-make arm VERSION=v1.4.1
+make arm VERSION=v1.6.1
 ```
 
 ## MPlayer
@@ -27,7 +27,7 @@ Build the matching patched player from [Dockerfile.mistervision](../docker/Docke
 make native-player
 ```
 
-The outputs are `build/mistervision-mplayer-arm` and its source/compiler record, `build/mistervision-mplayer-build.txt`. The base image is pinned by digest, and the build verifies the MPlayer source archive with SHA-256. The Bullseye toolchain targets MiSTer's glibc 2.31. The patches provide shared overlays, picture changes, captions, interlaced presentation, and playback timing fixes.
+The outputs are `build/mistervision-mplayer-arm` and its source/compiler record, `build/mistervision-mplayer-build.txt`. The base image is pinned by digest, and the build verifies the MPlayer source archive with SHA-256. The Bullseye toolchain targets MiSTer's glibc 2.31. The patches provide shared overlays, picture changes, captions, progressive and interlaced page flipping, and playback timing fixes.
 
 The original C client's player cannot substitute for this build. Update both binaries together when their protocol changes. See [third-party notices](THIRD_PARTY.md) for corresponding source and licenses.
 
@@ -38,15 +38,15 @@ The native build also exports `build/mistervision-mplayer-source.tar.xz`, the ve
 From a clean Git checkout, build a release with:
 
 ```sh
-make release VERSION=v1.4.1
+make release VERSION=v1.6.1
 ```
 
-This command rebuilds both ARM executables, records their metadata and checksums, and packages them under `build/releases/v1.4.1/`. It requires the same Go, Zig, Python, and Docker tools as the individual builds. Stable `vMAJOR.MINOR.PATCH` versions are required. Dirty checkouts, untracked source files, invalid binaries, source checksum mismatches, and existing output directories stop the build. Failed builds do not publish a partial bundle.
+This command rebuilds both ARM executables, records their metadata and checksums, and packages them under `build/releases/v1.6.1/`. It requires the same Go, Zig, Python, and Docker tools as the individual builds. Stable `vMAJOR.MINOR.PATCH` versions are required. Dirty checkouts, untracked source files, invalid binaries, source checksum mismatches, and existing output directories stop the build. Failed builds do not publish a partial bundle.
 
 | Artifact | Contents |
 | --- | --- |
-| `mistervision-v1.4.1-progressive.zip` | Both binaries, optional interlaced core, default launcher, examples, notices, metadata, and checksums. Also used for automatic updates. |
-| `mistervision-v1.4.1-source.tar.gz` | Committed project source plus the exact upstream MPlayer and interlaced Menu source archives. Patches and build recipes remain under `docker/`. |
+| `mistervision-v1.6.1-progressive.zip` | Both binaries, optional interlaced core, default launcher, examples, notices, metadata, and checksums. Also used for automatic updates. |
+| `mistervision-v1.6.1-source.tar.gz` | Committed project source plus the exact upstream MPlayer and interlaced Menu source archives. Patches and build recipes remain under `docker/`. |
 | `SHA256SUMS` | Checksums for the application ZIP and source archive. |
 
 There is one application ZIP. Its established `-progressive.zip` filename remains unchanged for installed updaters and Downloader. New installations leave interlacing off. Both output modes use the same binaries and included core. Enable optional interlacing through configuration on a compatible CRT. See [display setup](GO_DISPLAY.md#choose-an-output).
@@ -57,7 +57,7 @@ To rebuild MPlayer from the source bundle, run `make native-player` in its extra
 
 `make release-manifest` can run after separate `make arm` and `make native-player` builds. It writes `build/release-manifest.txt`, which records Go metadata, MPlayer source/compiler details, and both executable checksums. Packaging includes that record as `mistervision/BUILD.txt`, with the release version and source revision. Packaging the same inputs produces identical archives. This does not promise identical compiler output across toolchain or environment changes.
 
-The [release workflow](../.github/workflows/release.yml) runs when a version tag is pushed. It can also run manually with that tag selected as the workflow ref. It builds the bundle and creates a GitHub draft release with generated notes and all three assets. It refuses to overwrite an existing release. After creating the draft, it downloads the three assets, verifies their contents and source revision, and exercises installation and interrupted-update recovery in temporary storage. A verification failure leaves the release unpublished as a draft.
+The [release workflow](../.github/workflows/release.yml) runs when a version tag is pushed. It can also run manually with that tag selected as the workflow ref. It builds the bundle and creates a GitHub draft release with all three assets. It uses `docs/releases/<version>.md` when present and generated notes otherwise. It refuses to overwrite an existing release. After creating the draft, it downloads the three assets, verifies their contents and source revision, and exercises installation and interrupted-update recovery in temporary storage. A verification failure leaves the release unpublished as a draft.
 
 Before publishing, review the notes, require successful Go validation and downloaded-asset verification, and test the paired binaries on MiSTer. Publishing requires a manual action on GitHub. Draft or private releases are unavailable to the application's unauthenticated checker.
 
@@ -75,7 +75,7 @@ Copy these files to the SD card and make them executable:
 
 Jellyfin discovery and Plex account-based server selection need no connection file. Choose Plex under About → Connections. For an explicit Jellyfin or Plex address, copy `settings.example.json` to `settings.json` beside the binaries and set `server.provider` and `server.url`. See [configuration and migration](GO_CONFIGURATION.md) for existing installations. Launch **MiSTerVision** from Scripts so Main_MiSTer enables framebuffer output. Launcher filenames must contain no spaces. A direct progressive-mode launch over SSH does not enable framebuffer output through Scripts.
 
-The launcher enables both CPU cores, hides the console cursor, and reloads the normal menu after a successful exit. Failures leave their messages visible. Login and playback choices persist under `/media/fat/mistervision/state`. Caches use separate [artwork directories](GO_BROWSING.md#persistent-artwork-cache). For 480i, follow the [display guide](GO_DISPLAY.md).
+The launcher enables both CPU cores, hides the console cursor, and reloads the normal menu after a successful exit. Failures are saved in [startup logs](GO_DIAGNOSTICS.md#automatic-launcher-log). A display supervisor can restore Menu before an on-screen error is readable. Login and playback choices persist under `/media/fat/mistervision/state`. Caches use separate [artwork directories](GO_BROWSING.md#persistent-artwork-cache). For 480i, follow the [display guide](GO_DISPLAY.md).
 
 For manual installation, exit before replacing binaries. Copy replacements to temporary filenames in the installation directory, set executable permissions, then rename them over the installed files. Always replace the client and matching player together.
 
@@ -171,7 +171,7 @@ make test-browse
 
 The validation workflows use Ubuntu 24.04, read-only repository permissions, and Node.js 24 action runtimes. Node.js is not an application dependency. The separate release workflow has a 40-minute limit and repository write permission to create draft releases. No workflow deploys to MiSTer or makes the repository public.
 
-CI does not establish physical CRT timing. Hardware checks must cover startup/exit, video and music, repeated overlay toggling, seeking, paused picture changes, and A/V synchronization in each supported output mode. See [tested scope](GO_DISPLAY.md#tested-scope).
+CI does not establish physical CRT timing. Hardware checks must cover startup/exit, video and music, repeated overlay toggling, seeking, paused picture changes, and A/V synchronization in each supported output mode. See [tested scope](GO_DISPLAY.md#how-i-test-display-changes).
 
 ## Endurance and recovery
 
@@ -217,7 +217,7 @@ The comparison omits timing deltas if the recorded environment differs. Matching
 With Go and an authenticated GitHub CLI, download and verify a draft or published release:
 
 ```sh
-make verify-release VERSION=v1.4.1
+make verify-release VERSION=v1.6.1
 ```
 
 The local Git checkout must contain the release tag. Verification checks all three archive hashes, every bundled checksum, executable permissions and ARM headers, version and revision metadata, the source archive against that Git revision, and the pinned player and interlaced-core source checksums. It then installs the real ZIP through the production updater into temporary storage and tests interrupted replacement and repeat recovery while preserving fixture settings and sign-in files. The test never executes the installed ARM binaries on the host. Checksums are integrity checks, not independent signatures.
@@ -225,8 +225,8 @@ The local Git checkout must contain the release tag. Verification checks all thr
 To verify existing downloads and optionally execute the packaged pair on a MiSTer:
 
 ```sh
-python3 tools/verify_release.py v1.4.1 \
-  --directory /tmp/mistervision-v1.4.1-release \
+python3 tools/verify_release.py v1.6.1 \
+  --directory /tmp/mistervision-v1.6.1-release \
   --mister root@192.168.1.42 \
   --identity /home/trent/.ssh/misterfin_crt_development
 ```

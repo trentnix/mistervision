@@ -163,17 +163,14 @@ func RunConsoleMode(ctx context.Context, directory string, c Config, args []stri
 		}
 		environment = append(environment, ActiveEnv+"=1")
 	} else {
-		f := nativeFramebufferControl()
-		w, h, readErr := f.read()
-		if readErr != nil {
-			return readErr
+		if err = nativeFramebufferControl().configureProgressive(ready, c); err != nil {
+			return err
 		}
-		if !crtFramebuffer(w, h) {
-			if err = f.configure(ready, c); err != nil {
-				return err
-			}
+		mainPID, err = stopMain(ready)
+		if err != nil {
+			return err
 		}
-		environment = append(environment, scaledEnv+"=1")
+		environment = append(environment, scaledEnv+"=1", ProgressiveEnv+"=1")
 	}
 	phase("client")
 	return runChild(ctx, args, environment...)

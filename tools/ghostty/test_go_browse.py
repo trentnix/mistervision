@@ -262,7 +262,7 @@ class BrowseIntegrationTests(BrowserFixture):
         self.key(b"b")
         self.wait_request("/Items/movie-tricky-0")
         self.key(b"b")
-        self.wait_request("/Videos/movie-tricky-0/stream", maxWidth=640, maxHeight=480, videoBitRate=8000000)
+        self.wait_request("/Videos/movie-tricky-0/stream", maxWidth=320, maxHeight=240, videoBitRate=8000000)
         self.key(b"a")
         self.wait_request("/Items/movie-tricky-0")
         self.assertIsNone(self.process.poll())
@@ -274,7 +274,7 @@ class BrowseIntegrationTests(BrowserFixture):
         self.key(b"b")
         self.wait_request("/Items/movie-tricky-0")
         self.key(b"b")
-        self.wait_request("/Videos/movie-tricky-0/stream", maxWidth=640, maxHeight=480,
+        self.wait_request("/Videos/movie-tricky-0/stream", maxWidth=320, maxHeight=240,
                           videoBitRate=8000000, maxFramerate=30, allowVideoStreamCopy="false")
         self.assertEqual(len(self.read_frame()), 640 * 240 * 4)
 
@@ -854,7 +854,15 @@ class BrowseIntegrationTests(BrowserFixture):
             time.sleep(0.02)
         time.sleep(0.1)
         if clean_footer:
-            self.assertEqual(self.read_frame()[220 * 640 * 4:], bytes(20 * 640 * 4))
+            # Music artwork can extend behind the controls. Hiding the overlay
+            # must restore that background rather than requiring a black footer.
+            footer = self.read_frame()[220 * 640 * 4:]
+            self.key(b"\x1b[A")
+            time.sleep(0.1)
+            self.assertNotEqual(self.read_frame()[220 * 640 * 4:], footer)
+            self.key(b"\x1b[A")
+            time.sleep(0.1)
+            self.assertEqual(self.read_frame()[220 * 640 * 4:], footer)
         self.key(b"b")
         time.sleep(0.1)
         self.key(b"]")  # Hidden controls must not consume navigation.
