@@ -2,7 +2,7 @@
 
 This document records missing features, current limitations, and intentional exclusions for Jellyfin and Plex without assigning priorities. MiSTerVision targets personal media on a consumer CRT and also supports HDMI displays. Both providers are supported, but matching every feature of either ecosystem is not the goal.
 
-Implementation status was reviewed September 26, 2026 for v1.6.2. Comparisons with other clients retain the September 19 documentation review.
+Implementation status was reviewed October 3, 2026 for v1.6.3. Comparisons with other clients retain the September 19 documentation review.
 
 ## Current baseline
 
@@ -11,6 +11,10 @@ Both providers support discovery, saved connections, user switching, Continue Wa
 Both providers now supply current and next Live TV programs through the shared channel-list guide. Valid cached listings appear immediately on return while the server refreshes them. Channel logos and friendly Plex guide names appear when available. See [Live TV listings](GO_BROWSING.md#live-tv-listings).
 
 The interface supports progressive and interlaced CRT output, HDMI framebuffer scaling, automatic or explicit display aspect, and full-width widescreen backgrounds. v1.6.0 extends the carousel across widescreen displays and improves music presentation and background persistence. Music no longer shows separate audio meters. Single-season shows open directly to episodes, and season lists show episode counts when supplied. These are implemented behaviors, not remaining gaps.
+
+### Playback controls in v1.6.3
+
+Left/Right seeks, LB/RB changes music tracks or queued videos, and Up/Down toggles controls. Automatic trigger-axis bindings were removed to address [unintended seeking (#30)](https://github.com/trentnix/mistervision/issues/30). Explicit input profiles can still bind triggers. Automatic controller-family recognition remains a separate gap.
 
 ### Fixes in v1.6.1
 
@@ -84,7 +88,6 @@ Live TV timeshifting is absent from both MiSTerVision adapters. Plex provides a 
 ## Open compatibility work
 
 - **[SuperStation One (#22)](https://github.com/trentnix/mistervision/issues/22):** ConsoleMode handoff and diagnostics are implemented. The reporter confirmed the tearing fix on HDMI and VGA, then reported smooth HDMI playback with the output-sized transcoding change in v1.6.2. VGA testing of the sizing change remains open. The maintainer has no SS1 and relies on reporter validation.
-- **[Xbox trigger mappings (#30)](https://github.com/trentnix/mistervision/issues/30):** Some controllers report trigger rest positions that cause unintended seeking. A candidate fix is saved on `fix/controller-trigger-mapping` but is not merged. This is separate from automatic controller recognition.
 - **[PAL validation (#28)](https://github.com/trentnix/mistervision/issues/28):** PAL code paths exist, but 288p/576i output needs validation by someone with suitable hardware.
 
 ## Implementation considerations

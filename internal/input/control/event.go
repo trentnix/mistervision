@@ -25,7 +25,7 @@ func (l Labels) Name(action Action) string {
 var controllerLabels = Labels{
 	Up: "Up", Down: "Down", Previous: "Left", Next: "Right",
 	About: "Start", Open: "B", Back: "A", Select: "Select", Retry: "R", Quit: "Q",
-	TrackPrevious: "LB", TrackNext: "RB", SeekBackward: "LT", SeekForward: "RT",
+	TrackPrevious: "LB", TrackNext: "RB",
 }
 
 var keyboardLabels = Labels{

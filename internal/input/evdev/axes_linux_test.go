@@ -56,8 +56,8 @@ func TestConfiguredAxes(t *testing.T) {
 			}
 		}
 	}
-	// Explicitly disabling a default trigger must beat its autodetected mapping.
-	d := device{held: make(map[uint16]control.Action), triggers: map[uint16]*triggerAxis{2: {min: 0, max: 100}}, bindings: Profile{Axes: map[uint16]Axis{2: {}}}}
+	// An explicitly disabled axis must not produce an action.
+	d := device{held: make(map[uint16]control.Action), bindings: Profile{Axes: map[uint16]Axis{2: {}}}}
 	if got := d.accept(event{Type: 3, Code: 2, Value: 100}); got != "" {
 		t.Fatal("disabled axis fired", got)
 	}
@@ -196,4 +196,35 @@ func TestStickAndDPadShareNavigationRepeat(t *testing.T) {
 	check(1110, &d, event{Type: 3, Code: 1, Value: 500}, control.Down)
 	check(1459, nil, event{}, "")
 	check(1460, nil, event{}, control.Down.Repeat())
+}
+
+// Issue #30's driver reports the right stick on ABS_Z/ABS_RZ and advertises
+// unused GAS/BRAKE axes. None may become a seek binding just from its range.
+func TestUnconfiguredTriggerAndRightStickAxesStayIdle(t *testing.T) {
+	ranges := map[uint16][2]int32{0: {0, 65535}, 1: {0, 65535}, 2: {0, 65535}, 5: {0, 65535}, 9: {0, 1023}, 10: {0, 1023}}
+	d := configuredTestAxes("Xbox Wireless Controller", advertised(304, 310, 311, 312, 313), Profile{}, ranges)
+	for _, code := range []uint16{2, 5, 9, 10} {
+		for _, value := range []int32{0, ranges[code][1] / 2, ranges[code][1], 0} {
+			if got := d.accept(event{Type: 3, Code: code, Value: value}); got != "" {
+				t.Fatalf("unconfigured axis %d produced %s at %d", code, got, value)
+			}
+		}
+	}
+	for _, code := range []uint16{312, 313} {
+		if got := d.accept(event{Type: 1, Code: code, Value: 1}); got != "" {
+			t.Fatalf("unconfigured trigger button %d produced %s", code, got)
+		}
+	}
+	if len(d.held) != 0 {
+		t.Fatal("unconfigured inputs left held actions", d.held)
+	}
+	// Users can still opt into either digital or analog trigger bindings.
+	d.bindings.Buttons = map[uint16]control.Action{312: control.SeekBackward}
+	if got := d.accept(event{Type: 1, Code: 312, Value: 1}); got != control.SeekBackward {
+		t.Fatal("explicit trigger button lost its binding", got)
+	}
+	d.accept(event{Type: 1, Code: 312, Value: 0})
+	if len(d.held) != 0 {
+		t.Fatal("explicit trigger button stayed held after release")
+	}
 }

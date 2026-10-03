@@ -402,7 +402,7 @@ class BrowseIntegrationTests(BrowserFixture):
         initial_stream = next(r for r in self.requests
                               if urlparse(r).path == "/Videos/movie-tricky-0/stream")
         initial_session = parse_qs(urlparse(initial_stream).query)["playSessionId"][0]
-        self.key(b"ll")
+        self.key(b"\x1b[C\x1b[C")  # Right seeks even with controls hidden.
         deadline = time.monotonic() + 5
         while not any(path == "/Sessions/Playing/Progress" and body.get("IsPaused") and
                       body.get("PlaySessionId") == initial_session for path, body in self.reports):
@@ -775,15 +775,25 @@ class BrowseIntegrationTests(BrowserFixture):
         self.wait_request("/Items", ParentId="view-homevideos")
         self.key(b"\x1b[Bb")
         self.wait_request("/Items/photo-landscape/Images/Primary", quality=90, maxWidth=640, maxHeight=240)
-        frame = self.read_frame()
-        offset = (120 * 640 + 320) * 4
-        self.assertEqual(frame[offset:offset + 3], bytes([215, 125, 35]))
+        def wait_photo(color, visible=True):
+            # A request or a fixed delay does not prove that asynchronous photo
+            # navigation has committed. Wait for its actual rendered pixels.
+            offset = (120 * 640 + 320) * 4
+            deadline = time.monotonic() + 5
+            while (self.read_frame()[offset:offset + 3] == color) != visible:
+                self.assertLess(time.monotonic(), deadline, "photo transition did not finish")
+                self.assertIsNone(self.process.poll())
+                time.sleep(.01)
+
+        landscape = bytes([215, 125, 35])
+        wait_photo(landscape)
         self.key(b"\x1b[C")
         self.wait_request("/Items/photo-portrait/Images/Primary", quality=90)
+        wait_photo(bytes([45, 95, 215]))
         self.key(b"\x1b[D")
-        time.sleep(0.15)  # The previous photo is already cached.
+        wait_photo(landscape)  # Cached photos still commit asynchronously.
         self.key(b"a")
-        time.sleep(0.15)
+        wait_photo(landscape, visible=False)
         self.key(b"\x1b[Bb")
         self.wait_request("/Items", ParentId="photo-album")
         self.assertFalse(any(path.startswith("/Sessions/") for path, _ in self.reports))
@@ -865,7 +875,7 @@ class BrowseIntegrationTests(BrowserFixture):
             self.assertEqual(self.read_frame()[220 * 640 * 4:], footer)
         self.key(b"b")
         time.sleep(0.1)
-        self.key(b"]")  # Hidden controls must not consume navigation.
+        self.key(b"]")  # Shoulder-equivalent track input works with hidden controls.
         self.wait_request("/Audio/artist-000-album0-t02/stream", static="true")
         self.key(b"]")  # The next move must also take one press.
         self.wait_request("/Audio/artist-000-album0-t03/stream", static="true")

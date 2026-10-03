@@ -126,8 +126,8 @@ func TestNavigationAcceleratesAndResets(t *testing.T) {
 	}
 }
 
-func TestPlaybackButtonsAndTriggerHysteresis(t *testing.T) {
-	for code, want := range map[uint16]control.Action{310: control.TrackPrevious, 311: control.TrackNext, 312: control.SeekBackward, 313: control.SeekForward, 26: control.TrackPrevious, 27: control.TrackNext, 36: control.SeekBackward, 38: control.SeekForward} {
+func TestPlaybackButtonsAndExplicitTriggerHysteresis(t *testing.T) {
+	for code, want := range map[uint16]control.Action{310: control.TrackPrevious, 311: control.TrackNext, 312: "", 313: "", 26: control.TrackPrevious, 27: control.TrackNext, 36: control.SeekBackward, 38: control.SeekForward} {
 		if got := action("Xbox", 1, code, 1); got != want {
 			t.Fatalf("code %d: %s", code, got)
 		}
@@ -136,8 +136,8 @@ func TestPlaybackButtonsAndTriggerHysteresis(t *testing.T) {
 		}
 	}
 	for _, bounds := range [][2]int32{{0, 255}, {0, 1023}, {-32768, 32767}} {
-		axis := &triggerAxis{min: bounds[0], max: bounds[1]}
-		d := device{name: "Xbox", held: make(map[uint16]control.Action), triggers: map[uint16]*triggerAxis{2: axis}}
+		axis := newMappedAxis(Axis{Rest: "minimum", Positive: control.SeekBackward}, bounds[0], bounds[1])
+		d := device{name: "Xbox", held: make(map[uint16]control.Action), axes: map[uint16]*mappedAxis{2: axis}}
 		value := func(percent int32) int32 { return bounds[0] + (bounds[1]-bounds[0])*percent/100 }
 		if d.accept(event{Type: 3, Code: 2, Value: value(10)}) != "" {
 			t.Fatal("light touch triggered seek")

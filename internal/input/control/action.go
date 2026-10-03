@@ -31,11 +31,11 @@ const (
 	Retry Action = "retry"
 	// Quit requests application shutdown.
 	Quit Action = "quit"
-	// ToggleControls is synthesized from directions during playback.
+	// ToggleControls is synthesized from Up/Down during playback.
 	ToggleControls Action = "controls"
-	// TrackPrevious selects the previous music track or browsing page.
+	// TrackPrevious selects the previous playback item or browsing page.
 	TrackPrevious Action = "track-previous"
-	// TrackNext selects the next music track or browsing page.
+	// TrackNext selects the next playback item or browsing page.
 	TrackNext Action = "track-next"
 	// SeekBackward requests a backward seek step for recorded media.
 	SeekBackward Action = "seek-backward"

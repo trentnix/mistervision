@@ -162,7 +162,7 @@ func TestTrackSelectionWaitsForDecoderExit(t *testing.T) {
 	s := setupMusicSession(t)
 	s.handleKey("track-next-repeat")
 	if s.media.pending {
-		t.Fatal("held shoulder changed tracks")
+		t.Fatal("held track input changed tracks")
 	}
 	s.handleKey(control.TrackNext)
 	s.handleNeighbor(receiveNeighbor(t, s))
@@ -181,9 +181,9 @@ func TestTrackSelectionWaitsForDecoderExit(t *testing.T) {
 	}
 }
 
-func TestPlaybackDirectionsOnlyToggleMenu(t *testing.T) {
+func TestPlaybackVerticalDirectionsOnlyToggleMenu(t *testing.T) {
 	for _, kind := range []string{"Movie", "Episode", "TvChannel", "Audio"} {
-		for _, key := range []control.Action{"up", "down", "previous", "next"} {
+		for _, key := range []control.Action{"up", "down"} {
 			t.Run(kind+"/"+string(key), func(t *testing.T) {
 				s := testSession(t)
 				s.model.Stack = append(s.model.Stack, View{Detail: &media.Item{Type: kind}})
@@ -513,4 +513,91 @@ func TestSeasonPageStartsEpisodeRequestWithoutAnotherKey(t *testing.T) {
 		t.Fatal("season list remained in navigation")
 	}
 	s.requests.cancel()
+}
+
+func TestPlaybackTrackButtonsChangeQueueOnce(t *testing.T) {
+	for _, kind := range []string{"Movie", "Episode", "Audio"} {
+		t.Run(kind, func(t *testing.T) {
+			s := testSession(t)
+			s.applyRemoteItems(remote.Command{PlayMode: "now", StartIndex: 1}, []media.Item{
+				{ID: "first", Type: kind}, {ID: "middle", Type: kind}, {ID: "last", Type: kind},
+			})
+			s.handlePlayback(PlaybackEvent{Kind: PlaybackEnded, ID: s.controller.active.id})
+			for _, step := range []struct {
+				key  control.Action
+				want string
+			}{{control.TrackNext, "last"}, {control.TrackPrevious, "middle"}} {
+				s.handleKey(step.key)
+				s.handleKey(step.key.Repeat())
+				if s.playbackQueue.queue.Current().ID != step.want {
+					t.Fatal("track button did not change exactly one item")
+				}
+				s.handlePlayback(PlaybackEvent{Kind: PlaybackEnded, ID: s.controller.active.id})
+				if s.controller.item.ID != step.want || s.controller.Snapshot(time.Now()).ControlsVisible {
+					t.Fatal("queue change failed or opened controls")
+				}
+			}
+		})
+	}
+}
+
+func TestMusicTrackButtonChangesTrackWithoutOpeningControls(t *testing.T) {
+	s := setupMusicSession(t)
+	s.handleKey(control.TrackNext)
+	s.handleKey(control.TrackNext.Repeat())
+	s.handleNeighbor(receiveNeighbor(t, s))
+	s.handlePlayback(PlaybackEvent{Kind: PlaybackEnded, ID: s.controller.active.id})
+	if s.model.Current().Detail.ID != "second" || s.controller.Snapshot(time.Now()).ControlsVisible {
+		t.Fatal("Next track did not advance one music track without opening controls")
+	}
+}
+
+func TestLiveTVIgnoresSeeking(t *testing.T) {
+	s := testSession(t)
+	s.controller.item.Type = "TvChannel"
+	for _, key := range []control.Action{control.Previous, control.Next, control.Next.Repeat(), control.SeekBackward, control.SeekForward, control.SeekForward.Repeat()} {
+		s.handleKey(key)
+	}
+	if s.controller.state.SeekTarget != nil || len(s.controller.active.controls) != 0 {
+		t.Fatal("Live TV accepted a seek")
+	}
+}
+
+func TestPlaybackDirectionsSeekInsteadOfChangingItems(t *testing.T) {
+	for _, kind := range []string{"Movie", "Episode", "Audio"} {
+		t.Run(kind, func(t *testing.T) {
+			s := testSession(t)
+			s.model.Stack = append(s.model.Stack, View{Detail: &media.Item{ID: "current", Type: kind}})
+			s.controller.item.Type = kind
+			if kind == "Audio" {
+				s.model.StartMusicQueue()
+			}
+			s.handleKey(control.Next)
+			if kind == "Audio" {
+				select {
+				case command := <-s.controller.active.controls:
+					if command.Kind != "seek" || command.Seconds != 10 {
+						t.Fatal("Right did not seek music forward ten seconds", command)
+					}
+				default:
+					t.Fatal("Right did not seek music")
+				}
+				s.handleKey(control.Previous)
+				if command := <-s.controller.active.controls; command.Kind != "seek" || command.Seconds != -10 {
+					t.Fatal("Left did not seek music backward ten seconds", command)
+				}
+			} else {
+				if target := s.controller.state.SeekTarget; target == nil || *target != 320000000 {
+					t.Fatal("Right did not seek video forward thirty seconds", target)
+				}
+				s.handleKey(control.Previous)
+				if target := s.controller.state.SeekTarget; target == nil || *target != 20000000 {
+					t.Fatal("Left did not reverse the pending seek", target)
+				}
+			}
+			if s.media.pending || s.controller.Snapshot(time.Now()).ControlsVisible || s.model.Current().Detail.ID != "current" {
+				t.Fatal("direction changed item or toggled controls")
+			}
+		})
+	}
 }

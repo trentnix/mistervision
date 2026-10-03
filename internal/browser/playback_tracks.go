@@ -11,7 +11,7 @@ import (
 )
 
 // trackPicker owns navigation within the video Options menu.
-// Directions navigate this menu while it is open. They toggle controls otherwise.
+// Directions navigate tabs and rows while this menu is open.
 type trackPicker struct {
 	visible  bool
 	tab      int
@@ -86,12 +86,12 @@ func (c *PlaybackController) trackKey(key control.Action, now time.Time) {
 			delta = -1
 		}
 		c.picker.selected[c.picker.tab] = max(0, min(len(c.trackRows(c.picker.tab))-1, c.picker.selected[c.picker.tab]+delta))
-	case control.SeekBackward, control.SeekForward:
-		// While choosing subtitles, triggers adjust text timing rather than seeking.
+	case control.SeekBackward, control.SeekForward, control.TrackPrevious, control.TrackNext:
+		// Shoulder buttons and explicit seek bindings adjust subtitle timing here.
 		sub, ok := c.tracks.Stream("Subtitle", c.tracks.Selection.SubtitleIndex)
 		if c.picker.tab == 0 && ok && sub.ClientSubtitle() && c.tracks.ClientSubtitles {
 			delta := 100 * time.Millisecond
-			if key == control.SeekBackward {
+			if key == control.SeekBackward || key == control.TrackPrevious {
 				delta = -delta
 			}
 			c.subtitleDelay = max(-10*time.Second, min(10*time.Second, c.subtitleDelay+delta))
