@@ -12,7 +12,7 @@ import (
 // handleRemote operates on media state directly. It never synthesizes a select
 // button, so About, track pickers, and hidden overlays cannot consume commands.
 func (s *browserSession) handleRemote(cmd remote.Command) bool {
-	if s.about.Updating || !s.update.exitAt.IsZero() {
+	if s.confirmExit || s.model.ExitConfirm || s.about.Updating || !s.update.exitAt.IsZero() {
 		return false
 	}
 	now := time.Now()
@@ -20,8 +20,16 @@ func (s *browserSession) handleRemote(cmd remote.Command) bool {
 	case remote.Message:
 		s.message = browserMessage{MessagePresentation: rendering.MessagePresentation{Header: cmd.Header, Text: cmd.Text, Until: now.Add(8 * time.Second)}}
 	case remote.Play:
+		if s.watched.busy {
+			return false // Do not race an explicit watched change with new progress reports.
+		}
+		s.options.close()
+		s.watched.close()
 		s.requestRemotePlay(cmd)
 	case remote.Stop:
+		if s.options.visible {
+			s.options.close()
+		}
 		s.remoteRequests.cancelAll()
 		s.playbackQueue.switching = false
 		if s.media.pending {
@@ -49,6 +57,9 @@ func (s *browserSession) handleRemote(cmd remote.Command) bool {
 			s.controller.SeekTo(*cmd.Position, now)
 		}
 	case remote.Next, remote.Previous:
+		if s.options.visible {
+			s.options.close()
+		}
 		direction := 1
 		if cmd.Kind == remote.Previous {
 			direction = -1
@@ -60,6 +71,9 @@ func (s *browserSession) handleRemote(cmd remote.Command) bool {
 			s.navigateMedia(direction)
 		}
 	case remote.Repeat, remote.Shuffle:
+		if s.options.busy {
+			s.options.close()
+		}
 		if !s.playbackQueue.active {
 			s.adoptLocalQueue()
 		}

@@ -75,6 +75,8 @@ For Jellyfin, movies and music videos use filtered recursive lists. Music retain
 
 Details show available artwork, overview, year, rating, runtime, and resume/watched state. Open starts or resumes video. SELECT/Tab restarts an unwatched resumable video from the beginning. See [playback controls](GO_PLAYBACK.md#playback-controls).
 
+On a movie or episode preview, X on the controller or O on the keyboard directly marks the item watched or unwatched. The button hint names the action. Saving and completion appear inline on the preview without a menu or popup. The change applies to the signed-in user and clears the saved resume position. The preview and retained list update after the server accepts the change, and Continue Watching refreshes. This action waits for any final playback report to finish. It does not mark whole seasons or libraries.
+
 Interface text and subtitles share a broad Unicode font set. Navigation hints and the clock retain the bitmap font and its more limited fallback. See [text coverage](GO_RENDERING.md#text-coverage). Search is not implemented.
 
 ## Live TV listings

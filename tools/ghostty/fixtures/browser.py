@@ -219,7 +219,22 @@ class BrowserFixture(unittest.TestCase):
                 except (BrokenPipeError, ConnectionResetError):
                     pass  # Expected when the browser cancels a delayed request.
 
+            def set_watched(self, watched):
+                path = urlparse(self.path).path
+                item = mock.ITEMS[path.rsplit("/", 1)[-1]]
+                item["UserData"].update(Played=watched, PlaybackPositionTicks=0)
+                test.reports.append((path, {"Played": watched}))
+                self.send_response(204)
+                self.end_headers()
+
+            def do_DELETE(self):
+                if urlparse(self.path).path.startswith("/UserPlayedItems/"):
+                    return self.set_watched(False)
+                self.send_error(404)
+
             def do_POST(self):
+                if urlparse(self.path).path.startswith("/UserPlayedItems/"):
+                    return self.set_watched(True)
                 length = int(self.headers.get("Content-Length", "0"))
                 body = json.loads(self.rfile.read(length)) if length else {}
                 test.reports.append((urlparse(self.path).path, body))

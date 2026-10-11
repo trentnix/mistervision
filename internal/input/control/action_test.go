@@ -7,7 +7,7 @@ import (
 
 func TestBindingNamesAndJSONCompatibility(t *testing.T) {
 	// Literal spellings are the public configuration contract.
-	for _, name := range []string{"", "about", "up", "down", "previous", "next", "open", "back", "select", "retry", "quit", "track-previous", "track-next", "seek-backward", "seek-forward"} {
+	for _, name := range []string{"", "about", "up", "down", "previous", "next", "open", "back", "select", "options", "retry", "quit", "track-previous", "track-next", "seek-backward", "seek-forward"} {
 		t.Run(name, func(t *testing.T) {
 			data, err := json.Marshal(name)
 			if err != nil {
@@ -23,7 +23,7 @@ func TestBindingNamesAndJSONCompatibility(t *testing.T) {
 			}
 		})
 	}
-	for _, name := range []string{"seek-forwards", "UP", " up", "up-repeat", "controls"} {
+	for _, name := range []string{"seek-forwards", "UP", " up", "up-repeat", "controls", "confirm-exit"} {
 		action := Open
 		data, _ := json.Marshal(name)
 		if err := json.Unmarshal(data, &action); err == nil || action != Open {

@@ -237,7 +237,7 @@ func TestExitStripePaddingAndFullWidth(t *testing.T) {
 			cache := &sceneCache{}
 			c.Typeface = cache.typeface(c.Width, c.Height)
 			p := screenPainter{canvas: c, cache: cache, width: c.Width, height: c.Height, bottom: height - 20, scene: Scene{Root: true, ExitConfirm: true, Controls: labels}}
-			p.footer(nil)
+			p.exitConfirmation()
 			top, bottom := height, 0
 			for y := range height {
 				left, right := y*c.Width*4, (y*c.Width+c.Width-1)*4

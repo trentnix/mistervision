@@ -31,6 +31,7 @@ type device struct {
 	bindings Profile
 	axes     map[uint16]*mappedAxis
 	hats     [2]bool
+	about    aboutHold
 	legend   control.Labels
 }
 
@@ -98,6 +99,8 @@ func action(name string, kind, code uint16, value int32) control.Action {
 		return control.About // BTN_START (Xbox Menu), F1
 	case 314, 15:
 		return control.Select // BTN_SELECT (Xbox View/Back), Tab. Y is unmapped.
+	case 307, 24:
+		return control.Options // Xbox X, O
 	case 19:
 		return control.Retry
 	case 16:
@@ -273,6 +276,7 @@ func Read(ctx context.Context, config Config, log *diagnostics.Log) (<-chan cont
 				}
 				pressed := make(map[control.Action]bool)
 				for path, d := range devices {
+					aboutPressed := false
 					for {
 						var e event
 						data := unsafe.Slice((*byte)(unsafe.Pointer(&e)), int(unsafe.Sizeof(e)))
@@ -289,9 +293,24 @@ func Read(ctx context.Context, config Config, log *diagnostics.Log) (<-chan cont
 						if key != "" && d.name != "MiSTer virtual input" {
 							active = d.legend
 						}
-						if direction(key) {
+						if key == control.About {
+							aboutPressed = true
+						} else if direction(key) {
 							pressed[key] = true
 						} else if key != "" {
+							if !send(key) {
+								return
+							}
+						}
+					}
+					// A disconnected device cannot synthesize a short press on release.
+					if devices[path] == d {
+						aboutHeld := false
+						for _, key := range d.held {
+							aboutHeld = aboutHeld || key == control.About
+						}
+						if key := d.about.update(aboutHeld, aboutPressed, now); key != "" {
+							active = d.legend
 							if !send(key) {
 								return
 							}

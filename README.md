@@ -130,7 +130,7 @@ About offers **Switch profile** when multiple saved Jellyfin users or Plex Home 
 ## Controls
 
 
-I test with an Xbox controller. The default layout follows MiSTer: B selects, plays, or pauses, and A goes back, cancels, or stops. Use the D-pad or left analog stick to navigate. During video or music playback, Up/Down shows or hides controls. Left/Right seeks. Shoulder buttons change music tracks or queued videos. Triggers have no default action and can be configured.
+I test with an Xbox controller. The default layout follows MiSTer: B selects, plays, or pauses, and A goes back, cancels, or stops. Use the D-pad or left analog stick to navigate. Hold Start for two seconds to open the exit confirmation from any screen. B exits and A cancels. During video or music playback, Up/Down shows or hides controls. Left/Right seeks. Holding either direction repeats at a steady rate. Shoulder buttons change music tracks or queued videos. Triggers have no default action and can be configured. During music playback, Select/Tab opens repeat/shuffle settings and X/O changes the background. On movie and episode previews, X/O marks the item watched or unwatched.
 
 Controller mappings are configurable in the `input` section of `settings.json`. For example, if you prefer A to select and B to go back, add this section while preserving your other settings:
 

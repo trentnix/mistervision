@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"image"
 
-	"mistervision/internal/input/control"
 	"mistervision/internal/musicviz"
 	"mistervision/internal/ui"
 )
@@ -146,24 +145,7 @@ func (p *screenPainter) footer(controls [][]controlHint) {
 			c.Text(24+(messageWidth-c.MeasureText(message, 1))/2, messageY, message, 0xff6060, w-24)
 		}
 	}
-	if s.ExitConfirm {
-		rows := controlRows(w, []controlHint{hint(s.Controls, control.Open, "Exit"), hint(s.Controls, control.Back, "Cancel")})
-		// Use the shared dense list text path to retain sharp outlines and ink
-		// bounds at both native CRT and HDMI raster densities.
-		size := max(8, int(14/(float64(h)*4/float64(w*3))+0.5))
-		title := p.listText("Exit?", w-48, size, titleColor, true)
-		ink := title.Bounds()
-		const padding, gap, badgeHeight = 8, 8, 14
-		controlsHeight := badgeHeight + max(0, len(rows)-1)*controlRowHeight
-		height := padding*2 + ink.Dy() + gap + controlsHeight
-		top := (h - height) / 2
-		c.Shade(0, top, w, height, 210)
-		if p.background != nil {
-			p.background.full.Shade(0, top, w, height, 210)
-		}
-		c.Blit(title, (w-ink.Dx())/2, top+padding, ink.Dx(), ink.Dy())
-		drawControls(c, top+height-padding-badgeHeight+3+controlBottomInset, rows)
-	} else if s.Notice != "" {
+	if !s.ExitConfirm && s.Notice != "" {
 		drawNotice(c, "", s.Notice, -1, 6)
 	}
 }

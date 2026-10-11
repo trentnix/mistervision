@@ -28,6 +28,8 @@ func (s *browserSession) send(work context.Context, r workerResult) {
 // authenticate resets browser state and delegates connection work. The
 // connection manager rejects results from superseded attempts.
 func (s *browserSession) authenticate() {
+	s.options.close()
+	s.watched.close()
 	s.counts.reset()
 	s.about.AccountMessage = ""
 	s.pendingAuthError = nil

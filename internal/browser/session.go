@@ -18,6 +18,10 @@ import (
 // browserSession owns one browser run. Only the event loop mutates its state.
 // Workers capture their inputs and return results through channels.
 type browserSession struct {
+	confirmExit      bool // Global confirmation survives asynchronous navigation changes.
+	seekInput        seekRepeat
+	options          itemOptions
+	watched          watchedChange
 	update           updateWork
 	connectionChange *connection.Change
 	remote           remoteSession
@@ -100,6 +104,8 @@ func newBrowserSession(ctx context.Context, config Config, player playback.Confi
 // close runs after the application context is canceled, so decoder callbacks
 // cannot block shutdown while the event loop is no longer receiving results.
 func (s *browserSession) close() {
+	s.options.close()
+	s.watched.close()
 	s.ticker.Stop()
 	s.guide.reset()
 	s.counts.reset()

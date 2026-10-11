@@ -2,6 +2,12 @@
 
 Selecting a track within an album starts album playback and advances in order, including across pages. Shoulder buttons or brackets change tracks immediately. Left/Right or J/L seek ten seconds. Up/Down toggles controls. Open pauses/resumes without instructions, and Back returns to the track list. See [playback controls](GO_PLAYBACK.md#playback-controls).
 
+## Album and playlist options
+
+During music playback, Select on the controller or Tab on the keyboard opens Options. Select Repeat to cycle Off, All, and One. Repeat One restarts a track when it finishes. Previous/Next still changes tracks. Select Shuffle to randomize upcoming tracks without restarting the current song. Turning Shuffle off restores the original order. Back dismisses Options while music continues.
+
+Options apply to the current queue and reset when it ends. Paged albums and playlists load their complete track list before applying a change, up to 10,000 entries. Loading can be canceled. A failed lookup leaves playback unchanged. These controls are separate from whole-library shuffle and are not offered during its rolling batches.
+
 ## Whole-library shuffle
 
 On a music library's artist list, SELECT/Tab starts shuffle. The selected server supplies batches of up to 64 random tracks. A new batch loads when needed. Tracks can repeat between batches, but immediate repetition is avoided when another track is available. The client retains at most two batches of history. Back cancels pending loading and restores the artist selection.
@@ -12,7 +18,7 @@ On widescreen displays, artist and album artwork and music playback backgrounds 
 
 ## Built-in backgrounds
 
-SELECT/Tab cycles backgrounds during music playback and briefly shows the name in a top strip. The strip disappears with the name. Music playback has no persistent header or clock. The artwork background label shows the artist name, or the album name if no artist is available. Before a manual background choice, playback prefers available album or artist backdrop artwork. If no backdrop loads, playback uses the configured default and omits Artwork from the cycle. A manual selection takes precedence across tracks and after stopping and starting another song, until the app closes. If the selected background needs an unavailable image, playback falls back without erasing the preference. Now Spinning requires an album cover and is omitted without one. The backdrop and album cover are separate images. Missing backdrops do not add an extra blank option. The configured default effect is distinct from Off unless it is itself an Off preset.
+X/O cycles backgrounds during music playback and briefly shows the name in a top strip. The strip disappears with the name. Music playback has no persistent header or clock. The artwork background label shows the artist name, or the album name if no artist is available. Before a manual background choice, playback prefers available album or artist backdrop artwork. If no backdrop loads, playback uses the configured default and omits Artwork from the cycle. A manual selection takes precedence across tracks and after stopping and starting another song, until the app closes. If the selected background needs an unavailable image, playback falls back without erasing the preference. Now Spinning requires an album cover and is omitted without one. The backdrop and album cover are separate images. Missing backdrops do not add an extra blank option. The configured default effect is distinct from Off unless it is itself an Off preset.
 
 | Background | Behavior |
 | --- | --- |

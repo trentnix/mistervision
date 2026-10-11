@@ -64,6 +64,7 @@ func (s *browserSession) navigateMedia(direction int) {
 }
 
 func (s *browserSession) startPlayback(startTicks *int64, paused bool) {
+	s.options.close()
 	if !s.playbackQueue.active {
 		s.remoteRequests.cancelAll()
 	}
@@ -139,6 +140,7 @@ func (s *browserSession) handlePlayback(event PlaybackEvent) bool {
 	if !ended {
 		return false
 	}
+	s.options.close()
 	s.model.Notice = ""
 	if completionErr != nil {
 		s.showPlaybackError(completionErr)

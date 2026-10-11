@@ -50,7 +50,7 @@ On an unwatched resumable video's details screen, Open resumes and SELECT/Tab re
 
 Seek presses accumulate toward a destination. With controls hidden, two quick presses reveal the destination overlay. With controls open, the destination stays in that menu. After 0.5 seconds without another press, the current decoder pauses and a replacement stream is prepared. A new seek during preparation cancels that replacement and returns to the destination preview for another 0.5 seconds.
 
-The last frame remains beneath Seeking/Loading until handoff. The replacement uses an explicit start offset and restores the latest user pause choice. Targets are clamped to the known duration, and seeking becomes available after the first position report. Back cancels playback. Music seeks within its running player instead of replacing the stream.
+The last frame remains beneath Seeking/Loading until handoff. The replacement uses an explicit start offset and restores the latest user pause choice. Holding Left/Right repeats at a steady rate of about 250 milliseconds per step. Video keeps updating the destination and seeks 0.5 seconds after the last accepted step. Up/Down and track changes remain one action per press. Targets are clamped to the known duration, and seeking becomes available after the first position report. Back cancels playback. Music seeks within its running player instead of replacing the stream.
 
 `PlaybackController` keeps user pause intent separate from decoder feedback. Each `playbackProcess` owns its command queue, so a seek replacement cannot consume commands left for the old decoder. Busy queues retry required pause/resume delivery on the browser tick.
 

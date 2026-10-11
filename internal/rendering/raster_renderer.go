@@ -45,9 +45,16 @@ func (r *RasterRenderer) Render(w, h int, s Scene) videoout.Frame {
 		r.overlay.Typeface = r.canvas.Typeface
 		clear(r.overlay.Pixels)
 		f.Overlay = renderVideoOverlayOn(r.overlay, s.Playback, s.Now, s.Controls, &r.captions)
-		drawMessage(r.overlay, s.Message, s.Now)
+		if s.ExitConfirm {
+			p := screenPainter{canvas: r.overlay, cache: &r.cache, scene: s, width: w, height: h}
+			p.exitConfirmation()
+		} else {
+			drawMessage(r.overlay, s.Message, s.Now)
+		}
 	}
-	drawMessage(r.canvas, s.Message, s.Now)
+	if !s.ExitConfirm {
+		drawMessage(r.canvas, s.Message, s.Now)
+	}
 	if wide {
 		f.UI = r.wide.compose(r.canvas)
 		f.UIWidth, f.UIHeight = r.wide.width, r.wide.height

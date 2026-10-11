@@ -50,5 +50,11 @@ func renderSceneWithMusic(c *ui.Canvas, cache *sceneCache, s Scene, anim Animati
 		}
 		p.footer(controls)
 	}
+	if s.Options != nil {
+		p.options(s.Options)
+	}
+	if s.ExitConfirm {
+		p.exitConfirmation()
+	}
 	return c.Pixels
 }

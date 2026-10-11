@@ -115,8 +115,11 @@ class BrowseIntegrationTests(BrowserFixture):
         self.assertEqual(display["output_height"], 240)
         self.assertTrue(any(e["msg"] == "application.phase" and e["stage"] == "browser" for e in events))
         self.assertTrue(any(e["msg"] == "input.backend" and e["terminal"] for e in events))
-        self.assertEqual(events[-1]["msg"], "application.exit")
-        self.assertFalse(events[-1]["failed"])
+        # A canceled HTTP worker can finish logging between the exit record
+        # and Log.Close. The lifecycle contract is one successful exit event.
+        exits = [event for event in events if event["msg"] == "application.exit"]
+        self.assertEqual(len(exits), 1)
+        self.assertFalse(exits[0]["failed"])
         self.assertTrue(any(e["msg"] == "http.request" and e["path"] == "/UserViews" for e in events))
         for event in events:
             self.assertNotIn("?", event.get("path", ""))
@@ -837,6 +840,47 @@ class BrowseIntegrationTests(BrowserFixture):
                              for path, body in self.reports), "remote stop failed")
         self.assertIsNone(self.process.poll(), "remote Stop exited the browser")
         self.remote_done.set()
+
+    def test_preview_watched_options(self):
+        self.start_browser(Scenario(resume_movie=True))
+        self.key(b"b")
+        self.wait_request("/Items", ParentId="view-movies")
+        self.key(b"b")
+        self.wait_request("/Items/movie-tricky-0")
+        self.key(b"o")
+        self.wait_event("browser.watched", watched=True, failed=False)
+        self.key(b"o")
+        self.wait_event("browser.watched", watched=False, failed=False)
+        actions = [body["Played"] for path, body in self.reports
+                   if path == "/UserPlayedItems/movie-tricky-0"]
+        self.assertEqual(actions, [True, False])
+        self.assertFalse(any(path == "/Sessions/Playing" for path, _ in self.reports))
+        self.key(b"a")
+        self.assertIsNone(self.process.poll())
+
+    def test_local_music_options_publish_without_restarting(self):
+        self.start_browser(Scenario(short_album=True, remote_control=True))
+        self.key(b"\x1b[C\x1b[Cb")
+        self.wait_request("/Items", ParentId="view-music")
+        self.key(b"b")
+        self.wait_request("/Items", ParentId="artist-000")
+        self.key(b"b")
+        self.wait_request("/Items", ParentId="artist-000-album0")
+        self.key(b"b")
+        self.wait_request("/Audio/artist-000-album0-t01/stream")
+        self.wait_event("browser.playback-ready")
+        self.key(b"\tb\x1b[Bb")  # Repeat All, then shuffle the remaining tracks.
+        deadline = time.monotonic() + 5
+        while not any(path == "/Sessions/Playing/Progress"
+                      and body.get("RepeatMode") == "RepeatAll"
+                      and body.get("PlaybackOrder") == "Shuffle"
+                      for path, body in self.reports):
+            self.assertLess(time.monotonic(), deadline, "music options were not reported")
+            time.sleep(.02)
+        self.key(b"a")  # Dismiss options without stopping music.
+        self.assertEqual(sum(urlparse(r).path.startswith("/Audio/") for r in self.requests), 1)
+        self.assertFalse(any(path == "/Sessions/Playing/Stopped" for path, _ in self.reports))
+        self.assertIsNone(self.process.poll())
 
     def test_music_plays_with_browser_frame_and_stops(self):
         self.start_browser()

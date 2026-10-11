@@ -185,7 +185,7 @@ func (s *browserSession) endQueue() {
 	depth := q.returnDepth
 	q.active = false
 	q.switching = false
-	q.queue.Replace(nil, 0)
+	q.queue = remote.Queue{}
 	q.items = nil
 	q.localRows = nil
 	s.model.EndMusicQueue()

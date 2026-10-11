@@ -220,11 +220,13 @@ func TestMusicSeekingDoesNotChangeTrackOrShowControls(t *testing.T) {
 	s.controller.item.Type = "Audio"
 	s.controller.running = true
 	s.controller.state.ProgressSeen = true
+	now := time.Unix(100, 0)
 	for _, tc := range []struct {
 		key     control.Action
 		seconds int
 	}{{"seek-backward", -10}, {"seek-forward", 10}, {"seek-forward-repeat", 10}} {
-		s.handleKey(tc.key)
+		s.dispatchKeyAt(tc.key, now)
+		now = now.Add(250 * time.Millisecond)
 		select {
 		case c := <-s.controller.active.controls:
 			if c.Kind != "seek" || c.Seconds != tc.seconds {

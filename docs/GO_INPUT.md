@@ -6,6 +6,10 @@ Profiles configure Linux evdev devices, including MiSTer controllers and physica
 
 The default controller layout follows MiSTer: B selects, plays, or pauses and A returns, cancels, or stops. Explicit button bindings override these defaults. Keyboard controls remain Enter to select and Escape to return.
 
+Hold the button mapped to `about` for two seconds to open the exit confirmation from any screen. With the default controller layout, hold Start, then press B to exit or A to cancel. A short press opens About on release. The long hold fires once and does not also open About. Cancel preserves the current screen and playback. This gesture uses Linux input press/release events and also works with a physical keyboard's F1 on MiSTer. Ghostty terminal input retains its existing F1 and Q controls.
+
+During recorded video or music playback, held Left/Right repeats seeking at a controlled rate of about 250 milliseconds per step. Browsing lists retain accelerated held scrolling. Up/Down and track changes do not repeat during playback.
+
 ## Profiles and labels
 
 `match` is a case-sensitive glob for the Linux device name. See [finding device names and button codes](#finding-device-names-and-button-codes) to identify the controller and its inputs. Matching profiles apply in file order, including after hotplug.
@@ -114,8 +118,9 @@ Gamepads use the left stick for navigation by default: axis `0` selects left/rig
 | `seek-backward`, `seek-forward` | Seek music by 10 seconds or recorded video by 30 seconds. Ignored for Live TV. |
 | `open` | Open a selection, apply a choice, or pause/resume. |
 | `back` | Return, dismiss, cancel, or stop playback. |
-| `about` | Toggle About while browsing. Default: Start or F1. |
-| `select` | Switch the home view, restart resumable video from details, open video options, start library shuffle, or cycle music backgrounds. |
+| `about` | Toggle About while browsing. Hold for two seconds on Linux input devices to confirm exit from any screen. Default: Start or F1. |
+| `select` | Switch the home view, restart resumable video from details, open video options, start library shuffle, or open music repeat/shuffle settings. |
+| `options` | Cycle music backgrounds or mark a movie/episode watched or unwatched on its preview. Default: controller X or keyboard O. |
 | `retry` | Retry or refresh the current request. |
 | `quit` | Exit the application. |
 

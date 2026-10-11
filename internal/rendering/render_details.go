@@ -31,6 +31,13 @@ func (p *screenPainter) details() [][]controlHint {
 	if v.Error != "" || p.scene.SelectionError != "" {
 		hints = append(hints, hint(labels, control.Retry, "Retry"))
 	}
+	if p.scene.OptionsAvailable {
+		label := "Mark watched"
+		if v.Detail.UserData.Played {
+			label = "Mark unwatched"
+		}
+		hints = append(hints, hint(labels, control.Options, label))
+	}
 	hints = append(hints, hint(labels, control.Back, "Back"))
 	rows := controlRows(w, hints)
 	extra := max(0, len(rows)-1) * controlRowHeight
@@ -60,6 +67,10 @@ func (p *screenPainter) details() [][]controlHint {
 	overviewBottom := controlsTop(p.bottom, rows) - 4
 	if p.footerMessage() != "" {
 		overviewBottom -= 12
+	}
+	statusY := overviewBottom - 10
+	if p.scene.OptionsAvailable {
+		overviewBottom -= 14
 	}
 	cy := hero - 22 + 3
 	ty := max(hero+4, h-8-sy-34-50-extra)
@@ -94,6 +105,12 @@ func (p *screenPainter) details() [][]controlHint {
 		center(c, ty, truncate(s, w-48, 1), col, 1)
 	} else {
 		c.Text(w-24-c.MeasureText(s, 1), ty, s, col, w-24)
+	}
+	if p.scene.OptionsAvailable {
+		// Reserve a stable line so saving and completion do not move metadata.
+		if p.scene.WatchedMessage != "" {
+			center(c, statusY, truncate(p.scene.WatchedMessage, w-48, 1), 0xffffff, 1)
+		}
 	}
 	lines := min(3, (overviewBottom-(ty+16))/10)
 	if lines > 0 {
