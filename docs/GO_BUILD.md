@@ -1,6 +1,6 @@
 # Build and install
 
-Use Go 1.26.8 or later, a C compiler, and Python 3 on Linux. Go module dependencies are pinned in [go.mod](../go.mod). MiSTer builds also need an ARM cross-compiler. Docker builds the separate MPlayer executable on the development machine, not on MiSTer.
+Use Go 1.27.2 or later, a C compiler, and Python 3 on Linux. Go module dependencies are pinned in [go.mod](../go.mod). CI and release builds read the Go version from that file. MiSTer builds also need an ARM cross-compiler. Docker builds the separate MPlayer executable on the development machine, not on MiSTer.
 
 ## Go client
 
@@ -158,6 +158,8 @@ make test-browse
 ```
 
 `make lint` checks formatting, runs `go vet`, and uses pinned Staticcheck. [Linter settings](../staticcheck.conf) preserve proper-name capitalization in errors. `make vulnerability-check` uses pinned govulncheck to check reachable Go advisories. It does not scan native MPlayer dependencies.
+
+Staticcheck uses a separate [tool module](../tools/checks/go.mod) to pin a Go 1.27-compatible package importer without adding analysis dependencies to the application. `make lint` builds the pinned tool before running it.
 
 `make test` covers Go with and without cgo plus Python/native adapter tests. `make test-browse` runs the built client against isolated HTTP/WebSocket fixtures. Generated media and local servers avoid a real media-server account or MiSTer dependency. Decoder tests can skip when their external dependencies are absent.
 

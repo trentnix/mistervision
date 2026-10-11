@@ -27,6 +27,11 @@ func (s *browserSession) loadSelection() {
 	key := ""
 	root := len(s.model.Stack) == 1
 	detail := s.model.Current().Detail != nil
+	postPlay := s.postPlay.visible && s.postPlay.sequence.next != nil
+	if postPlay {
+		item = &s.postPlay.sequence.next.item
+		root, detail = false, true
+	}
 	if item != nil {
 		key = item.ID
 		if root {
@@ -34,6 +39,9 @@ func (s *browserSession) loadSelection() {
 		}
 		if detail {
 			key = "detail:" + key
+		}
+		if postPlay {
+			key = "post-play:" + key
 		}
 	}
 	if key == s.selection.key {
@@ -99,7 +107,12 @@ func (s *browserSession) handleSelection(r selectionResult) bool {
 		case selectionArtwork:
 			applyArtwork(&s.selection.current.artwork, r.update.art)
 		case selectionDetails:
-			if s.model.Current().Detail != nil {
+			if s.postPlay.visible && s.postPlay.sequence.next != nil {
+				// Preview metadata must never replace the completed browser item.
+				if r.update.detail != nil && r.update.detail.ID == s.postPlay.sequence.next.item.ID {
+					s.postPlay.sequence.next.item = *r.update.detail
+				}
+			} else if s.model.Current().Detail != nil {
 				s.model.Current().Detail = r.update.detail
 			}
 		}

@@ -28,6 +28,11 @@ func NewRenderer() *RasterRenderer { return &RasterRenderer{} }
 // advances animation from Scene.Now, and invalidates visual caches on size changes.
 // The caller must present or copy both pixel slices before calling Render again.
 func (r *RasterRenderer) Render(w, h int, s Scene) videoout.Frame {
+	// Choose artwork before either output layout draws its background. The
+	// scene is a copy, so ordinary previews keep their original backdrop.
+	if s.PostPlay != nil && s.PostPlay.Next != nil && s.Artwork.Primary != nil {
+		s.Artwork.Backdrop = s.Artwork.Primary
+	}
 	rw, rh := w, h
 	if !s.Video && r.rasterWidth > 0 && r.rasterHeight > 0 {
 		rw, rh = r.rasterWidth, r.rasterHeight
@@ -45,9 +50,16 @@ func (r *RasterRenderer) Render(w, h int, s Scene) videoout.Frame {
 		r.overlay.Typeface = r.canvas.Typeface
 		clear(r.overlay.Pixels)
 		f.Overlay = renderVideoOverlayOn(r.overlay, s.Playback, s.Now, s.Controls, &r.captions)
-		drawMessage(r.overlay, s.Message, s.Now)
+		if s.ExitConfirm {
+			p := screenPainter{canvas: r.overlay, cache: &r.cache, scene: s, width: w, height: h}
+			p.exitConfirmation()
+		} else {
+			drawMessage(r.overlay, s.Message, s.Now)
+		}
 	}
-	drawMessage(r.canvas, s.Message, s.Now)
+	if !s.ExitConfirm {
+		drawMessage(r.canvas, s.Message, s.Now)
+	}
 	if wide {
 		f.UI = r.wide.compose(r.canvas)
 		f.UIWidth, f.UIHeight = r.wide.width, r.wide.height

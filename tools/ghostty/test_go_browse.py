@@ -115,8 +115,11 @@ class BrowseIntegrationTests(BrowserFixture):
         self.assertEqual(display["output_height"], 240)
         self.assertTrue(any(e["msg"] == "application.phase" and e["stage"] == "browser" for e in events))
         self.assertTrue(any(e["msg"] == "input.backend" and e["terminal"] for e in events))
-        self.assertEqual(events[-1]["msg"], "application.exit")
-        self.assertFalse(events[-1]["failed"])
+        # A canceled HTTP worker can finish logging between the exit record
+        # and Log.Close. The lifecycle contract is one successful exit event.
+        exits = [event for event in events if event["msg"] == "application.exit"]
+        self.assertEqual(len(exits), 1)
+        self.assertFalse(exits[0]["failed"])
         self.assertTrue(any(e["msg"] == "http.request" and e["path"] == "/UserViews" for e in events))
         for event in events:
             self.assertNotIn("?", event.get("path", ""))
@@ -278,6 +281,36 @@ class BrowseIntegrationTests(BrowserFixture):
                           videoBitRate=8000000, maxFramerate=30, allowVideoStreamCopy="false")
         self.assertEqual(len(self.read_frame()), 640 * 240 * 4)
 
+    def test_episode_completion_waits_for_choice_and_restores_list(self):
+        self.start_browser(Scenario(player="finish"))
+        self.key(b"\x1b[Cb")
+        self.wait_request("/Items", ParentId="view-tv")
+        self.key(b"b")
+        self.wait_request("/Shows/series-000/Seasons")
+        self.key(b"b")
+        self.wait_request("/Shows/series-000/Episodes", seasonId="series-000-s1")
+        self.key(b"b")
+        self.wait_request("/Items/series-000-s1e01")
+        self.key(b"b")
+        self.wait_event("browser.post-play", available=True, pending=False)
+        self.wait_request("/Items/series-000-s1e02/Images/Backdrop/0")
+        self.assertFalse(any("/Videos/series-000-s1e02/stream" in r for r in self.requests))
+        self.key(b"b")  # Explicitly accept the successor.
+        self.wait_request("/Videos/series-000-s1e02/stream", startTimeTicks=0)
+        deadline = time.monotonic() + 5
+        while sum(path == "/Sessions/Playing/Stopped" for path, _ in self.reports) < 2:
+            self.assertLess(time.monotonic(), deadline, "second episode did not finish")
+            time.sleep(.02)
+        # Wait for the second completion prompt, not just the final server report.
+        while self.diagnostics.read_text().count('"msg":"browser.post-play"') < 2:
+            self.assertLess(time.monotonic(), deadline, "second completion prompt did not open")
+            time.sleep(.02)
+        self.key(b"a")  # Back restores episode two in its list.
+        self.key(b"b")  # Opening the selected item must not start playback.
+        self.wait_request("/Items/series-000-s1e02")
+        self.assertEqual(sum("/Videos/series-000-s1e02/stream" in r for r in self.requests), 1)
+        self.assertFalse(any("/Videos/series-000-s1e03/stream" in r for r in self.requests))
+
     def test_playback_stop_returns_to_details(self):
         self.start_browser()
         self.exercise_playback_stop()
@@ -390,6 +423,52 @@ class BrowseIntegrationTests(BrowserFixture):
             self.assertLess(time.monotonic(), deadline, "seek after restart did not reach destination")
             time.sleep(0.02)
         self.key(b"a")
+
+    def test_segment_skip_preserves_pause_without_refetching(self):
+        self.start_browser(Scenario(player="inline", segments=[
+            {"Type": "Intro", "StartTicks": 0, "EndTicks": 600000000},
+        ]))
+        self.key(b"b")
+        self.wait_request("/Items", ParentId="view-movies", StartIndex=0)
+        self.key(b"b")
+        self.wait_request("/Items/movie-tricky-0")
+        self.key(b"b")
+        self.wait_video_ready()
+        self.wait_event("browser.segments", count=1)
+        self.key(b"b")
+        deadline = time.monotonic() + 5
+        while not any(path.endswith("/Progress") and body.get("IsPaused")
+                      for path, body in self.reports):
+            self.assertLess(time.monotonic(), deadline, "pause was not reported")
+            time.sleep(.01)
+        self.reports.clear()
+        self.key(b"o")
+        self.wait_request("/Videos/movie-tricky-0/stream", startTimeTicks=600000000)
+        self.wait_video_ready(600000000)
+        deadline = time.monotonic() + 5
+        while not any(path.endswith("/Progress") and body.get("IsPaused") and
+                      body.get("PositionTicks", 0) >= 600000000 for path, body in self.reports):
+            self.assertLess(time.monotonic(), deadline, "skip did not preserve pause")
+            time.sleep(.01)
+        self.assertEqual(sum(urlparse(r).path.startswith("/MediaSegments/")
+                             for r in self.requests), 1)
+        self.key(b"a")
+        self.assertIsNone(self.process.poll())
+
+    def test_unavailable_segments_do_not_interrupt_playback(self):
+        self.start_browser(Scenario(player="inline", segments_status=500))
+        self.key(b"b")
+        self.wait_request("/Items", ParentId="view-movies", StartIndex=0)
+        self.key(b"b")
+        self.wait_request("/Items/movie-tricky-0")
+        self.key(b"b")
+        self.wait_video_ready()
+        self.wait_event("browser.segments", count=0)
+        self.key(b"o")
+        self.key(b"a")
+        self.assertIsNone(self.process.poll())
+        self.assertEqual(sum(urlparse(r).path == "/Videos/movie-tricky-0/stream"
+                             for r in self.requests), 1)
 
     def test_video_seek_accumulates_and_preserves_pause(self):
         self.start_browser()
@@ -837,6 +916,47 @@ class BrowseIntegrationTests(BrowserFixture):
                              for path, body in self.reports), "remote stop failed")
         self.assertIsNone(self.process.poll(), "remote Stop exited the browser")
         self.remote_done.set()
+
+    def test_preview_watched_options(self):
+        self.start_browser(Scenario(resume_movie=True))
+        self.key(b"b")
+        self.wait_request("/Items", ParentId="view-movies")
+        self.key(b"b")
+        self.wait_request("/Items/movie-tricky-0")
+        self.key(b"o")
+        self.wait_event("browser.watched", watched=True, failed=False)
+        self.key(b"o")
+        self.wait_event("browser.watched", watched=False, failed=False)
+        actions = [body["Played"] for path, body in self.reports
+                   if path == "/UserPlayedItems/movie-tricky-0"]
+        self.assertEqual(actions, [True, False])
+        self.assertFalse(any(path == "/Sessions/Playing" for path, _ in self.reports))
+        self.key(b"a")
+        self.assertIsNone(self.process.poll())
+
+    def test_local_music_options_publish_without_restarting(self):
+        self.start_browser(Scenario(short_album=True, remote_control=True))
+        self.key(b"\x1b[C\x1b[Cb")
+        self.wait_request("/Items", ParentId="view-music")
+        self.key(b"b")
+        self.wait_request("/Items", ParentId="artist-000")
+        self.key(b"b")
+        self.wait_request("/Items", ParentId="artist-000-album0")
+        self.key(b"b")
+        self.wait_request("/Audio/artist-000-album0-t01/stream")
+        self.wait_event("browser.playback-ready")
+        self.key(b"\tb\x1b[Bb")  # Repeat All, then shuffle the remaining tracks.
+        deadline = time.monotonic() + 5
+        while not any(path == "/Sessions/Playing/Progress"
+                      and body.get("RepeatMode") == "RepeatAll"
+                      and body.get("PlaybackOrder") == "Shuffle"
+                      for path, body in self.reports):
+            self.assertLess(time.monotonic(), deadline, "music options were not reported")
+            time.sleep(.02)
+        self.key(b"a")  # Dismiss options without stopping music.
+        self.assertEqual(sum(urlparse(r).path.startswith("/Audio/") for r in self.requests), 1)
+        self.assertFalse(any(path == "/Sessions/Playing/Stopped" for path, _ in self.reports))
+        self.assertIsNone(self.process.poll())
 
     def test_music_plays_with_browser_frame_and_stops(self):
         self.start_browser()

@@ -16,10 +16,11 @@ func TestDefaultButtonMapping(t *testing.T) {
 		want control.Action
 	}{
 		{"Microsoft Xbox Controller", 314, control.Select},
-		{"Microsoft Xbox Controller", 307, ""},
+		{"Microsoft Xbox Controller", 307, control.Options},
 		{"Microsoft Xbox Controller", 305, control.Open},
 		{"Microsoft Xbox Controller", 304, control.Back},
 		{"Keyboard", 15, control.Select},
+		{"Keyboard", 24, control.Options},
 		{"Keyboard", 59, control.About},
 		{"Microsoft Xbox Controller", 315, control.About},
 		{"MiSTer virtual input", 15, ""},
@@ -176,5 +177,31 @@ func TestSeekHoldRepeatsWithoutNavigationAcceleration(t *testing.T) {
 	n.update(nil, nil, now.Add(3*time.Second))
 	if got := n.update(nil, nil, now.Add(4*time.Second)); len(got) != 0 {
 		t.Fatal("released trigger kept seeking")
+	}
+}
+
+func TestAboutHoldFollowsConfiguredBinding(t *testing.T) {
+	d := device{name: "Custom pad", held: make(map[uint16]control.Action)}
+	d.configure(Config{Profiles: []Profile{{Match: "Custom pad", Buttons: map[uint16]control.Action{315: "", 307: control.About}}}})
+	start := time.Unix(100, 0)
+	if d.accept(event{Type: 1, Code: 315, Value: 1}) != "" {
+		t.Fatal("disabled Start binding remained active")
+	}
+	key := d.accept(event{Type: 1, Code: 307, Value: 1})
+	if key != control.About {
+		t.Fatal("remapped About was not recognized")
+	}
+	if d.about.update(d.held[307] == control.About, true, start) != "" {
+		t.Fatal("About fired before release")
+	}
+	if d.accept(event{Type: 1, Code: 307, Value: 2}) != "" {
+		t.Fatal("kernel repeat duplicated hold")
+	}
+	if d.about.update(d.held[307] == control.About, false, start.Add(2*time.Second)) != control.ConfirmExit {
+		t.Fatal("remapped hold did not request exit")
+	}
+	d.accept(event{Type: 1, Code: 307, Value: 0})
+	if d.about.update(d.held[307] == control.About, false, start.Add(4*time.Second)) != "" {
+		t.Fatal("long hold also opened About")
 	}
 }

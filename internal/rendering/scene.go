@@ -22,6 +22,14 @@ type Scene struct {
 	// Nil selects the normal per-library and per-item backgrounds.
 	Background image.Image
 
+	// OptionsAvailable exposes a contextual action without changing playback controls.
+	OptionsAvailable bool
+	Options          *OptionsMenu
+	// PostPlay replaces the completed preview with a next-episode choice.
+	PostPlay *PostPlayPresentation
+	// WatchedMessage gives inline saving, completion, or failure feedback on the preview.
+	WatchedMessage string
+
 	Message        MessagePresentation
 	About          AboutPresentation
 	Content        Content

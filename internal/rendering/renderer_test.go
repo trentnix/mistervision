@@ -102,3 +102,51 @@ func TestVideoBackdropReusesJPEGAndPNGImages(t *testing.T) {
 		}
 	}
 }
+
+func TestGlobalExitConfirmationCoversEveryScreen(t *testing.T) {
+	for _, size := range [][2]int{{640, 240}, {640, 288}, {640, 360}, {640, 480}} {
+		for _, screen := range []string{"browse", "about", "setup", "music", "options", "video", "video-options"} {
+			s := Scene{Root: true, Now: time.Unix(100, 0)}
+			switch screen {
+			case "about":
+				s.About.Visible = true
+			case "setup":
+				s.Setup.Kind = SetupPIN
+			case "music", "options":
+				s.Audio = true
+				s.Content.Detail = &media.Item{Type: "Audio", Name: "Track"}
+				if screen == "options" {
+					s.Options = &OptionsMenu{Title: "Music options", Rows: []string{"Repeat: Off"}}
+				}
+			case "video", "video-options":
+				s.Video = true
+				s.Content.Detail = &media.Item{Type: "Movie", Name: "Movie"}
+				if screen == "video-options" {
+					s.Playback.Tracks = &TrackMenu{}
+				}
+			}
+			r := NewRenderer()
+			base := r.Render(size[0], size[1], s)
+			uiPixels, overlayPixels := bytes.Clone(base.UI), bytes.Clone(base.Overlay)
+			s.ExitConfirm = true
+			confirmed := r.Render(size[0], size[1], s)
+			if bytes.Equal(uiPixels, confirmed.UI) {
+				t.Fatalf("exit missing on %s at %v", screen, size)
+			}
+			if s.Video {
+				if bytes.Equal(overlayPixels, confirmed.Overlay) {
+					t.Fatal("exit missing from video overlay")
+				}
+				// The translucent confirmation stripe must span the video frame.
+				if confirmed.Overlay[(size[1]/2*size[0])*4+3] == 0 {
+					t.Fatal("video confirmation stripe missing")
+				}
+			}
+			s.ExitConfirm = false
+			canceled := r.Render(size[0], size[1], s)
+			if !bytes.Equal(uiPixels, canceled.UI) || !bytes.Equal(overlayPixels, canceled.Overlay) {
+				t.Fatalf("cancel left exit pixels on %s", screen)
+			}
+		}
+	}
+}

@@ -114,6 +114,14 @@ func (q *Queue) Snapshot() QueueState {
 	return QueueState{Entries: slices.Clone(q.entries), Current: q.Current().Key, Repeat: mode, Shuffled: q.shuffled}
 }
 
+// Repeat reports the current repeat mode without copying the queue.
+func (q *Queue) Repeat() RepeatMode {
+	if q.repeat == "" {
+		return RepeatNone
+	}
+	return q.repeat
+}
+
 // Shuffled reports ordering mode without copying the queue for presentation.
 func (q *Queue) Shuffled() bool { return q.shuffled }
 

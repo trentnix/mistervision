@@ -22,7 +22,7 @@ func TestCollectionQueries(t *testing.T) {
 		{"musicvideos", "Recursive=true&IncludeItemTypes=MusicVideo", "ProductionYear,RunTimeTicks", "true"},
 		{"music", "", "ProductionYear,RunTimeTicks,ChildCount", "true"},
 		{"homevideos", "IncludeItemTypes=Folder,PhotoAlbum,Video,Photo", "ProductionYear,RunTimeTicks", "false"},
-		{"mixed", "", "ProductionYear,RunTimeTicks", "false"},
+		{"mixed", "", "ProductionYear,RunTimeTicks", "true"},
 		{"tvshows", "", "ProductionYear,RunTimeTicks,ChildCount,RecursiveItemCount", "true"},
 		{"plugin-defined", "", "ProductionYear,RunTimeTicks,ChildCount,RecursiveItemCount", "true"},
 	} {
@@ -245,5 +245,23 @@ func TestArtistAlbumsPreserveMusicFolderQuery(t *testing.T) {
 	page, err := c.List(t.Context(), Location{Kind: "albums", ParentID: "artist", Collection: "music"}, 64, 64)
 	if err != nil || len(page.Items) != 1 || page.Items[0].Type != "MusicAlbum" || page.TotalRecordCount == nil || *page.TotalRecordCount != 65 {
 		t.Fatalf("artist albums: %+v, %v", page, err)
+	}
+}
+
+func TestMixedLibraryIncludesWatchedAndResumeState(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("EnableUserData") != "true" {
+			t.Error("mixed library omitted user data")
+		}
+		fmt.Fprint(w, `{"Items":[{"Id":"one","Type":"Movie","UserData":{"Played":true}},{"Id":"two","Type":"Episode","UserData":{"PlaybackPositionTicks":900000000}}]}`)
+	}))
+	defer server.Close()
+	client := NewClient(Config{Server: server.URL}, Session{UserID: "viewer"})
+	page, err := client.List(t.Context(), Location{Collection: "mixed", ParentID: "library"}, 0, 64)
+	if err != nil || len(page.Items) != 2 {
+		t.Fatalf("page: %+v %v", page, err)
+	}
+	if !page.Items[0].UserData.Played || page.Items[1].UserData.PlaybackPositionTicks != 900000000 {
+		t.Fatal("mixed library lost watched/resume state")
 	}
 }

@@ -157,6 +157,7 @@ func (c *PlaybackController) updatePosition(ticks int64, now time.Time) {
 	}
 	c.state.ProgressSeen = true
 	c.state.PositionTicks = ticks
+	c.updateSegmentPrompt(now)
 	if firstPosition && c.pauseRequested {
 		c.SetPaused(true)
 	}

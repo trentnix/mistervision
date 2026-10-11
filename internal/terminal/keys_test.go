@@ -58,3 +58,12 @@ func TestAboutKeyEncodings(t *testing.T) {
 		t.Fatal("F1 repeat/release handling")
 	}
 }
+
+func TestOptionsKeyEncodings(t *testing.T) {
+	for _, seq := range []string{"o", "O", "\x1b[111u"} {
+		var d Decoder
+		if got := d.Feed([]byte(seq), time.Now()); len(got) != 1 || got[0] != control.Options {
+			t.Fatalf("%q: %v", seq, got)
+		}
+	}
+}

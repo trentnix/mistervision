@@ -23,8 +23,9 @@ func itemsQuery(user, parent, collection string, start, limit int) url.Values {
 		q.Set("Fields", "ProductionYear,RunTimeTicks,ChildCount")
 	case "homevideos", "mixed":
 		q.Set("Fields", "ProductionYear,RunTimeTicks")
-		q.Set("EnableUserData", "false")
+		// Mixed-library movies need the same watched/resume data as movie libraries.
 		if collection == "homevideos" {
+			q.Set("EnableUserData", "false")
 			q.Set("IncludeItemTypes", "Folder,PhotoAlbum,Video,Photo")
 		}
 		// Mixed libraries use their actual children without a type whitelist.

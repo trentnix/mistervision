@@ -93,3 +93,20 @@ const (
 
 // titleRemotePlayback identifies failures while resolving or extending a remote queue.
 const titleRemotePlayback = "Remote playback"
+
+// Media options and explicit watched-state changes.
+const (
+	messageQueueLoading       = "Loading album or playlist..."
+	messageQueueOptionsFailed = "Could not load the playback queue."
+	messageWatchedSaving      = "Saving watched state..."
+	messageWatchedFailed      = "Could not change watched state."
+	messageMarkedWatched      = "Marked watched."
+	messageMarkedUnwatched    = "Marked unwatched."
+)
+
+// Episode completion and optional successor lookup.
+const (
+	messageNextEpisodeLoading = "Finding the next episode..."
+	messageNextEpisodeFailed  = "Could not find the next episode. Go back to choose an episode."
+	messageNoNextEpisode      = "No more episodes are available in this series."
+)

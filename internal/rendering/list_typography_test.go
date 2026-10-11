@@ -10,7 +10,7 @@ import (
 	"mistervision/internal/ui"
 )
 
-func TestListSelectionBalancesVisibleText(t *testing.T) {
+func TestListSelectionContainsVisibleText(t *testing.T) {
 	count := 67
 	for _, height := range []int{240, 288} {
 		for _, tc := range []struct {
@@ -48,16 +48,18 @@ func TestListSelectionBalancesVisibleText(t *testing.T) {
 					t.Fatal("missing selection")
 				}
 				top, bottom := height, -1
-				for y := first; y <= last; y++ {
+				for y := max(0, first-2); y < min(height, last+5); y++ {
 					for x := 24; x < 200; x++ {
 						off := (y*640 + x) * 4
-						if !bytes.Equal(pixels[off:off+3], blue) {
+						if pixels[off] > 50 && pixels[off+1] > 50 && pixels[off+2] > 50 {
 							top = min(top, y)
 							bottom = max(bottom, y)
 						}
 					}
 				}
-				if bottom < top || top-first != last-bottom || top-first < 1 {
+				// A stable baseline reserves descender space even when the text
+				// does not use it. Visible-ink padding need not be identical.
+				if bottom < top || top < first || bottom > last {
 					t.Fatalf("selection padding top=%d bottom=%d", top-first, last-bottom)
 				}
 			})
@@ -77,5 +79,44 @@ func TestHomeAndLibraryRowsUseSameTypography(t *testing.T) {
 		if title != home {
 			t.Fatal("home and library title use different font settings")
 		}
+	}
+}
+
+func TestListRowSpacingDoesNotDependOnDescenders(t *testing.T) {
+	for _, geometry := range []struct{ height, rasterWidth, rasterHeight int }{
+		{240, 640, 240}, {288, 640, 288}, {480, 640, 480}, {240, 960, 720},
+	} {
+		t.Run(fmt.Sprintf("%d/%dx%d", geometry.height, geometry.rasterWidth, geometry.rasterHeight), func(t *testing.T) {
+			var wantTop, wantBottom, wantBar int
+			for i, title := range []string{"Countdown", "Space Fold", "Boobytrap", "The Long Wait", "Blitzkrieg"} {
+				item := media.Item{Name: title, Type: "Episode", RunTimeTicks: 24 * 600000000}
+				item.UserData.Played = true // Green metadata separates it from the title.
+				scene := Scene{ListMode: true, Content: Content{Page: media.Page{Items: []media.Item{item}}}}
+				r := NewRendererForRaster(geometry.rasterWidth, geometry.rasterHeight)
+				frame := r.Render(640, geometry.height, scene)
+				top, bottom, bar := frame.UIHeight, -1, -1
+				for y := 0; y < frame.UIHeight; y++ {
+					for x := 0; x < frame.UIWidth; x++ {
+						at := (y*frame.UIWidth + x) * 4
+						b, g, red := int(frame.UI[at]), int(frame.UI[at+1]), int(frame.UI[at+2])
+						if g > red+20 && g > b+20 {
+							top, bottom = min(top, y), max(bottom, y)
+						}
+						if b == 0x7c && g == 0x37 && red == 0x0d {
+							bar = max(bar, y)
+						}
+					}
+				}
+				if bottom < top || bar < 0 {
+					t.Fatal("missing metadata or selection bar")
+				}
+				if i == 0 {
+					wantTop, wantBottom, wantBar = top, bottom, bar
+				}
+				if top != wantTop || bottom != wantBottom || bar != wantBar {
+					t.Fatalf("%q moved metadata or selection: %d,%d,%d want %d,%d,%d", title, top, bottom, bar, wantTop, wantBottom, wantBar)
+				}
+			}
+		})
 	}
 }

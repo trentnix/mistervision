@@ -43,7 +43,7 @@ func (s *browserSession) stopRemote() {
 	s.remoteRequests.cancelAll()
 	s.playbackQueue.active = false
 	s.playbackQueue.switching = false
-	s.playbackQueue.queue.Replace(nil, 0)
+	s.playbackQueue.queue = remote.Queue{}
 	s.playbackQueue.items = nil
 	s.playbackQueue.localRows = nil
 }

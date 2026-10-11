@@ -20,6 +20,8 @@ func characterAction(c rune) control.Action {
 		return control.Quit
 	case 'b', 'B', 'x', 'X', 13, 10:
 		return control.Open
+	case 'o', 'O':
+		return control.Options
 	case 'r', 'R':
 		return control.Retry
 	case 'j', 'J':

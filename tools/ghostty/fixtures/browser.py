@@ -42,6 +42,8 @@ class Scenario:
     hold_home: bool = False
     remote_control: bool = False
     slow_seek: bool = False
+    segments: list = field(default_factory=list)
+    segments_status: int = 200
     page_delay: float = 0
     video_delay: float = 0
     transcode_profile: str = ""
@@ -160,6 +162,9 @@ class BrowserFixture(unittest.TestCase):
                         except (BrokenPipeError, ConnectionResetError):
                             break
                     return
+                if path.startswith("/MediaSegments/"):
+                    return self._send({"Items": test.scenario.segments},
+                                      status=test.scenario.segments_status)
                 if path == "/Items" and "Ids" in query:
                     return self._send(self._query_result(query["Ids"][0].split(","), query))
                 if (test.scenario.mixed_library
@@ -219,7 +224,22 @@ class BrowserFixture(unittest.TestCase):
                 except (BrokenPipeError, ConnectionResetError):
                     pass  # Expected when the browser cancels a delayed request.
 
+            def set_watched(self, watched):
+                path = urlparse(self.path).path
+                item = mock.ITEMS[path.rsplit("/", 1)[-1]]
+                item["UserData"].update(Played=watched, PlaybackPositionTicks=0)
+                test.reports.append((path, {"Played": watched}))
+                self.send_response(204)
+                self.end_headers()
+
+            def do_DELETE(self):
+                if urlparse(self.path).path.startswith("/UserPlayedItems/"):
+                    return self.set_watched(False)
+                self.send_error(404)
+
             def do_POST(self):
+                if urlparse(self.path).path.startswith("/UserPlayedItems/"):
+                    return self.set_watched(True)
                 length = int(self.headers.get("Content-Length", "0"))
                 body = json.loads(self.rfile.read(length)) if length else {}
                 test.reports.append((urlparse(self.path).path, body))

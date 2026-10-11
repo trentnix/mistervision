@@ -31,23 +31,20 @@ func (p *screenPainter) details() [][]controlHint {
 	if v.Error != "" || p.scene.SelectionError != "" {
 		hints = append(hints, hint(labels, control.Retry, "Retry"))
 	}
+	if p.scene.OptionsAvailable {
+		label := "Mark watched"
+		if v.Detail.UserData.Played {
+			label = "Mark unwatched"
+		}
+		hints = append(hints, hint(labels, control.Options, label))
+	}
 	hints = append(hints, hint(labels, control.Back, "Back"))
 	rows := controlRows(w, hints)
 	extra := max(0, len(rows)-1) * controlRowHeight
 
 	hero := max(80, min(150, h-88)-extra)
 	full := max(h*3/4, hero)
-	cache.backdrop(c, art, true, nil, image.Rectangle{}, func(layer *ui.Canvas) {
-		if p.background != nil {
-			copy(layer.Pixels, c.Pixels)
-			return
-		}
-		layer.Rect(0, 0, w, full, 0x181818)
-		layer.Blit(art.Backdrop, 0, 0, w, full)
-		for y := 0; y < full; y++ {
-			layer.Shade(0, y, w, 1, y*255/max(1, full-1))
-		}
-	})
+	p.previewBackdrop(full)
 	p.clock()
 	// Preview metadata and synopsis need stronger strokes on low-resolution CRTs.
 	// Restore the shared face before the caller draws navigation and notices.
@@ -60,6 +57,10 @@ func (p *screenPainter) details() [][]controlHint {
 	overviewBottom := controlsTop(p.bottom, rows) - 4
 	if p.footerMessage() != "" {
 		overviewBottom -= 12
+	}
+	statusY := overviewBottom - 10
+	if p.scene.OptionsAvailable {
+		overviewBottom -= 14
 	}
 	cy := hero - 22 + 3
 	ty := max(hero+4, h-8-sy-34-50-extra)
@@ -95,10 +96,33 @@ func (p *screenPainter) details() [][]controlHint {
 	} else {
 		c.Text(w-24-c.MeasureText(s, 1), ty, s, col, w-24)
 	}
+	if p.scene.OptionsAvailable {
+		// Reserve a stable line so saving and completion do not move metadata.
+		if p.scene.WatchedMessage != "" {
+			center(c, statusY, truncate(p.scene.WatchedMessage, w-48, 1), 0xffffff, 1)
+		}
+	}
 	lines := min(3, (overviewBottom-(ty+16))/10)
 	if lines > 0 {
 		c.Wrap(24, ty+16, w-48, lines, v.Detail.Overview, 0xffffff)
 	}
 
 	return rows
+}
+
+// previewBackdrop shares cached, shaded artwork between media previews and the
+// next-episode screen. Widescreen output already supplies the matching gradient.
+func (p *screenPainter) previewBackdrop(full int) {
+	c, art := p.canvas, p.scene.Artwork
+	p.cache.backdrop(c, art, true, nil, image.Rectangle{}, func(layer *ui.Canvas) {
+		if p.background != nil {
+			copy(layer.Pixels, c.Pixels)
+			return
+		}
+		layer.Rect(0, 0, p.width, full, 0x181818)
+		layer.Blit(art.Backdrop, 0, 0, p.width, full)
+		for y := 0; y < full; y++ {
+			layer.Shade(0, y, p.width, 1, y*255/max(1, full-1))
+		}
+	})
 }

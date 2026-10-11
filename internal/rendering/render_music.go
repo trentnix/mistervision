@@ -21,7 +21,10 @@ func (p *screenPainter) music() {
 
 	actions := playbackHints(s.Controls, s.Playback.Paused)
 	if s.Music != nil {
-		actions = append(actions, hint(s.Controls, control.Select, "Background"))
+		actions = append(actions, hint(s.Controls, control.Options, "Background"))
+	}
+	if s.OptionsAvailable {
+		actions = append(actions, hint(s.Controls, control.Select, "Options"))
 	}
 	rows := controlRows(w, []controlHint{
 		hint(s.Controls, control.TrackPrevious, "Previous"), hint(s.Controls, control.TrackNext, "Next"),

@@ -9,6 +9,7 @@ type PlaybackPresentation struct {
 	TracksAvailable bool
 	Tracks          *TrackMenu
 	Subtitle        string
+	SkipLabel       string // Contextual manual skip action. Empty hides the prompt.
 	// Active remains true during a seek handoff. Audio identifies the media type,
 	// independent of whether a music queue is waiting for its next track.
 	Active bool

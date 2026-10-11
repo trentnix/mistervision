@@ -27,8 +27,14 @@ const (
 	Back Action = "back"
 	// Select invokes the secondary action shown by the current screen.
 	Select Action = "select"
+	// Options changes the music background, toggles watched state on a video
+	// preview, or skips the indicated segment during video playback.
+	Options Action = "options"
 	// Retry retries the current request.
 	Retry Action = "retry"
+	// ConfirmExit asks the browser to confirm shutdown from any screen. Input
+	// readers synthesize it after a long hold of the About binding.
+	ConfirmExit Action = "confirm-exit"
 	// Quit requests application shutdown.
 	Quit Action = "quit"
 	// ToggleControls is synthesized from Up/Down during playback.
@@ -47,7 +53,7 @@ const (
 // ToggleControls is synthesized during playback. Repeats come from input readers.
 func (a Action) ValidBinding() bool {
 	switch a {
-	case "", About, Up, Down, Previous, Next, Open, Back, Select, Retry, Quit,
+	case "", About, Up, Down, Previous, Next, Open, Back, Select, Options, Retry, Quit,
 		TrackPrevious, TrackNext, SeekBackward, SeekForward:
 		return true
 	}

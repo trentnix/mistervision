@@ -12,19 +12,61 @@ import (
 // dispatchKey routes each action to the active screen. The return value requests
 // an immediate redraw. Quit remains owned by the event loop.
 func (s *browserSession) dispatchKey(key control.Action) bool {
+	return s.dispatchKeyAt(key, time.Now())
+}
+
+// dispatchKeyAt accepts an explicit clock for hold timing tests.
+func (s *browserSession) dispatchKeyAt(key control.Action, now time.Time) bool {
 	if key == control.Quit {
 		s.model.Quit = true
 		return false
+	}
+	if key == control.ConfirmExit {
+		s.confirmExit = true
+		return true
+	}
+	if s.confirmExit || s.model.ExitConfirm {
+		if key.IsRepeat() {
+			return false
+		}
+		switch key {
+		case control.Open:
+			s.model.Quit = true
+		case control.Back:
+			s.confirmExit, s.model.ExitConfirm = false, false
+		}
+		return true
+	}
+	if s.postPlay.visible {
+		return s.handlePostPlayKey(key)
 	}
 	photo := s.model.Current().Detail != nil && s.model.Current().Detail.Type == "Photo"
 	playing := s.controller.running || s.model.MusicQueueActive()
 	repeated := key.IsRepeat()
 	key = key.Base()
+	if repeated && (key == control.Options || key == control.Select || s.options.visible) {
+		return false
+	}
+	if s.watched.busy {
+		return false
+	}
+	if s.options.visible {
+		return s.handleOptionsKey(key)
+	}
+	music := s.model.Current().Detail != nil && s.model.Current().Detail.Type == "Audio" && playing
+	if (music && key == control.Select || !music && key == control.Options) && s.optionsAvailable() {
+		if music {
+			s.openOptions()
+		} else {
+			s.changeWatched()
+		}
+		return true
+	}
 	if repeated {
 		if key == control.About || (s.about.Visible && ((!s.about.NotesVisible && !s.about.ConnectionsVisible) || (key != control.Up && key != control.Down))) {
 			return false
 		}
-		if playing && !s.controller.picker.visible && (menuDirection(key) || key == control.TrackPrevious || key == control.TrackNext) {
+		if playing && !s.controller.picker.visible && (key == control.Up || key == control.Down || key == control.TrackPrevious || key == control.TrackNext) {
 			return false
 		}
 		if key == control.Open || key == control.Back || key == control.Select || (photo && key == control.Up) {
@@ -43,6 +85,7 @@ func (s *browserSession) dispatchKey(key control.Action) bool {
 		if playing || photo || s.media.pending {
 			return false
 		}
+		s.watched.close()
 		s.about.Visible = true
 		if !s.about.Checked {
 			s.checkUpdate()
@@ -63,6 +106,11 @@ func (s *browserSession) dispatchKey(key control.Action) bool {
 			key = control.SeekForward
 		}
 	}
+	if playing && !s.controller.picker.visible && (key == control.SeekBackward || key == control.SeekForward) {
+		if !s.seekInput.accept(key, repeated, now) {
+			return false
+		}
+	}
 	if !playing {
 		// Shoulder keys retain their existing page navigation outside playback.
 		switch key {
@@ -73,6 +121,10 @@ func (s *browserSession) dispatchKey(key control.Action) bool {
 		}
 	}
 	if playing {
+		if music && key == control.Options {
+			s.cycleMusicBackground()
+			return true
+		}
 		if key == control.Back && s.playbackQueue.active && !s.controller.picker.visible {
 			s.remoteRequests.cancelAll()
 			s.playbackQueue.switching = false
@@ -97,7 +149,7 @@ func (s *browserSession) dispatchKey(key control.Action) bool {
 			}
 			return false
 		}
-		s.controller.Key(key, time.Now())
+		s.controller.Key(key, now)
 		if !s.controller.running {
 			s.output.Clear()
 		}
@@ -121,8 +173,6 @@ func (s *browserSession) dispatchKey(key control.Action) bool {
 func (s *browserSession) handleMusicKey(key control.Action) bool {
 	now := time.Now()
 	switch key {
-	case control.Select:
-		s.cycleMusicBackground()
 	case control.Back:
 		s.controller.Key(control.Back, now)
 		s.media.cancel()
@@ -179,6 +229,7 @@ func (s *browserSession) handlePhotoKey(key control.Action) {
 }
 
 func (s *browserSession) handleBrowseKey(key control.Action) bool {
+	s.watched.close()
 	if key == control.Select && canShuffle(*s.model.Current()) {
 		s.startShuffle()
 		return true
@@ -230,7 +281,18 @@ func (s *browserSession) handleBrowseKey(key control.Action) bool {
 	return true
 }
 
-// menuDirection interprets directional navigation only while media is playing.
-func menuDirection(key control.Action) bool {
-	return key == control.Up || key == control.Down || key == control.Previous || key == control.Next
+// seekRepeat caps held seeking independently of accelerated list navigation.
+// Fresh presses always apply, including a change of direction. Scheduling from
+// the accepted event prevents bursts after delayed input or a slow frame.
+type seekRepeat struct {
+	key  control.Action
+	next time.Time
+}
+
+func (r *seekRepeat) accept(key control.Action, repeated bool, now time.Time) bool {
+	if repeated && key == r.key && now.Before(r.next) {
+		return false
+	}
+	r.key, r.next = key, now.Add(250*time.Millisecond)
+	return true
 }
