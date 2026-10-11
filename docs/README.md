@@ -1,6 +1,6 @@
 # Documentation
 
-Start with the [project README](../README.md) for installation and everyday use. These guides describe the current source. The [gap analysis](GAP_ANALYSIS.md#fixes-in-v161) covers v1.6.1 and separates released fixes from pending experiments.
+Start with the [project README](../README.md) for installation and everyday use. These guides describe the current source. The [gap analysis](GAP_ANALYSIS.md) covers v1.7.0 and lists remaining features and validation work.
 
 | Guide | Contents |
 | --- | --- |

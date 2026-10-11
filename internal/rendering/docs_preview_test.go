@@ -62,7 +62,7 @@ func TestDocumentationPreviews(t *testing.T) {
 			PathLabel: "Configuration file", Path: "/media/fat/mistervision/settings.json",
 		}},
 		"about": {About: AboutPresentation{
-			Visible: true, Build: release.Build{Version: "v1.3.0"}, Checked: true, ForgetLabel: "Sign out",
+			Visible: true, Build: release.Build{Version: "v1.7.0"}, Checked: true, ForgetLabel: "Sign out",
 			Profile: &profiles[0], ProfileAction: connection.ProfileChoose, Connections: choices,
 		}},
 	}
@@ -73,6 +73,11 @@ func TestDocumentationPreviews(t *testing.T) {
 				scene.About.Connections = choices
 			}
 			renderer := NewRenderer()
+			// Let selection animations settle before exporting the frame.
+			for range 60 {
+				renderer.Render(640, 240, scene)
+				scene.Now = scene.Now.Add(time.Second / 60)
+			}
 			frame := renderer.Render(640, 240, scene)
 			canvas := ui.New(640, 240)
 			copy(canvas.Pixels, frame.UI)

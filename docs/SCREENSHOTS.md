@@ -1,24 +1,28 @@
 # Screenshots
 
-The browsing and setup gallery below shows v1.4.0. It predates v1.6.0’s full-width widescreen backgrounds, wider carousel, and revised music layout. These captures are historical examples, not a complete preview of the current interface. Browsing images were captured from the desktop headless client using Jellyfin. Setup images use the production renderer with fictional names, addresses, and approval codes. Alex’s sample avatar is the project logo, not a real account image.
+These captures show v1.7.0 using the production renderer. Browsing and playback previews use real Plex metadata and artwork. Watched flags and playback positions are staged locally without changing server history. Setup previews use fictional names, addresses, and approval codes. Alex’s sample avatar is the project logo.
 
-The shared UI uses a 640×240 logical frame for NTSC. These PNGs double its rows to show the intended 4:3 proportions at 640×480. They do not show CRT scanout, interlace, animation, or video smoothness. Browsing captures show keyboard hints. Setup previews show the default MiSTer controller hints.
+Browsing and playback images show 16:9 output at 1280×720. Setup images show 4:3 output at 640×480, with doubled rows from a 640×240 logical frame. Each grid uses one aspect ratio. The images show layout, not CRT scanout, interlace, animation, or video smoothness. These previews use default MiSTer controller hints. The application also supports keyboard hints.
 
-## Browsing
+## Browsing and playback
 
-The home carousel and root List view show the same update notice and active viewer. The home List view also shows each library’s count. Lists use bold titles and indented subtext. Library artwork is vertically centered in the wider information column.
-
-| Home List view | Exit confirmation |
-| --- | --- |
-| ![Library list retaining the update notice and active viewer](images/screenshots/home-list.png) | ![Full-width translucent exit stripe with balanced padding](images/screenshots/exit-confirmation.png) |
-
-| Home carousel | Continue Watching |
-| --- | --- |
-| ![Library carousel with artwork mosaics](images/screenshots/home-carousel.png) | ![Resumable movies and TV episodes](images/screenshots/continue-watching.png) |
+Lists use bold titles and indented subtext. Watched movies and episodes show an inline status. Library artwork is vertically centered beside the list.
 
 | Movie list | Movie details |
 | --- | --- |
-| ![Movie titles beside the selected poster](images/screenshots/movies-list.png) | ![Movie artwork, description, and Play action](images/screenshots/movie-info.png) |
+| ![Movie list with watched status and a resume position](images/screenshots/watched-movies-16x9.png) | ![Hackers artwork, description, and playback controls](images/screenshots/movie-preview-16x9.png) |
+
+| Episode list | Next episode |
+| --- | --- |
+| ![Robotech episodes with consistent title and duration spacing](images/screenshots/robotech-episodes-16x9.png) | ![Next episode artwork and an explicit choice to play or return](images/screenshots/next-episode-16x9.png) |
+
+After an episode finishes, the next-episode screen waits for a choice. It uses the next episode’s preview image when available. See [next-episode behavior](GO_PLAYBACK.md#next-episode).
+
+| Music playback | Music options |
+| --- | --- |
+| ![Artist artwork, album cover, track information, and playback progress](images/screenshots/music-playing-16x9.png) | ![Music repeat and shuffle controls](images/screenshots/music-options-16x9.png) |
+
+Select on a controller or Tab on a keyboard opens music options. X or O changes the background. See [music playback](GO_MUSIC.md).
 
 ## Connections and sign-in
 
@@ -73,6 +77,6 @@ DOCS_PREVIEW_DIR="$PWD/docs/images/screenshots" \
 
 The [preview fixtures](../internal/rendering/docs_preview_test.go) use the current `RasterRenderer`. The command needs no server, account, credentials, or MiSTer. Ordinary tests skip the exporter. Review each image after changing layouts, and keep fixture text aligned with the connection flow.
 
-The browsing captures require the [desktop harness](../tools/ghostty/README.md) and a media library. Use isolated development state when capturing them. Export complete frames, preserve the configured physical 4:3 or 16:9 proportions, and check for private account details before adding images to the repository. Do not include real sign-in codes or credential files.
+For browsing and playback captures, use the [desktop harness](../tools/ghostty/README.md) with a media library, or render a staged scene with the production `RasterRenderer` and locally saved artwork. Let selection animations settle before exporting a frame. Use isolated development state when capturing them. Export complete frames, preserve the configured physical 4:3 or 16:9 proportions, and check for private account details before adding images to the repository. Do not include real sign-in codes or credential files.
 
 Keep release announcement images and drafts in `announcements/<version>/` at the repository root. Git ignores that folder. Documentation screenshots belong in `docs/images/screenshots/`.

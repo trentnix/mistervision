@@ -251,25 +251,17 @@ See the [documentation index](docs/README.md) for all guides and current limits.
 
 ## Screenshots
 
-These older captures show the v1.4.0 interface. v1.6.0 adds full-width widescreen backgrounds and carousel navigation, plus a revised music layout. Browsing captures come from the desktop harness. Setup previews use example names, addresses, approval codes, and a sample avatar. Controller and keyboard hints follow the active input device.
+These captures show the v1.7.0 interface. Browsing and playback previews use real Plex metadata and artwork with staged playback positions and watched status. Setup previews use fictional account details. See the [full gallery](docs/SCREENSHOTS.md) for setup screens and capture instructions.
 
-![MiSTerVision library carousel](docs/images/screenshots/home-carousel.png)
-
-| Continue Watching | Movie details |
+| Movie details | Next episode |
 | --- | --- |
-| ![Continue Watching with saved playback positions](docs/images/screenshots/continue-watching.png) | ![Movie artwork, summary, runtime, and playback controls](docs/images/screenshots/movie-info.png) |
-| **Choose a connection** | **Discover Jellyfin** |
-| ![Saved connections and Jellyfin or Plex setup](docs/images/screenshots/connections.png) | ![A discovered Jellyfin server with its name and address](docs/images/screenshots/jellyfin-discovery.png) |
-| **Plex Home viewers** | **Protected profile** |
-| ![Three visible Plex Home cards and a counter for four viewers](docs/images/screenshots/plex-profiles.png) | ![Viewer avatar and name above the centered PIN keypad](docs/images/screenshots/plex-pin.png) |
-| **Saved Jellyfin users** | **About and Plex sign-out** |
-| ![Saved Jellyfin users with Add user and Forget user controls](docs/images/screenshots/jellyfin-users.png) | ![About with Switch profile, Sign out, Connections, and update controls](docs/images/screenshots/about.png) |
+| ![Hackers preview with artwork, summary, and playback controls](docs/images/screenshots/movie-preview-16x9.png) | ![Next episode preview with Play next episode and Back to episodes](docs/images/screenshots/next-episode-16x9.png) |
+| **Watched status** | **Episode list** |
+| ![Movie list with inline watched status and resume position](docs/images/screenshots/watched-movies-16x9.png) | ![Robotech episodes with consistent title and duration spacing](docs/images/screenshots/robotech-episodes-16x9.png) |
+| **Music playback** | **Music options** |
+| ![Boards of Canada playback with artist artwork and track information](docs/images/screenshots/music-playing-16x9.png) | ![Music repeat and shuffle options](docs/images/screenshots/music-options-16x9.png) |
 
-The home carousel and root List view share library counts and show the active viewer and an update notice when available. Live TV lists show current and upcoming programs when the server supplies guide data. Shows with a single season open directly to their episodes. See [browsing behavior](docs/GO_BROWSING.md).
-
-Interface text uses the same smooth font as captions. Navigation hints and the clock keep the bitmap font.
-
-The [full gallery](docs/SCREENSHOTS.md) also shows the home List view, account linking, server selection, the movie list, setup help, and About.
+The interface supports 4:3 CRT and widescreen HDMI output. Navigation hints and the clock keep the bitmap font. See [browsing behavior](docs/GO_BROWSING.md) for library counts, Continue Watching, and Live TV guide information.
 
 ## Origins and license
 
