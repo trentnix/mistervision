@@ -1,7 +1,7 @@
 # MiSTerVision
 
 <p align="center">
-  <img src="docs/images/mistervision-logo.png" alt="MiSTerVision logo" width="256" height="256">
+  <img src="docs/images/mistervision-logo.png" alt="MiSTerVision CRT logo with Jellyfin and Plex marks" width="256" height="256">
 </p>
 
 MiSTerVision is a Jellyfin and Plex client for MiSTer FPGA, designed for CRT televisions with support for HDMI displays. It supports movies, TV shows, live TV, music, photos, collections, and playlists through one interface.

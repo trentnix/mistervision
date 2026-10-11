@@ -1,6 +1,6 @@
 # Screenshots
 
-These captures show v1.7.0 using the production renderer. Browsing and playback previews use real Plex metadata and artwork. Watched flags and playback positions are staged locally without changing server history. Setup previews use fictional names, addresses, and approval codes. Alex’s sample avatar is the project logo.
+These captures show the v1.7.0 layout using the production renderer. Setup previews include the revised Jellyfin/Plex logo planned for the next release. Browsing and playback previews use real Plex metadata and artwork. Watched flags and playback positions are staged locally without changing server history. Setup previews use fictional names, addresses, and approval codes. Alex’s sample avatar is the project logo.
 
 Browsing and playback images show 16:9 output at 1280×720. Setup images show 4:3 output at 640×480, with doubled rows from a 640×240 logical frame. Each grid uses one aspect ratio. The images show layout, not CRT scanout, interlace, animation, or video smoothness. These previews use default MiSTer controller hints. The application also supports keyboard hints.
 
