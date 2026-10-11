@@ -281,6 +281,36 @@ class BrowseIntegrationTests(BrowserFixture):
                           videoBitRate=8000000, maxFramerate=30, allowVideoStreamCopy="false")
         self.assertEqual(len(self.read_frame()), 640 * 240 * 4)
 
+    def test_episode_completion_waits_for_choice_and_restores_list(self):
+        self.start_browser(Scenario(player="finish"))
+        self.key(b"\x1b[Cb")
+        self.wait_request("/Items", ParentId="view-tv")
+        self.key(b"b")
+        self.wait_request("/Shows/series-000/Seasons")
+        self.key(b"b")
+        self.wait_request("/Shows/series-000/Episodes", seasonId="series-000-s1")
+        self.key(b"b")
+        self.wait_request("/Items/series-000-s1e01")
+        self.key(b"b")
+        self.wait_event("browser.post-play", available=True, pending=False)
+        self.wait_request("/Items/series-000-s1e02/Images/Backdrop/0")
+        self.assertFalse(any("/Videos/series-000-s1e02/stream" in r for r in self.requests))
+        self.key(b"b")  # Explicitly accept the successor.
+        self.wait_request("/Videos/series-000-s1e02/stream", startTimeTicks=0)
+        deadline = time.monotonic() + 5
+        while sum(path == "/Sessions/Playing/Stopped" for path, _ in self.reports) < 2:
+            self.assertLess(time.monotonic(), deadline, "second episode did not finish")
+            time.sleep(.02)
+        # Wait for the second completion prompt, not just the final server report.
+        while self.diagnostics.read_text().count('"msg":"browser.post-play"') < 2:
+            self.assertLess(time.monotonic(), deadline, "second completion prompt did not open")
+            time.sleep(.02)
+        self.key(b"a")  # Back restores episode two in its list.
+        self.key(b"b")  # Opening the selected item must not start playback.
+        self.wait_request("/Items/series-000-s1e02")
+        self.assertEqual(sum("/Videos/series-000-s1e02/stream" in r for r in self.requests), 1)
+        self.assertFalse(any("/Videos/series-000-s1e03/stream" in r for r in self.requests))
+
     def test_playback_stop_returns_to_details(self):
         self.start_browser()
         self.exercise_playback_stop()

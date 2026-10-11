@@ -84,6 +84,7 @@ func (s *browserSession) startPlayback(startTicks *int64, paused bool) {
 	}
 	s.controller.Start(selected, startTicks, paused, time.Now())
 	s.loadSegments(selected)
+	s.preparePostPlay(selected)
 	s.media.paused = false
 	s.publishLocalQueue()
 	s.media.nextTrack = 0
@@ -149,6 +150,9 @@ func (s *browserSession) handlePlayback(event PlaybackEvent) bool {
 	}
 	if s.controller.item.Type != "Audio" && !media.IsLive(s.controller.item) {
 		s.refreshHome()
+	}
+	if s.showPostPlay(event) {
+		return true
 	}
 	if s.queueEnded(event) {
 		return true

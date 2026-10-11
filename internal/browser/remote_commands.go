@@ -27,6 +27,9 @@ func (s *browserSession) handleRemote(cmd remote.Command) bool {
 		s.watched.close()
 		s.requestRemotePlay(cmd)
 	case remote.Stop:
+		if s.postPlay.visible {
+			s.leavePostPlay(false)
+		}
 		if s.options.visible {
 			s.options.close()
 		}

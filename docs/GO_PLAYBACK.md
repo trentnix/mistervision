@@ -59,6 +59,14 @@ A skip uses the existing seek handoff without the repeated-press delay and prese
 
 `media.SegmentSource` is an optional provider capability. Provider adapters translate metadata into `media.Segment` values. The browser owns request cancellation, `PlaybackController` chooses the current action, and the shared renderer draws the prompt for every overlay-capable output.
 
+## Next episode
+
+When an episode finishes, MiSTerVision offers **Play next episode** and **Back to episodes**. The preview shows the next episode’s title, series, season/episode number, and episode preview image with a dark gradient. Artwork loads through the existing cache without delaying the choices. If the preview image is unavailable, the screen uses the episode, season, or series backdrop supplied by the provider, then a plain background. The screen supports both 4:3 and 16:9 output and waits for a choice. There is no countdown or automatic playback. Selecting Play starts the next episode from the beginning. Back restores the completed episode's position in its list.
+
+Plex and Jellyfin use the same flow, including episodes opened from Continue Watching. The lookup follows the server's season and episode order, crosses page and season boundaries, and includes watched episodes. At the end of a series, the prompt offers a return to the episode list. A failed lookup provides a return action without blocking playback or suggesting another series.
+
+Stopping playback or encountering a playback error does not open the prompt. Explicit playlists and remote queues keep their existing advancement behavior. The browser resolves the next episode through `media.Catalog.List` while the current episode plays. The shared renderer displays the choice after the decoder closes.
+
 ## Video seeking
 
 Seek presses accumulate toward a destination. With controls hidden, two quick presses reveal the destination overlay. With controls open, the destination stays in that menu. After 0.5 seconds without another press, the current decoder pauses and a replacement stream is prepared. A new seek during preparation cancels that replacement and returns to the destination preview for another 0.5 seconds.

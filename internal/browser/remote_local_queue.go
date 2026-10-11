@@ -38,6 +38,12 @@ func (s *browserSession) publishLocalQueue() {
 	if hasParent && parent.Location.Kind == "playlist" {
 		return
 	}
+	// A locally opened episode waits for the completion prompt. Publishing it
+	// must not transfer advancement to a queue. Explicit Repeat or Shuffle
+	// commands can still adopt it through handleRemote.
+	if item.Type == "Episode" {
+		return
+	}
 	if item.Type != "Audio" || !hasParent || (parent.Start == 0 && !parent.More()) {
 		s.adoptLocalQueue()
 		return

@@ -29,6 +29,7 @@ func (s *browserSession) send(work context.Context, r workerResult) {
 // connection manager rejects results from superseded attempts.
 func (s *browserSession) authenticate() {
 	s.segments.close()
+	s.postPlay.close()
 	s.options.close()
 	s.watched.close()
 	s.counts.reset()

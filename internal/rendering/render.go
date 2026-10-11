@@ -32,6 +32,8 @@ func renderSceneWithMusic(c *ui.Canvas, cache *sceneCache, s Scene, anim Animati
 		p.about()
 	case s.Setup.Kind != SetupHidden:
 		p.setup()
+	case s.PostPlay != nil:
+		p.postPlay(s.PostPlay)
 	case s.Content.Detail != nil && s.Content.Detail.Type == "Photo":
 		p.photo()
 	case s.Video && s.Content.Detail != nil:

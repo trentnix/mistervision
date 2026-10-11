@@ -25,6 +25,8 @@ type Scene struct {
 	// OptionsAvailable exposes a contextual action without changing playback controls.
 	OptionsAvailable bool
 	Options          *OptionsMenu
+	// PostPlay replaces the completed preview with a next-episode choice.
+	PostPlay *PostPlayPresentation
 	// WatchedMessage gives inline saving, completion, or failure feedback on the preview.
 	WatchedMessage string
 

@@ -28,6 +28,10 @@ func (s *browserSession) draw() error {
 	scene.ExitConfirm = scene.ExitConfirm || s.confirmExit
 	scene.OptionsAvailable = s.optionsAvailable()
 	scene.Options = s.optionsPresentation()
+	if s.postPlay.visible {
+		scene.PostPlay = s.postPlayPresentation()
+		scene.OptionsAvailable = false
+	}
 	if item := scene.Content.Detail; item != nil && !scene.Playback.Active && item.ID == s.watched.itemID {
 		scene.WatchedMessage = s.watched.message
 	}

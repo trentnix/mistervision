@@ -5,6 +5,7 @@ import "mistervision/internal/connection"
 // requireSignIn preserves an active account decision when background work loses
 // authorization. The failure becomes visible if removal leaves the account open.
 func (s *browserSession) requireSignIn(err error) {
+	s.postPlay.close()
 	s.options.close()
 	s.watched.close()
 	if s.connection.forgetting {

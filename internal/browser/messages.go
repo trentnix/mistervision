@@ -103,3 +103,10 @@ const (
 	messageMarkedWatched      = "Marked watched."
 	messageMarkedUnwatched    = "Marked unwatched."
 )
+
+// Episode completion and optional successor lookup.
+const (
+	messageNextEpisodeLoading = "Finding the next episode..."
+	messageNextEpisodeFailed  = "Could not find the next episode. Go back to choose an episode."
+	messageNoNextEpisode      = "No more episodes are available in this series."
+)

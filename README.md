@@ -132,6 +132,8 @@ About offers **Switch profile** when multiple saved Jellyfin users or Plex Home 
 
 I test with an Xbox controller. The default layout follows MiSTer: B selects, plays, or pauses, and A goes back, cancels, or stops. Use the D-pad or left analog stick to navigate. Hold Start for two seconds to open the exit confirmation from any screen. B exits and A cancels. During video or music playback, Up/Down shows or hides controls. Left/Right seeks. Holding either direction repeats at a steady rate. Shoulder buttons change music tracks or queued videos. Triggers have no default action and can be configured. During music playback, Select/Tab opens repeat/shuffle settings and X/O changes the background. On movie and episode previews, X/O marks the item watched or unwatched. During video playback, X/O skips an intro, credits, or another segment when the server supplies markers and a skip prompt is visible. See [segment skipping](docs/GO_PLAYBACK.md#segment-skipping).
 
+After an episode finishes, choose Play next episode or Back to episodes. The prompt works with Plex and Jellyfin and waits for your choice. See [next episode](docs/GO_PLAYBACK.md#next-episode).
+
 Controller mappings are configurable in the `input` section of `settings.json`. For example, if you prefer A to select and B to go back, add this section while preserving your other settings:
 
 ```json

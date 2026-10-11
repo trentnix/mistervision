@@ -44,17 +44,7 @@ func (p *screenPainter) details() [][]controlHint {
 
 	hero := max(80, min(150, h-88)-extra)
 	full := max(h*3/4, hero)
-	cache.backdrop(c, art, true, nil, image.Rectangle{}, func(layer *ui.Canvas) {
-		if p.background != nil {
-			copy(layer.Pixels, c.Pixels)
-			return
-		}
-		layer.Rect(0, 0, w, full, 0x181818)
-		layer.Blit(art.Backdrop, 0, 0, w, full)
-		for y := 0; y < full; y++ {
-			layer.Shade(0, y, w, 1, y*255/max(1, full-1))
-		}
-	})
+	p.previewBackdrop(full)
 	p.clock()
 	// Preview metadata and synopsis need stronger strokes on low-resolution CRTs.
 	// Restore the shared face before the caller draws navigation and notices.
@@ -118,4 +108,21 @@ func (p *screenPainter) details() [][]controlHint {
 	}
 
 	return rows
+}
+
+// previewBackdrop shares cached, shaded artwork between media previews and the
+// next-episode screen. Widescreen output already supplies the matching gradient.
+func (p *screenPainter) previewBackdrop(full int) {
+	c, art := p.canvas, p.scene.Artwork
+	p.cache.backdrop(c, art, true, nil, image.Rectangle{}, func(layer *ui.Canvas) {
+		if p.background != nil {
+			copy(layer.Pixels, c.Pixels)
+			return
+		}
+		layer.Rect(0, 0, p.width, full, 0x181818)
+		layer.Blit(art.Backdrop, 0, 0, p.width, full)
+		for y := 0; y < full; y++ {
+			layer.Shade(0, y, p.width, 1, y*255/max(1, full-1))
+		}
+	})
 }

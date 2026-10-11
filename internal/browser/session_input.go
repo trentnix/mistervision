@@ -37,6 +37,9 @@ func (s *browserSession) dispatchKeyAt(key control.Action, now time.Time) bool {
 		}
 		return true
 	}
+	if s.postPlay.visible {
+		return s.handlePostPlayKey(key)
+	}
 	photo := s.model.Current().Detail != nil && s.model.Current().Detail.Type == "Photo"
 	playing := s.controller.running || s.model.MusicQueueActive()
 	repeated := key.IsRepeat()

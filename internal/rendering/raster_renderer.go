@@ -28,6 +28,11 @@ func NewRenderer() *RasterRenderer { return &RasterRenderer{} }
 // advances animation from Scene.Now, and invalidates visual caches on size changes.
 // The caller must present or copy both pixel slices before calling Render again.
 func (r *RasterRenderer) Render(w, h int, s Scene) videoout.Frame {
+	// Choose artwork before either output layout draws its background. The
+	// scene is a copy, so ordinary previews keep their original backdrop.
+	if s.PostPlay != nil && s.PostPlay.Next != nil && s.Artwork.Primary != nil {
+		s.Artwork.Backdrop = s.Artwork.Primary
+	}
 	rw, rh := w, h
 	if !s.Video && r.rasterWidth > 0 && r.rasterHeight > 0 {
 		rw, rh = r.rasterWidth, r.rasterHeight
