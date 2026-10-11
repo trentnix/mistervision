@@ -1,7 +1,6 @@
 # Build the Go client. The native framebuffer adapter is compiled through cgo.
 GO ?= go
-STATICCHECK_VERSION := v0.8.1
-GOVULNCHECK_VERSION := v1.8.0
+GOVULNCHECK_VERSION := v1.9.0
 VERSION ?= dev
 GO_LDFLAGS = -X mistervision/internal/release.Version=$(VERSION)
 GO_ARM_CC ?= sh $(CURDIR)/tools/zig-cc-go.sh
@@ -15,11 +14,12 @@ host:
 arm:
 	CGO_ENABLED=1 GOOS=linux GOARCH=arm GOARM=7 CC="$(GO_ARM_CC)" $(GO) build -trimpath -ldflags "$(GO_LDFLAGS)" -o build/mistervision-arm ./cmd/mistervision
 
-# A versioned tool invocation leaves go.mod and go.sum unchanged.
+# Keep analysis-tool dependencies separate from the application module.
 lint:
 	@files="$$(gofmt -l cmd internal)"; if [ -n "$$files" ]; then printf '%s\n' "$$files"; exit 1; fi
 	$(GO) vet ./...
-	$(GO) run honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION) ./...
+	$(GO) -C tools/checks build -o ../../build/staticcheck honnef.co/go/tools/cmd/staticcheck
+	./build/staticcheck ./...
 
 vulnerability-check:
 	$(GO) run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
