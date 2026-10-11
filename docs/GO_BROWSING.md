@@ -73,6 +73,8 @@ Held directions accelerate. Lists keep selection near the center except at the f
 
 For Jellyfin, movies and music videos use filtered recursive lists. Music retains artist → album → track navigation. Mixed and home-video libraries retain folders. Series and seasons use Jellyfin's Shows endpoints. Live TV preserves server channel order and opens a channel directly into playback. Stopping returns to that channel in the list.
 
+Movie and episode lists show watched status beneath the title, for example `150 min - Watched`, with the entire line in green. In-progress items show the duration and resume position in amber. Unwatched items show only the duration. The indicator uses the active user’s server state and does not apply to series, seasons, or music.
+
 Details show available artwork, overview, year, rating, runtime, and resume/watched state. Open starts or resumes video. SELECT/Tab restarts an unwatched resumable video from the beginning. See [playback controls](GO_PLAYBACK.md#playback-controls).
 
 On a movie or episode preview, X on the controller or O on the keyboard directly marks the item watched or unwatched. The button hint names the action. Saving and completion appear inline on the preview without a menu or popup. The change applies to the signed-in user and clears the saved resume position. The preview and retained list update after the server accepts the change, and Continue Watching refreshes. This action waits for any final playback report to finish. It does not mark whole seasons or libraries.

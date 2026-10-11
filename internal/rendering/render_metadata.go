@@ -44,8 +44,8 @@ func subtitle(i media.Item) (string, uint32) {
 		s = fmt.Sprintf("%d min", i.RunTimeTicks/600000000)
 	}
 	if i.UserData.Played {
-		s += " - watched"
-		color = 0x40cc40
+		s += " - Watched"
+		color = 0x90ee90
 	} else if i.UserData.PlaybackPositionTicks > 0 {
 		s += " - resume " + runtime(i.UserData.PlaybackPositionTicks)
 		color = 0xffc040
