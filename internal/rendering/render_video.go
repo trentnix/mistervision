@@ -1,6 +1,7 @@
 package rendering
 
 import (
+	"math"
 	"time"
 
 	"mistervision/internal/caption"
@@ -58,7 +59,7 @@ func renderVideoOverlayOn(c *ui.Canvas, p PlaybackPresentation, now time.Time, l
 		// Match the display's 4:3 shape after logical CRT pixels are stretched.
 		boxWidth := 140
 		boxHeight := (boxWidth*h + w/2) / w
-		c.Shade((w-boxWidth)/2, (h-boxHeight)/2, boxWidth, boxHeight, 210)
+		drawWaitBackground(c, (w-boxWidth)/2, (h-boxHeight)/2, boxWidth, boxHeight)
 		if seeking {
 			center(&status, h/2-12, "Seek to", 0xffffff, 1)
 			center(&status, h/2+5, runtime(p.DestinationTicks), 0xffffff, 1)
@@ -112,4 +113,17 @@ func renderVideoOverlayOn(c *ui.Canvas, p PlaybackPresentation, now time.Time, l
 	center(c, bottom-22-extra, label, dimColor, 1)
 	drawControls(c, bottom, rows)
 	return c.Pixels
+}
+
+// drawWaitBackground shades the shared loading and seek box. Separate corner
+// radii compensate for the stretched logical pixels on low-resolution CRTs.
+func drawWaitBackground(c *ui.Canvas, x, y, w, h int) {
+	rx, ry := min(8, w/2), min(max(1, c.Height/60), h/2)
+	c.Shade(x, y+ry, w, h-2*ry, 210)
+	for row := 0; row < ry; row++ {
+		dy := (float64(ry-row) - 0.5) / float64(ry)
+		inset := int(math.Round(float64(rx) * (1 - math.Sqrt(1-dy*dy))))
+		c.Shade(x+inset, y+row, w-2*inset, 1, 210)
+		c.Shade(x+inset, y+h-1-row, w-2*inset, 1, 210)
+	}
 }
