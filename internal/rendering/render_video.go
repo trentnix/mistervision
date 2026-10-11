@@ -39,6 +39,9 @@ func renderVideoOverlayOn(c *ui.Canvas, p PlaybackPresentation, now time.Time, l
 	if p.Notice != "" {
 		drawNotice(c, "", p.Notice, safeY(w, h), 6)
 	}
+	if p.SkipLabel != "" && p.WaitLabel == "" && !p.HasDestination && p.Notice == "" {
+		drawSegmentPrompt(c, p.SkipLabel, labels)
+	}
 	if !p.ControlsVisible {
 		drawSubtitle(c, captions, p.Subtitle, h-safeY(w, h)-8)
 	}

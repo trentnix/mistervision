@@ -42,6 +42,8 @@ class Scenario:
     hold_home: bool = False
     remote_control: bool = False
     slow_seek: bool = False
+    segments: list = field(default_factory=list)
+    segments_status: int = 200
     page_delay: float = 0
     video_delay: float = 0
     transcode_profile: str = ""
@@ -160,6 +162,9 @@ class BrowserFixture(unittest.TestCase):
                         except (BrokenPipeError, ConnectionResetError):
                             break
                     return
+                if path.startswith("/MediaSegments/"):
+                    return self._send({"Items": test.scenario.segments},
+                                      status=test.scenario.segments_status)
                 if path == "/Items" and "Ids" in query:
                     return self._send(self._query_result(query["Ids"][0].split(","), query))
                 if (test.scenario.mixed_library

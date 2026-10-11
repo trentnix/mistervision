@@ -394,6 +394,52 @@ class BrowseIntegrationTests(BrowserFixture):
             time.sleep(0.02)
         self.key(b"a")
 
+    def test_segment_skip_preserves_pause_without_refetching(self):
+        self.start_browser(Scenario(player="inline", segments=[
+            {"Type": "Intro", "StartTicks": 0, "EndTicks": 600000000},
+        ]))
+        self.key(b"b")
+        self.wait_request("/Items", ParentId="view-movies", StartIndex=0)
+        self.key(b"b")
+        self.wait_request("/Items/movie-tricky-0")
+        self.key(b"b")
+        self.wait_video_ready()
+        self.wait_event("browser.segments", count=1)
+        self.key(b"b")
+        deadline = time.monotonic() + 5
+        while not any(path.endswith("/Progress") and body.get("IsPaused")
+                      for path, body in self.reports):
+            self.assertLess(time.monotonic(), deadline, "pause was not reported")
+            time.sleep(.01)
+        self.reports.clear()
+        self.key(b"o")
+        self.wait_request("/Videos/movie-tricky-0/stream", startTimeTicks=600000000)
+        self.wait_video_ready(600000000)
+        deadline = time.monotonic() + 5
+        while not any(path.endswith("/Progress") and body.get("IsPaused") and
+                      body.get("PositionTicks", 0) >= 600000000 for path, body in self.reports):
+            self.assertLess(time.monotonic(), deadline, "skip did not preserve pause")
+            time.sleep(.01)
+        self.assertEqual(sum(urlparse(r).path.startswith("/MediaSegments/")
+                             for r in self.requests), 1)
+        self.key(b"a")
+        self.assertIsNone(self.process.poll())
+
+    def test_unavailable_segments_do_not_interrupt_playback(self):
+        self.start_browser(Scenario(player="inline", segments_status=500))
+        self.key(b"b")
+        self.wait_request("/Items", ParentId="view-movies", StartIndex=0)
+        self.key(b"b")
+        self.wait_request("/Items/movie-tricky-0")
+        self.key(b"b")
+        self.wait_video_ready()
+        self.wait_event("browser.segments", count=0)
+        self.key(b"o")
+        self.key(b"a")
+        self.assertIsNone(self.process.poll())
+        self.assertEqual(sum(urlparse(r).path == "/Videos/movie-tricky-0/stream"
+                             for r in self.requests), 1)
+
     def test_video_seek_accumulates_and_preserves_pause(self):
         self.start_browser()
         self.key(b"b")

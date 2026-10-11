@@ -86,12 +86,17 @@ func drawControls(c *ui.Canvas, bottom int, rows [][]controlHint) {
 		}
 		x, y := (c.Width-width)/2, bottom-(len(rows)-1-i)*controlRowHeight
 		for _, h := range row {
-			badge := textWidth(h.key, 1) + 12
-			c.Rect(x, y-3, badge, 14, 0x606060)
-			c.Rect(x+1, y-2, badge-2, 12, 0x282828)
-			c.BitmapText(x+6, y, h.key, titleColor, c.Width-24)
-			c.BitmapText(x+badge+8, y, h.description, 0xd0d0d0, c.Width-24)
+			drawControlHint(c, x, y, h)
 			x += h.width() + 20
 		}
 	}
+}
+
+// drawControlHint draws one badge and action using the same baseline everywhere.
+func drawControlHint(c *ui.Canvas, x, y int, h controlHint) {
+	badge := textWidth(h.key, 1) + 12
+	c.Rect(x, y-3, badge, 14, 0x606060)
+	c.Rect(x+1, y-2, badge-2, 12, 0x282828)
+	c.BitmapText(x+6, y, h.key, titleColor, c.Width-24)
+	c.BitmapText(x+badge+8, y, h.description, 0xd0d0d0, c.Width-24)
 }

@@ -83,6 +83,7 @@ func (s *browserSession) startPlayback(startTicks *int64, paused bool) {
 		s.model.StartMusicQueue()
 	}
 	s.controller.Start(selected, startTicks, paused, time.Now())
+	s.loadSegments(selected)
 	s.media.paused = false
 	s.publishLocalQueue()
 	s.media.nextTrack = 0
@@ -140,6 +141,7 @@ func (s *browserSession) handlePlayback(event PlaybackEvent) bool {
 	if !ended {
 		return false
 	}
+	s.segments.close()
 	s.options.close()
 	s.model.Notice = ""
 	if completionErr != nil {

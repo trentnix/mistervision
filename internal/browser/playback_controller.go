@@ -17,6 +17,8 @@ import (
 // ownership belong to the renderer and output adapters.
 type PlaybackController struct {
 	// State stays private. Rendering receives a value snapshot.
+	segments        []media.Segment
+	segmentPrompt   segmentPrompt
 	tracks          playback.VideoTracks
 	trackOptions    playback.TrackOptions
 	picker          trackPicker
@@ -67,6 +69,8 @@ func (c *PlaybackController) Start(item media.Item, offset *int64, paused bool, 
 	c.subtitleDelay = 0
 	c.subtitleRequest = 0
 	c.subtitleLoading = false
+	c.segments = nil
+	c.segmentPrompt = segmentPrompt{}
 	c.item = item
 	c.pauseRequested = paused
 	c.pendingPause = ""
@@ -89,6 +93,9 @@ func (c *PlaybackController) Snapshot(now time.Time) rendering.PlaybackPresentat
 	presentation.Audio = c.item.Type == "Audio"
 	presentation.Notice = c.notice
 	c.trackPresentation(&presentation, now)
+	if segment, ok := c.segmentAt(now); ok {
+		presentation.SkipLabel = segmentLabel(segment.Kind)
+	}
 	return presentation
 }
 
@@ -110,6 +117,8 @@ func (c *PlaybackController) Key(key control.Action, now time.Time) {
 		return
 	}
 	switch key {
+	case control.Options:
+		c.skipSegment(now)
 	case control.SeekBackward, control.SeekForward:
 		if c.item.Type == "Audio" {
 			c.seekAudio(key)
@@ -123,6 +132,8 @@ func (c *PlaybackController) Key(key control.Action, now time.Time) {
 		c.SetPaused(!c.wantsPause())
 	case control.ToggleControls:
 		c.state.ToggleControls(now)
+		// Once requested manually, the skip prompt follows the controls.
+		c.segmentPrompt.until = time.Time{}
 	}
 }
 

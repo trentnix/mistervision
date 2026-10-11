@@ -27,7 +27,8 @@ const (
 	Back Action = "back"
 	// Select invokes the secondary action shown by the current screen.
 	Select Action = "select"
-	// Options changes the music background or toggles watched state on a video preview.
+	// Options changes the music background, toggles watched state on a video
+	// preview, or skips the indicated segment during video playback.
 	Options Action = "options"
 	// Retry retries the current request.
 	Retry Action = "retry"

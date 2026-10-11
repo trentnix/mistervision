@@ -20,6 +20,7 @@ import (
 type browserSession struct {
 	confirmExit      bool // Global confirmation survives asynchronous navigation changes.
 	seekInput        seekRepeat
+	segments         segmentRequest
 	options          itemOptions
 	watched          watchedChange
 	update           updateWork
@@ -104,6 +105,7 @@ func newBrowserSession(ctx context.Context, config Config, player playback.Confi
 // close runs after the application context is canceled, so decoder callbacks
 // cannot block shutdown while the event loop is no longer receiving results.
 func (s *browserSession) close() {
+	s.segments.close()
 	s.options.close()
 	s.watched.close()
 	s.ticker.Stop()

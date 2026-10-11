@@ -36,15 +36,28 @@ MiSTer's MPlayer retains an 8 MiB read-ahead cache. Recorded video prefills 20% 
 | Previous/next music track or queued video | LB / RB | [ / ] or Page Up / Page Down |
 | Pause/resume | B | Enter or B |
 | Stop and return | A | Escape or A |
-| Video options / music background | Select | Tab |
+| Video options / music repeat and shuffle | Select | Tab |
+| Music background / indicated video segment skip | X | O |
 
 [Input profiles](GO_INPUT.md) control hardware bindings and badge labels. Controls expire after three seconds. Pause/resume hides them. Menu toggles and track changes act once per press.
 
 Changing items with Next or Previous starts playback even if the previous item was paused. An explicit Pause after requesting the change is retained while the next item loads.
 
-Directional seeks act once per press. Explicit seek bindings, including J/L, repeat after 350 ms, then every 250 ms. Video steps are 30 seconds and music steps are 10 seconds. Live TV does not seek. Previous/next video requires a playlist or playback queue. Triggers are unassigned by default and can be configured through an input profile.
+Held directional and explicit seek bindings repeat at a steady rate, capped at one step every 250 ms. Video steps are 30 seconds and music steps are 10 seconds. Live TV does not seek. Previous/next video requires a playlist or playback queue. Triggers are unassigned by default and can be configured through an input profile.
 
 On an unwatched resumable video's details screen, Open resumes and SELECT/Tab restarts from zero. Restart is a selection-screen action, not an in-playback control. [Photos](GO_BROWSING.md#photos) retain Left/Right navigation and Up for controls. See [music](GO_MUSIC.md) for album queues and shuffle.
+
+## Segment skipping
+
+When the server supplies a supported segment, a small prompt appears in the upper-right corner for up to eight seconds when you enter that segment. Press X on the default controller mapping or O on the keyboard to skip. The prompt uses the configured `options` binding and stays clear of subtitles and the playback controls. Skipping is manual. Ignore the prompt to keep watching. Up/Down brings the prompt back with the playback controls if the current position is still inside a skippable segment. Once manually opened, the prompt follows the controls and disappears when they close or the segment ends.
+
+Plex supplies analyzed intro, credits, and commercial markers when available for the item and account. Jellyfin 10.10 and later supplies Intro, Outro, Recap, Preview, and Commercial segments through its media-segment API. Jellyfin needs a segment-provider plugin and a completed media-segment scan. See [Jellyfin media segments](https://jellyfin.org/docs/general/server/metadata/media-segments/) and [Plex content skipping](https://support.plex.tv/articles/skip-content/).
+
+MiSTerVision fetches segments once when an item starts, independently of playback preparation. Missing metadata leaves playback unchanged. Failed requests appear in diagnostics without interrupting playback. Invalid intervals and unknown types are ignored. Seeking or resuming into a segment shows its prompt again. Live TV and music do not offer segment skipping.
+
+A skip uses the existing seek handoff without the repeated-press delay and preserves pause state. Credits skip to their supplied endpoint so a post-credits scene remains playable. A marker at the end of the video uses the same final-second safety margin as ordinary seeking. There is no automatic skipping or automatic next-episode action.
+
+`media.SegmentSource` is an optional provider capability. Provider adapters translate metadata into `media.Segment` values. The browser owns request cancellation, `PlaybackController` chooses the current action, and the shared renderer draws the prompt for every overlay-capable output.
 
 ## Video seeking
 

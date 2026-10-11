@@ -120,7 +120,7 @@ Gamepads use the left stick for navigation by default: axis `0` selects left/rig
 | `back` | Return, dismiss, cancel, or stop playback. |
 | `about` | Toggle About while browsing. Hold for two seconds on Linux input devices to confirm exit from any screen. Default: Start or F1. |
 | `select` | Switch the home view, restart resumable video from details, open video options, start library shuffle, or open music repeat/shuffle settings. |
-| `options` | Cycle music backgrounds or mark a movie/episode watched or unwatched on its preview. Default: controller X or keyboard O. |
+| `options` | Cycle music backgrounds, mark a movie/episode watched or unwatched on its preview, or skip the indicated segment during video playback. Default: controller X or keyboard O. |
 | `retry` | Retry or refresh the current request. |
 | `quit` | Exit the application. |
 
