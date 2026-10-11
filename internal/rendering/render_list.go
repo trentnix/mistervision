@@ -81,8 +81,8 @@ func (p *screenPainter) list() [][]controlHint {
 	rowHeight = min(rowHeight, max(20, (controlsTop(p.bottom, controls)-16-top)/rows))
 	list := c.Rows(top, min(rows*rowHeight, h-top))
 	if item := v.Item(); item != nil {
-		title, line := p.listRowText(*item, width, true, live)
-		geometry := placeListText(title, line, rowHeight)
+		_, line := p.listRowText(*item, width, true, live)
+		geometry := p.placeListText(line != nil, rowHeight)
 		list.Rect(20, int(math.Round(anim.Row*float64(rowHeight))), width+8, geometry.barHeight, 0x0d377c)
 	}
 	scroll := float64(v.Scroll) + anim.ScrollOffset
@@ -90,7 +90,7 @@ func (p *screenPainter) list() [][]controlHint {
 		item := v.Page.Items[index]
 		y := int(math.Round((float64(index) - scroll) * float64(rowHeight)))
 		title, line := p.listRowText(item, width, index == v.Selected, live)
-		geometry := placeListText(title, line, rowHeight)
+		geometry := p.placeListText(line != nil, rowHeight)
 
 		if title != nil {
 			list.Blit(title, 24, y+geometry.titleY, title.Bounds().Dx(), title.Bounds().Dy())
@@ -108,36 +108,36 @@ func (p *screenPainter) list() [][]controlHint {
 	return controls
 }
 
-// listTextPlacement balances the selection's visible ink, not font line boxes.
+// listTextPlacement fixes each line's baseline independently of a row's letters.
 type listTextPlacement struct{ titleY, subtitleY, barHeight int }
 
-// placeListText keeps a title-only row at the same top inset. Two-line rows
-// receive equal whole-pixel padding above the title and below the subtext.
-func placeListText(title, subtitle *ui.RasterImage, rowHeight int) listTextPlacement {
-	height := func(im *ui.RasterImage) int {
-		if im == nil {
-			return 0
-		}
-		return im.Bounds().Dy()
-	}
-	titleHeight, subtitleHeight := height(title), height(subtitle)
-	if subtitleHeight == 0 {
-		return listTextPlacement{titleY: 3, barHeight: rowHeight - 2}
+// placeListText uses a capital and descender as the shared font band. Titles
+// without descenders retain that space instead of moving their subtitle upward.
+// Full label images preserve accents and glyph bottoms at every raster density.
+func (p *screenPainter) placeListText(hasSubtitle bool, rowHeight int) listTextPlacement {
+	title := p.listText("Ag", 64, 18, 0xffffff, true).Bounds()
+	line := p.listText("Ag", 64, 16, 0xffffff, false).Bounds()
+	if !hasSubtitle {
+		return listTextPlacement{titleY: 3 - title.Min.Y, barHeight: rowHeight - 2}
 	}
 	const gap = 2
-	content := titleHeight + gap + subtitleHeight
+	content := title.Dy() + gap + line.Dy()
 	padding := max(1, (rowHeight-2-content)/2)
-	return listTextPlacement{titleY: padding, subtitleY: padding + titleHeight + gap, barHeight: content + 2*padding}
+	return listTextPlacement{
+		titleY:    padding - title.Min.Y,
+		subtitleY: padding + title.Dy() + gap - line.Min.Y,
+		barHeight: content + 2*padding,
+	}
 }
 
 // listRowText uses the same type sizes and metadata treatment in every home
-// and library list. Label rasters and their ink bounds are cached.
+// and library list. Keep font padding so placement can use stable baselines.
 func (p *screenPainter) listRowText(item media.Item, width int, selected, live bool) (*ui.RasterImage, *ui.RasterImage) {
 	color := uint32(dimColor)
 	if selected {
 		color = 0xffffff
 	}
-	title := p.listText(itemTitle(item), width, 18, color, true)
+	title := p.textImage(itemTitle(item), width, 18, 1, color, true)
 	s, col := subtitle(item)
 	if p.scene.Root {
 		s = ""
@@ -156,6 +156,6 @@ func (p *screenPainter) listRowText(item media.Item, width int, selected, live b
 		s, col = continueSubtitle(item), titleColor
 	}
 	const indent = 10
-	line := p.listText(s, width-indent, 16, col, false)
+	line := p.textImage(s, width-indent, 16, 1, col, false)
 	return title, line
 }

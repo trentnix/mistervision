@@ -1,12 +1,12 @@
 # Jellyfin and Plex gap analysis
 
-This document records missing features, current limitations, and intentional exclusions for Jellyfin and Plex without assigning priorities. MiSTerVision targets personal media on a consumer CRT and also supports HDMI displays. Both providers are supported, but matching every feature of either ecosystem is not the goal.
+This document records missing features, current limitations, and intentional exclusions for Jellyfin and Plex without assigning a release schedule. MiSTerVision targets personal media on a consumer CRT and also supports HDMI displays. Both providers are supported, but matching every feature of either ecosystem is not the goal.
 
 Implementation status was reviewed October 11, 2026. The release baseline is v1.7.0. Comparisons with other clients retain the September 19 documentation review.
 
 ## Additions in v1.7.0
 
-Music Options exposes repeat and shuffle for the current album or playlist. Movie and episode previews offer Mark watched and Mark unwatched for the active user. Music options use Select/Tab, and X/O changes the music background. On a movie or episode preview, X/O changes watched state directly with inline feedback. Held Left/Right now repeats seeking without list acceleration. Holding Start for two seconds opens an exit confirmation from any screen. Manual segment skipping offers a contextual X/O action for server-provided intros, credits, recaps, previews, and commercials. Episode completion now offers Play next episode or Back to episodes for Plex and Jellyfin, without a countdown. Automatic segment skipping remains separate work. See [segment skipping](GO_PLAYBACK.md#segment-skipping) and [next episode](GO_PLAYBACK.md#next-episode). Watched movies and episodes also show their status inline in lists. Loading, buffering, and seeking boxes have subtly rounded corners.
+Music Options exposes repeat and shuffle for the current album or playlist. Movie and episode previews offer Mark watched and Mark unwatched for the active user. Music options use Select/Tab, and X/O changes the music background. On a movie or episode preview, X/O changes watched state directly with inline feedback. Held Left/Right now repeats seeking without list acceleration. Holding Start for two seconds opens an exit confirmation from any screen. Manual segment skipping offers a contextual X/O action for server-provided intros, credits, recaps, previews, and commercials. Episode completion now offers Play next episode or Back to episodes for Plex and Jellyfin, without a countdown. Automatic segment skipping remains separate work. See [segment skipping](GO_PLAYBACK.md#segment-skipping) and [next episode](GO_PLAYBACK.md#next-episode). Watched movies and episodes also show their status inline in lists. Loading, buffering, and seeking boxes have subtly rounded corners. List rows use stable text positions so descending letters do not shift subtitle spacing.
 
 ## Current baseline
 
