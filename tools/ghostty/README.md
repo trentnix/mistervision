@@ -4,7 +4,7 @@ This helper presents MiSTerVision's desktop framebuffer inside Ghostty. MiSTerVi
 
 ## Requirements and demo
 
-Run these commands in a Ghostty terminal on Linux, from the repository root. Install Go 1.26.8 or later, Make, a C compiler, and Python 3. Music and inline video also need the libmpv shared library. Install FFmpeg for the separate-window FFplay fallback and decoder tests. No Python packages are required. See the [build guide](../../docs/GO_BUILD.md) for build commands.
+Run these commands in a Ghostty terminal on Linux, from the repository root. Install Go 1.26.9 or later, Make, a C compiler, and Python 3. Music and inline video also need the libmpv shared library. Install FFmpeg for the separate-window FFplay fallback and decoder tests. No Python packages are required. See the [build guide](../../docs/GO_BUILD.md) for build commands.
 
 Check the inline playback dependency:
 
