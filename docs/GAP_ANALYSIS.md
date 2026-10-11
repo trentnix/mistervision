@@ -2,11 +2,11 @@
 
 This document records missing features, current limitations, and intentional exclusions for Jellyfin and Plex without assigning priorities. MiSTerVision targets personal media on a consumer CRT and also supports HDMI displays. Both providers are supported, but matching every feature of either ecosystem is not the goal.
 
-Implementation status was reviewed October 11, 2026. The released baseline is v1.6.3. Comparisons with other clients retain the September 19 documentation review.
+Implementation status was reviewed October 11, 2026. The release baseline is v1.7.0. Comparisons with other clients retain the September 19 documentation review.
 
-## Unreleased additions
+## Additions in v1.7.0
 
-Music Options exposes repeat and shuffle for the current album or playlist. Movie and episode previews offer Mark watched and Mark unwatched for the active user. Music options use Select/Tab, and X/O changes the music background. On a movie or episode preview, X/O changes watched state directly with inline feedback. Held Left/Right now repeats seeking without list acceleration. Holding Start for two seconds opens an exit confirmation from any screen. Manual segment skipping offers a contextual X/O action for server-provided intros, credits, recaps, previews, and commercials. Episode completion now offers Play next episode or Back to episodes for Plex and Jellyfin, without a countdown. Automatic segment skipping remains separate work. See [segment skipping](GO_PLAYBACK.md#segment-skipping) and [next episode](GO_PLAYBACK.md#next-episode). These changes are not part of v1.6.3.
+Music Options exposes repeat and shuffle for the current album or playlist. Movie and episode previews offer Mark watched and Mark unwatched for the active user. Music options use Select/Tab, and X/O changes the music background. On a movie or episode preview, X/O changes watched state directly with inline feedback. Held Left/Right now repeats seeking without list acceleration. Holding Start for two seconds opens an exit confirmation from any screen. Manual segment skipping offers a contextual X/O action for server-provided intros, credits, recaps, previews, and commercials. Episode completion now offers Play next episode or Back to episodes for Plex and Jellyfin, without a countdown. Automatic segment skipping remains separate work. See [segment skipping](GO_PLAYBACK.md#segment-skipping) and [next episode](GO_PLAYBACK.md#next-episode). Watched movies and episodes also show their status inline in lists. Loading, buffering, and seeking boxes have subtly rounded corners.
 
 ## Current baseline
 
@@ -35,6 +35,10 @@ Plex and Jellyfin now receive transcode limits derived from the playback framebu
 
 Jellyfin remote control is supported. Plex Companion video control exists only on the parked `feat/plex-companion-prototype` branch. It is not a released capability or a prerequisite for unrelated improvements. See the [Plex remote plan](https://github.com/trentnix/mistervision/blob/feat/plex-companion-prototype/docs/PLEX_REMOTE_PLAN.md) and [forum report](https://forums.plex.tv/t/companion-timeline-stays-stale-pms-proxy-does-not-expose-x-plex-client-identifier/943091).
 
+## Next work
+
+The next planned features are chapter selection and alternate-version selection. Chapter selection should use server chapter metadata. Alternate-version selection should let the user choose among available encodes of the same movie or episode. Both need shared controls with provider-specific metadata translation.
+
 ## Shared feature gaps
 
 Other Jellyfin and Plex clients offer the capabilities below. Availability varies by client, server version, metadata, permissions, and Plex subscription. A server API does not guarantee that every client implements a feature. MiSTerVision's shared browser lacks these controls for both providers unless noted.
@@ -44,8 +48,8 @@ Other Jellyfin and Plex clients offer the capabilities below. Availability varie
 | Search, filters, and sorting | Text search, selectable genre/year/unwatched filters, and sort controls. | Both adapters need query support. Current ordering is fixed by the adapters. |
 | Personal shortcuts | A favorites view and favorite/unfavorite actions. | Jellyfin favorites are not equivalent to Plex Universal Watchlist or cloud Lists. Do not silently map one to the other. |
 | Chapters and seek previews | Chapter selection and thumbnail previews while seeking. | Jellyfin chapter/trickplay data and Plex chapter/preview data need separate adapters. |
-| [Post-play experience (#26)](https://github.com/trentnix/mistervision/issues/26) | An optional countdown or earlier end-of-episode prompt. The current branch offers an explicit next-episode choice after completion. Existing album and playlist advancement is separate. | Both providers use the shared catalog lookup to follow episode order across seasons, including playback started from Continue Watching. |
-| Queue controls | Local Play next/Add to queue actions and remove/reorder. Repeat/shuffle controls are implemented in the unreleased additions. | Jellyfin remote commands already exercise shared queue functionality. The local UI can reuse it. Plex remote queues remain unfinished. |
+| Optional post-play extensions | A configurable countdown or earlier end-of-episode prompt. v1.7.0 implements [the next-episode experience (#26)](https://github.com/trentnix/mistervision/issues/26) with an explicit choice after completion. Existing album and playlist advancement is separate. | Both providers use the shared catalog lookup to follow episode order across seasons, including playback started from Continue Watching. |
+| Queue controls | Local Play next/Add to queue actions and remove/reorder. Repeat/shuffle controls are available for the current album or playlist. | Jellyfin remote commands already exercise shared queue functionality. The local UI can reuse it. Plex remote queues remain unfinished. |
 | Playlist editing | Creating playlists and adding/removing entries from the device. Existing playlists browse and play. | Persist changes through the active provider, respecting its permissions. |
 | Source-version selection | A chooser for alternate encodes or versions. Source metadata already exists internally. | Both providers represent multiple sources. Plex multi-file movies are a separate unsupported case. |
 | Trailers and extras | A dedicated extras browser and trailer playback flow. | Jellyfin exposes local extras. Plex can also supply subscription-dependent online extras. |
