@@ -190,9 +190,13 @@ make host
 python3 -m tools.ghostty.endurance --seconds 900
 ```
 
-Each cycle uses generated video, the production desktop decoder with null audio, and an isolated Jellyfin fixture. It changes movies, verifies moving frames, pauses, shows and hides controls, resumes, seeks, stops, rejects a stream with HTTP 503, retries after restoration, cancels a blocked stream request, and plays again. It checks decoder cleanup and normal application exit. Every wait has a deadline. Missing Linux process data, FFmpeg, libmpv, or the host binary fails the command instead of silently skipping it.
+Each cycle uses generated video, the production desktop decoder with null audio, and an isolated Jellyfin fixture. It changes movies, verifies moving frames, pauses, shows and hides controls, resumes, seeks, stops, rejects a stream with HTTP 503, retries after restoration, cancels a blocked stream request, and plays again. It checks decoder cleanup and normal application exit.
+
+Paused-frame checks compare the displayed image with the current decoder frame, rather than a baseline saved before toggling controls. Showing controls must change the lower half while preserving the video above it. Hiding controls must restore the complete current decoder image. Every wait has a deadline. Missing Linux process data, FFmpeg, libmpv, or the host binary fails the command instead of silently skipping it.
 
 `build/reports/endurance.json` records the tested binary checksum, startup and initial list-navigation time, playback-ready/seek/recovery timings, browser memory, file descriptors, threads, and child counts. Resource changes are reported without arbitrary performance thresholds. `endurance.events.json` retains the bounded diagnostic history from the fixture. Use `--report PATH` for a separate run. Failure reports can contain no completed samples if startup fails.
+
+A timed-out wait also saves the current cycle’s decoder and display frames under `endurance.frames/`, with PNG previews, a pixel-difference image, and a JSON summary of hashes, read consistency, and the failing phase. The difference image shows overlays or presentation lag. It is not the original alpha overlay. These captures contain only generated fixture video and test UI.
 
 The harness finishes the current cycle after the duration expires. Scheduled runs upload reports for 30 days. PR runs upload reports for 14 days. Tests use no saved accounts and do not open workstation audio or a physical display. The fixture serves the same generated clip for each requested seek offset, so these runs test replacement/recovery and resumed frame delivery, not content-accurate seeking or CRT cadence. They do not cover Plex server behavior, a real tuner, midstream network restoration, or long uninterrupted A/V synchronization. Existing provider and decoder tests cover separate cases.
 

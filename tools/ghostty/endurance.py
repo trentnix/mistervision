@@ -18,6 +18,7 @@ import time
 import unittest
 
 from .fixtures.browser import BINARY, BrowserFixture, Scenario
+from tools.raw_to_png import raw_to_png
 
 
 def resources(pid):
@@ -43,6 +44,23 @@ def resources(pid):
         return None
 
 
+def visible_pixels(data):
+    """Return BGRX bytes with unused padding zeroed for visible-image comparisons."""
+    pixels = bytearray(data)
+    pixels[3::4] = bytes(len(pixels) // 4)
+    return bytes(pixels)
+
+
+def overlay_matches(display, decoder, controls):
+    """Check the fixture's control region against the current clean decoder frame."""
+    if not display or len(display) != len(decoder):
+        return False
+    if not controls:
+        return display == decoder
+    middle = len(display) // 2
+    return display[:middle] == decoder[:middle] and display[middle:] != decoder[middle:]
+
+
 class Endurance(BrowserFixture):
     """Run repeated controls, stream-open failures, cancellation, and recovery."""
 
@@ -51,6 +69,8 @@ class Endurance(BrowserFixture):
         self.cycles, self.seconds, self.report = cycles, seconds, report
         self.samples = []
         self.seen_children = {}
+        self.frame_evidence = {}
+        self.phase = "startup"
 
     def events(self):
         """Read complete diagnostic records, including the previous rotated file."""
@@ -69,6 +89,8 @@ class Endurance(BrowserFixture):
                 return result
             self.remember_children()
             time.sleep(.025)
+        self.capture_frames('timeout')
+        self.save_frames(description)
         self.fail('timed out: ' + description + '; recent events: ' + json.dumps(self.events()[-8:]))
 
     def remember_children(self):
@@ -85,18 +107,99 @@ class Endurance(BrowserFixture):
                      and (playback is None or e.get('playback') == playback)
                      and all(e.get(k) == v for k, v in values.items())), None)
 
-    def stable_frame(self):
-        """Wait for a settled paused frame instead of assuming decoder latency."""
-        previous, since = self.read_frame(), time.monotonic()
+    def stable_frame(self, controls=False):
+        """Wait for settled video with controls present or fully removed.
+
+        Pause delivery and decoder publication are asynchronous. Compare with
+        the current decoder image, never a baseline saved before toggling UI.
+        The fixture has no captions or segment prompts. Its controls occupy
+        the lower half, leaving the upper half unchanged.
+        """
+        previous, since = None, time.monotonic()
 
         def settled():
             nonlocal previous, since
-            frame = self.read_frame()
-            if frame != previous:
-                previous, since = frame, time.monotonic()
-            return previous if time.monotonic() - since >= .15 else None
+            sample = self.capture_frames('latest')
+            display, decoder = sample.get('display'), sample.get('decoder')
+            pair = (display, decoder)
+            valid = sample['consistent'] and overlay_matches(display, decoder, controls)
+            if not valid or pair != previous:
+                previous, since = pair, time.monotonic()
+            return display if valid and time.monotonic() - since >= .15 else None
 
-        return self.until(settled, 'stable paused frame')
+        description = 'controls visible while paused' if controls else 'clean paused frame restored'
+        return self.until(settled, description)
+
+    def capture_frames(self, stage):
+        """Retain one coherent decoder/display pair, or mark the read incomplete."""
+        sample = {'phase': self.phase, 'time': time.time(), 'consistent': False}
+        decoder = Path(str(self.frame) + '.video')
+        before_decoder = None
+        try:
+            before_decoder = decoder.read_bytes()
+        except OSError as error:
+            sample['decoder_error'] = str(error)
+        try:
+            before_display = self.frame.stat()
+            sample['display'] = self.frame.read_bytes()
+            after_display = self.frame.stat()
+            sample['display_consistent'] = (before_display.st_mtime_ns == after_display.st_mtime_ns
+                                            and before_display.st_size == after_display.st_size == len(sample['display'])
+                                            and before_display.st_ino == after_display.st_ino)
+        except OSError as error:
+            sample['display_error'] = str(error)
+        try:
+            sample['decoder'] = decoder.read_bytes()
+        except OSError as error:
+            sample['decoder_error'] = str(error)
+        width, height = map(int, self.scenario.framebuffer.split('x'))
+        sample['consistent'] = (sample.get('display_consistent', False)
+                                and len(sample.get('display', b'')) == len(sample.get('decoder', b'')) == width * height * 4
+                                and before_decoder == sample.get('decoder'))
+        # The fourth byte is padding, not part of the displayed image.
+        for name in ('display', 'decoder'):
+            if name in sample:
+                sample[name] = visible_pixels(sample[name])
+        self.frame_evidence[stage] = sample
+        return sample
+
+    def save_frames(self, description):
+        """Save fixture-only frames and differences when a wait fails.
+
+        The difference image is not an alpha overlay. It shows every pixel that
+        differs from the decoder, including overlays and presentation lag.
+        """
+        directory = self.report.with_suffix('.frames')
+        directory.mkdir(parents=True, exist_ok=True)
+        width, height = map(int, self.scenario.framebuffer.split('x'))
+        size = width * height * 4
+        summary = {'failure': description, 'width': width, 'height': height,
+                   'pixel_format': 'BGRX8888 (padding zeroed)', 'stages': {}}
+        for stage, sample in self.frame_evidence.items():
+            details = {k: v for k, v in sample.items() if not isinstance(v, bytes)}
+            for name in ('display', 'decoder'):
+                data = sample.get(name)
+                if data is None:
+                    continue
+                details[name] = {'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
+                raw = directory / f'{stage}-{name}.raw'
+                raw.write_bytes(data)
+                if len(data) == size:
+                    raw_to_png(raw, width, height, raw.with_suffix('.png'))
+            display, decoder = sample.get('display', b''), sample.get('decoder', b'')
+            if len(display) == len(decoder) == size:
+                difference = bytearray(size)
+                changed = 0
+                for offset in range(0, size, 4):
+                    if display[offset:offset+3] != decoder[offset:offset+3]:
+                        difference[offset:offset+3] = b'\xff\xff\xff'
+                        changed += 1
+                details['different_pixels'] = changed
+                raw = directory / f'{stage}-difference.raw'
+                raw.write_bytes(difference)
+                raw_to_png(raw, width, height, raw.with_suffix('.png'))
+            summary['stages'][stage] = details
+        (directory / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
 
     def command(self, command, **values):
         self.remote_commands.put({'MessageType': 'Playstate', 'Data': {'Command': command, **values}})
@@ -143,21 +246,28 @@ class Endurance(BrowserFixture):
         navigation_ms = (time.monotonic() - navigation_started) * 1000
         cycle = 0
         while cycle < self.cycles or time.monotonic() - started < self.seconds:
+            self.frame_evidence.clear()
+            self.phase = f'cycle {cycle + 1}: starting'
             item = f'movie-tricky-{cycle % 2}'
             playback, ready_ms = self.play(item)
             # Observe a real moving image, then exercise local controls.
-            frame = self.read_frame()
-            self.until(lambda: self.read_frame() != frame, 'decoded frame advancement')
+            frame = visible_pixels(self.read_frame())
+            self.until(lambda: visible_pixels(self.read_frame()) != frame, 'decoded frame advancement')
             self.command('Pause')
             self.until(lambda: self.event('playback.pause', playback, paused=True), 'pause')
+            self.phase = f'cycle {cycle + 1}: pause and controls'
+            self.stable_frame()
+            self.frame_evidence['paused'] = self.frame_evidence['latest']
+            self.key(b'\x1b[A')
+            self.stable_frame(controls=True)
+            self.frame_evidence['controls'] = self.frame_evidence['latest']
+            self.key(b'\x1b[A')
             clean = self.stable_frame()
-            self.key(b'\x1b[A')
-            self.until(lambda: self.read_frame() != clean, 'controls visible while paused')
-            self.key(b'\x1b[A')
-            self.until(lambda: self.read_frame() == clean, 'clean paused frame restored')
+            self.frame_evidence['hidden'] = self.frame_evidence['latest']
+            self.phase = f'cycle {cycle + 1}: seek and recovery'
             self.command('Unpause')
             self.until(lambda: self.event('playback.pause', playback, paused=False), 'resume')
-            self.until(lambda: self.read_frame() != clean, 'motion after hiding controls')
+            self.until(lambda: visible_pixels(self.read_frame()) != clean, 'motion after hiding controls')
             seek_started = time.monotonic()
             self.key(b'll')
             next_start = self.until(lambda: next((e for e in self.events() if
