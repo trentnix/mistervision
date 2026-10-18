@@ -9,7 +9,7 @@ import (
 )
 
 // Config overrides hardware bindings by device name. Its zero value keeps the
-// built-in mappings. Matching profiles apply in order, including after hotplug.
+// inherited mappings. Matching profiles apply in order, including after hotplug.
 type Config struct {
 	Profiles []Profile `json:"profiles"`
 }
@@ -97,9 +97,16 @@ func validLabel(label string) bool {
 // bindings merges only configuration data. Device discovery adds axis ranges
 // separately, keeping matching and validation independent of Linux syscalls.
 func (c Config) bindings(name string) Profile {
+	return c.bindingsOn(name, Profile{})
+}
+
+// bindingsOn copies inherited bindings before applying explicit profiles.
+func (c Config) bindingsOn(name string, base Profile) Profile {
+	profiles := append([]Profile{base}, c.Profiles...)
+
 	result := Profile{Buttons: make(map[uint16]control.Action), Axes: make(map[uint16]Axis), ButtonLabels: make(map[uint16]string), AxisLabels: make(map[uint16]AxisLabels)}
-	for _, p := range c.Profiles {
-		if match, _ := filepath.Match(p.Match, name); !match {
+	for i, p := range profiles {
+		if match, _ := filepath.Match(p.Match, name); i != 0 && !match {
 			continue
 		}
 		if p.Replace {

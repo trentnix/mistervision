@@ -6,6 +6,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	"mistervision/internal/diagnostics"
 	"mistervision/internal/input/control"
 )
 
@@ -15,6 +16,7 @@ type mappedAxis struct {
 	binding        Axis
 	min, rest, max int64
 	held           control.Action
+	waitForNeutral bool
 }
 
 func newMappedAxis(binding Axis, min, max int32) *mappedAxis {
@@ -43,13 +45,64 @@ func (a *mappedAxis) action(value int32) control.Action {
 	if key != "" && span > 0 && travel*100 >= span*int64(threshold) {
 		a.held = key
 	}
+	if a.waitForNeutral {
+		a.waitForNeutral = a.held != ""
+		return ""
+	}
 	return a.held
 }
 
-func axisRange(fd int, code uint16) (min, max int32, ok bool) {
-	var info struct{ Value, Minimum, Maximum, Fuzz, Flat, Resolution int32 }
+type absoluteInfo struct{ Value, Minimum, Maximum, Fuzz, Flat, Resolution int32 }
+
+func readAxis(fd int, code uint16) (info absoluteInfo, ok bool) {
 	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), uintptr(0x80184540)+uintptr(code), uintptr(unsafe.Pointer(&info))) // EVIOCGABS
-	return info.Minimum, info.Maximum, errno == 0 && info.Maximum > info.Minimum
+	return info, errno == 0 && info.Maximum > info.Minimum
+}
+
+// deviceCapabilities snapshots advertised inputs and usable axis ranges once
+// at discovery. The same snapshot validates saved maps and initializes axes.
+type deviceCapabilities struct {
+	keys [96]byte
+	axes map[uint16]absoluteInfo
+}
+
+func readCapabilities(fd int) deviceCapabilities {
+	caps := deviceCapabilities{keys: keyCapabilities(fd), axes: make(map[uint16]absoluteInfo)}
+	var bits [8]byte
+	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), 0x80084523, uintptr(unsafe.Pointer(&bits[0]))) // EVIOCGBIT(EV_ABS)
+	if errno != 0 {
+		return caps
+	}
+	for code := uint16(0); code < 64; code++ {
+		if bits[code/8]&(1<<(code%8)) == 0 {
+			continue
+		}
+		if info, ok := readAxis(fd, code); ok {
+			caps.axes[code] = info
+		}
+	}
+	return caps
+}
+
+// supports checks whether a saved action can actually be produced. Missing
+// optional buttons do not invalidate a map, but confirm and back must work.
+func (c deviceCapabilities) supports(p Profile, action control.Action) bool {
+	for code, key := range p.Buttons {
+		if key == action && code < 768 && c.keys[code/8]&(1<<(code%8)) != 0 {
+			return true
+		}
+	}
+	for code, binding := range p.Axes {
+		info, ok := c.axes[code]
+		if !ok || info.Maximum <= info.Minimum {
+			continue
+		}
+		axis := newMappedAxis(binding, info.Minimum, info.Maximum)
+		if axis.action(info.Minimum) == action || axis.action(info.Maximum) == action {
+			return true
+		}
+	}
+	return false
 }
 
 // axisBindings adds gamepad left-stick defaults before applying explicit
@@ -68,18 +121,28 @@ func (d *device) axisBindings(keys [96]byte) map[uint16]Axis {
 	return bindings
 }
 
-func (d *device) configure(config Config) {
-	d.bindings = config.bindings(d.name)
-	keys := keyCapabilities(d.fd)
-	_, _, d.hats[0] = axisRange(d.fd, 16)
-	_, _, d.hats[1] = axisRange(d.fd, 17)
+func (d *device) configure(config Config, source MappingSource, log *diagnostics.Log) {
+	caps := readCapabilities(d.fd)
+	d.overrides = config.bindings(d.name)
+	var base Profile
+	if !d.overrides.Replace {
+		base = d.inheritedBindings(source, caps, log)
+	}
+	d.bindings = config.bindingsOn(d.name, base)
+	_, d.hats[0] = caps.axes[16]
+	_, d.hats[1] = caps.axes[17]
 	d.axes = make(map[uint16]*mappedAxis)
-	for code, binding := range d.axisBindings(keys) {
-		if min, max, ok := axisRange(d.fd, code); ok {
-			d.axes[code] = newMappedAxis(binding, min, max)
+	for code, binding := range d.axisBindings(caps.keys) {
+		if info, ok := caps.axes[code]; ok {
+			a := newMappedAxis(binding, info.Minimum, info.Maximum)
+			// Wait for release if an inherited axis is already held at discovery.
+			if base.Replace {
+				a.waitForNeutral = a.action(info.Value) != ""
+			}
+			d.axes[code] = a
 		}
 	}
-	d.legend = d.labels(keys)
+	d.legend = d.labels(caps.keys)
 }
 
 func (d *device) mappedAction(e event) control.Action {

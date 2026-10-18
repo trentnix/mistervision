@@ -1,20 +1,38 @@
 # Controller configuration
 
-Set device profiles in the `input` section of `settings.json`. Omission or `{"profiles": []}` keeps built-in bindings. Invalid input settings stop startup. Restart after editing. See [settings paths and overrides](GO_CONFIGURATION.md#paths-and-precedence) and [default playback controls](GO_PLAYBACK.md#playback-controls).
+Set device profiles in the `input` section of `settings.json`. On MiSTer, omission or `{"profiles": []}` uses the saved MiSTer controller mapping when available and built-in bindings otherwise. Invalid input settings stop startup. Restart after editing. See [settings paths and overrides](GO_CONFIGURATION.md#paths-and-precedence) and [default playback controls](GO_PLAYBACK.md#playback-controls).
 
 Profiles configure Linux evdev devices, including MiSTer controllers and physical keyboards. Ghostty uses terminal key sequences instead and shows keyboard labels from the first frame. MiSTer starts with the default controller labels. Input events replace the hints with the active device’s configured bindings.
 
-The default controller layout follows MiSTer: B selects, plays, or pauses and A returns, cancels, or stops. Explicit button bindings override these defaults. Keyboard controls remain Enter to select and Escape to return.
+MiSTerVision reads the controller mapping saved by MiSTer’s **Define joystick buttons**. Menu confirm/back assignments take precedence over the map’s core A/B assignments. Without a saved map, B selects, plays, or pauses and A returns, cancels, or stops. The default buttons match MiSTer’s menu so selecting and going back stay consistent when moving between MiSTer and MiSTerVision. Explicit application bindings override either layout. Keyboard controls remain Enter to select and Escape to return.
 
 Hold the button mapped to `about` for two seconds to open the exit confirmation from any screen. With the default controller layout, hold Start, then press B to exit or A to cancel. A short press opens About on release. The long hold fires once and does not also open About. Cancel preserves the current screen and playback. This gesture uses Linux input press/release events and also works with a physical keyboard's F1 on MiSTer. Ghostty terminal input retains its existing F1 and Q controls.
 
 During recorded video or music playback, held Left/Right repeats seeking at a controlled rate of about 250 milliseconds per step. Browsing lists retain accelerated held scrolling. Up/Down and track changes do not repeat during playback.
 
+## MiSTer mappings
+
+Bindings apply in this order: a saved MiSTer menu map, or built-in defaults if no usable map exists, followed by matching application profiles. A valid saved map replaces the fixed gamepad layout. Controls left unassigned in that map stay unassigned. MiSTerVision reads the map without modifying it. Restart or reconnect the controller after changing its mapping in MiSTer.
+
+The reader loads v3 maps from `/media/fat/config/inputs/`. It supports ordinary vendor/product names, MiSTer’s adapter-specific names, and `controller_unique_mapping` rules from the active INI profile. It uses the running menu core’s section when resolving those rules.
+
+If `controller_unique_mapping` appears in a video-dependent `[video=…]` section or `+video=…` group, saved-map loading falls back to built-in bindings and diagnostics records `video-dependent-mapping`. The reader does not guess which video section MiSTer selected. Ordinary display settings in video sections do not trigger this fallback.
+
+Core-specific maps and transient controller mode switches, such as Atari VCS `_m` maps, are not imported. MiSTer’s in-memory controller database defaults are not saved maps. If no saved map exists, use Define joystick buttons to create one or set an application profile.
+
+Saved button and axis assignments cover navigation, confirm/back, X, shoulders, Select, Start, and the configured navigation stick. An axis can act as a shoulder or face button if MiSTer mapped it that way. Triggers do not gain a seek action merely because the driver advertises them. Mapped axes retain dead zones and separate press/release thresholds. An axis held when the controller is discovered must be released before it can produce a new press.
+
+Missing maps use built-in bindings. Malformed maps and maps whose confirm/back inputs are unavailable on the connected device also fall back. Diagnostics identify unavailable controls as `unavailable-controls`. Explicit profiles apply afterward, so intentional overrides and disabled bindings remain effective.
+
+With diagnostics enabled, `input.mapping` records `saved`, `default`, or `fallback`, the vendor/product IDs, and an error category. `input.mapping_source` records failure to read the active INI configuration. Logs do not include device serials or raw map contents. Explicit profiles still apply after fallback. A profile with `replace: true` bypasses the saved map for that device.
+
+The mapping does not identify every controller family’s printed button labels. Standard key-code labels remain available, mapped axis labels use their MiSTer roles, and explicit label overrides take precedence.
+
 ## Profiles and labels
 
 `match` is a case-sensitive glob for the Linux device name. See [finding device names and button codes](#finding-device-names-and-button-codes) to identify the controller and its inputs. Matching profiles apply in file order, including after hotplug.
 
-Omitted bindings retain defaults. An empty action disables one binding. `replace: true` clears all inherited bindings first, so a replacement profile must provide every needed action. Buttons use decimal Linux `EV_KEY` codes, which depend on the driver rather than the printed controller labels.
+Omitted bindings retain inherited bindings. An empty action disables one binding. `replace: true` clears all inherited bindings first, so a replacement profile must provide every needed action. Buttons use decimal Linux `EV_KEY` codes, which depend on the driver rather than the printed controller labels.
 
 The example below keeps track changes on the shoulders and adds seeking on configured trigger axes. Use it only if the measured input codes match your controller.
 
@@ -98,7 +116,7 @@ MiSTerVision does not include a button-identification tool. If `evtest` is unava
 
 `axes` maps decimal Linux `EV_ABS` codes. The driver supplies each range. An empty axis object disables that axis.
 
-Gamepads use the left stick for navigation by default: axis `0` selects left/right, and axis `1` selects up/down. A direction activates at 40% travel and releases below 25%, preventing small stick movements from navigating. Held directions use the same acceleration as the D-pad. Explicit axis bindings override these defaults, and `replace: true` removes them. The right stick and triggers are unmapped unless configured. Drivers can use the same axis codes for different physical inputs. Verify each input before adding an axis binding.
+Without a saved MiSTer map, gamepads use the left stick for navigation by default: axis `0` selects left/right, and axis `1` selects up/down. A direction activates at 40% travel and releases below 25%, preventing small stick movements from navigating. Held directions use the same acceleration as the D-pad. Explicit axis bindings override these defaults, and `replace: true` removes them. The right stick and triggers are unmapped unless configured. Drivers can use the same axis codes for different physical inputs. Verify each input before adding an axis binding.
 
 | `rest` | Input | Allowed directions |
 | --- | --- | --- |

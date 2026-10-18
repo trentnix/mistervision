@@ -21,13 +21,13 @@ func keyCapabilities(fd int) [96]byte {
 // precedence over inherited aliases, with stable code order as the tie breaker.
 func (d *device) labels(keys [96]byte) control.Labels {
 	labels := make(control.Labels)
-	for _, explicit := range []bool{true, false} {
+	for priority := 0; priority < 3; priority++ {
 		for code := uint16(0); code < 768; code++ {
 			if keys[code/8]&(1<<(code%8)) == 0 {
 				continue
 			}
 			key, configured := d.bindings.Buttons[code]
-			if configured != explicit {
+			if _, explicit := d.overrides.Buttons[code]; bindingPriority(explicit, configured) != priority {
 				continue
 			}
 			if !configured {
@@ -46,7 +46,7 @@ func (d *device) labels(keys [96]byte) control.Labels {
 		}
 		for code := uint16(0); code < 64; code++ {
 			binding, configured := d.bindings.Axes[code]
-			if configured != explicit {
+			if _, explicit := d.overrides.Axes[code]; bindingPriority(explicit, configured) != priority {
 				continue
 			}
 			if configured {
@@ -116,4 +116,15 @@ func axisLabel(code uint16, positive bool) string {
 		sign = "+"
 	}
 	return fmt.Sprintf("Axis %d%s", code, sign)
+}
+
+// bindingPriority makes explicit bindings win over saved mappings and defaults.
+func bindingPriority(explicit, configured bool) int {
+	if explicit {
+		return 0
+	}
+	if configured {
+		return 1
+	}
+	return 2
 }

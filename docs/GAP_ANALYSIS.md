@@ -18,7 +18,7 @@ The interface supports progressive and interlaced CRT output, HDMI framebuffer s
 
 ### Playback controls in v1.6.3
 
-Left/Right seeks, LB/RB changes music tracks or queued videos, and Up/Down toggles controls. Automatic trigger-axis bindings were removed to address [unintended seeking (#30)](https://github.com/trentnix/mistervision/issues/30). Explicit input profiles can still bind triggers. Automatic controller-family recognition remains a separate gap.
+Left/Right seeks, LB/RB changes music tracks or queued videos, and Up/Down toggles controls. Automatic trigger-axis bindings were removed to address [unintended seeking (#30)](https://github.com/trentnix/mistervision/issues/30). Explicit input profiles can still bind triggers. MiSTerVision now reads saved MiSTer controller mappings, with explicit application profiles taking precedence. Automatic controller-family recognition and matching physical button labels remain separate gaps.
 
 ### Fixes in v1.6.1
 

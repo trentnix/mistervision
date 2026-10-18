@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 
 	"mistervision/internal/diagnostics"
 	"mistervision/internal/input/control"
 	"mistervision/internal/input/evdev"
 	"mistervision/internal/mister/bgm"
+	"mistervision/internal/mister/inputmap"
 	"mistervision/internal/platform"
 	"mistervision/internal/playback"
 	"mistervision/internal/player/mplayer"
@@ -24,7 +27,16 @@ func misterTarget(d platform.Presenter, o launchOptions, bindings evdev.Config) 
 		player:   misterPlayback(o, d.Geometry()),
 		output:   output,
 		readInput: func(ctx context.Context, log *diagnostics.Log) (<-chan control.Event, <-chan struct{}, error) {
-			return evdev.Read(ctx, bindings, log)
+			source, err := inputmap.New()
+			if err != nil {
+				kind := diagnostics.ErrorKind(err)
+				if errors.Is(err, inputmap.ErrVideoMapping) {
+					kind = "video-dependent-mapping"
+				}
+				log.Record("input.mapping_source", slog.String("status", "fallback"), slog.String("error_kind", kind))
+				return evdev.Read(ctx, bindings, nil, log)
+			}
+			return evdev.Read(ctx, bindings, source, log)
 		},
 	}
 }
