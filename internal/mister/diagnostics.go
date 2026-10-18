@@ -89,7 +89,7 @@ func recordSettings(log *diagnostics.Log, source io.Reader) {
 		}
 		key, value = strings.ToLower(strings.TrimSpace(key)), strings.TrimSpace(value)
 		switch key {
-		case "ypbpr", "composite_sync", "forced_scandoubler", "vga_scaler", "direct_video", "vsync_adjust", "video_mode", "video_mode_ntsc", "video_mode_pal", "fb_terminal", "fb_size", "vscale_mode", "vscale_border", "ntsc_mode", "log_file_entry":
+		case "ypbpr", "composite_sync", "forced_scandoubler", "vga_scaler", "direct_video", "vsync_adjust", "video_mode", "video_mode_ntsc", "video_mode_pal", "fb_terminal", "fb_size", "vscale_mode", "vscale_border", "ntsc_mode", "menu_pal", "log_file_entry":
 		case "vga_mode":
 			if value != "rgb" && value != "ypbpr" && value != "svideo" && value != "cvbs" {
 				rejected++

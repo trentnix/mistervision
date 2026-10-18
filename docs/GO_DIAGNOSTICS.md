@@ -70,7 +70,7 @@ If picture or track choices disappear after restart, look for `playback.preferen
 
 Jellyfin metadata/artwork timings include buffered body reads. Its `/media-stream` event measures opening through response headers, not the whole stream. Its `/audio-stream` event includes one proxy request through completion. Plex labels ordinary API requests `/plex-request` and tune requests `/livetv/dvrs/:dvr/channels/:channel/tune`. Both omit private identifiers, and timing includes the buffered response body. GitHub release checks are outside the media-server request log.
 
-The MiSTer inventory resolves the active INI profile and reads its allowed display settings, preserving known section identity. If profile resolution fails, it logs the failure instead of substituting Main. Recorded settings do not prove active signal timing. Reads are bounded to 128 KiB and 64 setting events.
+The MiSTer inventory resolves the active INI profile and reads its allowed display settings, preserving known section identity. If profile resolution fails, it logs the failure instead of substituting Main. The inventory includes `fb_terminal`, `vga_scaler`, `direct_video`, and `menu_pal` to distinguish framebuffer routes and configured Menu timing. A 25 fps source alone does not establish PAL output. Recorded settings do not prove active signal timing. Reads are bounded to 128 KiB and 64 setting events.
 
 ## Configuration fallbacks
 
