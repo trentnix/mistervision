@@ -94,7 +94,7 @@ Live TV timeshifting is absent from both MiSTerVision adapters. Plex provides a 
 ## Open compatibility work
 
 - **[SuperStation One (#22)](https://github.com/trentnix/mistervision/issues/22):** ConsoleMode handoff and diagnostics are implemented. The reporter confirmed the tearing fix on HDMI and VGA, then reported smooth HDMI playback with the output-sized transcoding change in v1.6.2. VGA testing of the sizing change remains open. The maintainer has no SS1 and relies on reporter validation.
-- **[PAL validation (#28)](https://github.com/trentnix/mistervision/issues/28):** PAL code paths exist, but 288p/576i output needs validation by someone with suitable hardware.
+- **[PAL validation (#28)](https://github.com/trentnix/mistervision/issues/28):** A contributor reports working 288p output with an Analog IO Board v6.1 over RGBS to a Sony PVM-14N6U and over YPbPr to an NTSC Samsung TV reported to accept PAL timing. Interlaced output also reportedly works, but 576i timing needs diagnostic confirmation. PAL composite/S-Video encoding and other output paths remain unvalidated. See the [reported configuration](GO_DISPLAY.md#reported-pal-rgb-and-component-configurations).
 
 ## Implementation considerations
 
@@ -116,4 +116,4 @@ Source-version selection, multi-file movies, trailers/extras, photo controls, ma
 
 Offline downloads, Plex cloud services, social features, server administration, native HD decoding and HDR, and Plexamp's radio and sonic features have no implementation commitment. In-app screenshots and exact copies of the C music visualizers remain out of scope.
 
-Direct MiSTer YPbPr component output has been tested at 240p and 480i. PAL output and background-music restoration on the optional add-on need contributors with suitable hardware. Zaparoo DDR integration stays deferred until it can be tested. Existing automated checks continue across releases. CRT readability, controller feel, motion cadence, and audio sync still need hardware checks.
+Direct MiSTer YPbPr component output has been tested at 240p and 480i. Remaining PAL output checks and background-music restoration on the optional add-on need contributors with suitable hardware. Zaparoo DDR integration stays deferred until it can be tested. Existing automated checks continue across releases. CRT readability, controller feel, motion cadence, and audio sync still need hardware checks.

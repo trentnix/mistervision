@@ -168,9 +168,39 @@ I check carousel and list navigation, preview text, playback, seeking, controls 
 
 Automated tests exercise display negotiation, aspect ratios, framebuffer presentation, overlay composition, progressive and interlaced page ownership, startup recovery, and decoder timing. Headless tests run locally and in CI. Release checks verify the packaged binaries, checksums, and updater recovery. An isolated MiSTer smoke check runs the packaged client and player without changing the installed application or display settings.
 
-PAL 288p/576i and SS1-specific analog paths need contributors with suitable hardware. ConsoleMode was tested on the maintainer’s MiSTer Multisystem 2. That does not establish SS1 compatibility. See [open hardware work](GAP_ANALYSIS.md#open-compatibility-work).
+A contributor has reported working PAL progressive RGB and component output as documented below. Interlaced PAL timing and other PAL output paths still need confirmation. SS1-specific analog paths also need contributors with suitable hardware. ConsoleMode was tested on the maintainer’s MiSTer Multisystem 2. That does not establish SS1 compatibility. See [open hardware work](GAP_ANALYSIS.md#open-compatibility-work).
 
 The composite 240p setup uses `vga_scaler=1` and `composite_sync=0` in `[Menu]`, with a 15 kHz timing. Interlaced output uses the bundled core and its scoped settings. Hardware, adapters, and televisions vary, so reports should include the connection and relevant `MiSTer.ini` settings.
+
+## Reported PAL RGB and component configurations
+
+Redphosphors reported stable progressive and interlaced output with MiSTerVision v1.7 and an Analog IO Board v6.1 on two setups:
+
+| Connection | Display | Report |
+| --- | --- | --- |
+| RGBS | Sony PVM-14N6U | [RGB report](https://github.com/trentnix/mistervision/issues/28#issuecomment-6258728639) |
+| YPbPr component | NTSC Samsung TV, model unspecified, reported to accept PAL resolution and frequency | [Component report](https://github.com/trentnix/mistervision/issues/28#issuecomment-6258778429) |
+
+Both reports describe readable UI scaling, working music and video playback, correct overlays, and audio/video that appeared to remain synchronized. Both progressive configurations use the same 640×288, 50 Hz timing through the scaler. The RGB settings are below. The component report changes only `vga_mode=rgb` to `vga_mode=ypbpr` in this block.
+
+```ini
+[Menu]
+vga_mode=rgb
+vga_scaler=1
+vga_sog=0
+composite_sync=0
+forced_scandoubler=0
+direct_video=0
+fb_terminal=1
+menu_pal=1
+video_mode=640,24,64,72,288,5,5,14,12480
+vscale_mode=0
+vscale_border=8
+```
+
+These settings describe the contributor's working setup, not a universal PAL preset. Back up the active INI profile before changing settings. Preserve unrelated settings and use timings supported by the connected display.
+
+Both reports also describe working interlaced output, but the posted PAL timing settings are under `[Menu]`. The excerpts do not establish the timing used by `[MiSTerVisionInterlaced]`. Interlaced diagnostics are needed before recording that mode as confirmed 576i. RGB and component output do not validate PAL composite or S-Video color encoding, and these scaler configurations do not validate the native analog path in issue #48.
 
 ## VGA PC monitors and startup validation
 

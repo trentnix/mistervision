@@ -241,7 +241,7 @@ Search, automatic photo slideshows, and photo zoom are not implemented. Plex rel
 See the [Jellyfin and Plex gap analysis](docs/GAP_ANALYSIS.md) for missing features, current limitations, and intentional exclusions.
 
 - **Broader controller support:** Testing more controllers, recognizing controller families, and showing their button labels automatically are potential future improvements. Other controllers may need a custom input profile today.
-- **PAL 288p/576i validation:** Someone with PAL hardware will need to validate output. My hardware testing covers NTSC CRT output, including direct YPbPr component, and HDMI. See [tested display configurations](docs/GO_DISPLAY.md#how-i-test-display-changes).
+- **PAL output validation:** A contributor reports working 288p RGB and component output. Interlaced PAL timing and PAL composite/S-Video output still need confirmation. See the [reported PAL configuration](docs/GO_DISPLAY.md#reported-pal-rgb-and-component-configurations).
 - **Zaparoo DDR integration:** Deferred until I have a way to test it. Zaparoo is not required for the supported interlaced output.
 - **MiSTer background-music hardware validation:** Suspension and restoration are implemented and covered by automated tests. Testing with the actual add-on is deferred because I do not use it. This is separate from music played through Jellyfin or Plex.
 
