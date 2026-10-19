@@ -8,7 +8,7 @@ Install the application package and set `display.interlaced` to `false`. This ke
 
 | Connection | Start here |
 | --- | --- |
-| Analog CRT | Keep working CRT timing. The analog scaler must display the Linux framebuffer. Use settings for your adapter. |
+| Analog CRT | Keep working CRT timing. Use the tested scaler framebuffer path described below. Use settings for your adapter. |
 | Composite output | See the NTSC 240p example below, tested with Super Video Custard. Settings depend on your adapter. |
 | HDMI monitor | Keep interlacing off and use a supported HDMI timing. Keep the default framebuffer limits. |
 | Optional 480i CRT output | Establish working output first, then follow [interlaced setup](#enable-or-disable-interlaced-output). |
@@ -31,7 +31,7 @@ The handoff was developed against ConsoleMode 1.1.4.2 on the maintainer's MiSTer
 
 ## Composite and S-Video output
 
-MiSTerVision draws through the Linux framebuffer. Analog output must display that framebuffer through the scaler. If the CRT says to disable the framebuffer or enable the VGA scaler, use `vga_scaler=1` with a CRT-compatible timing. Disabling `fb_terminal` does not solve the application’s display requirement.
+MiSTerVision draws through the Linux framebuffer. The tested analog output path displays that framebuffer through the scaler. If the CRT says to disable the framebuffer or enable the VGA scaler, use `vga_scaler=1` with a CRT-compatible timing. Disabling `fb_terminal` does not solve the application’s display requirement.
 
 The following **NTSC 240p** settings worked over composite through a Super Video Custard on a MiSTer Multisystem 2. Back up `/media/fat/MiSTer.ini`, then merge these keys into its existing `[Menu]` section. Preserve other sections. Exit MiSTerVision before editing and reload the Menu core afterward.
 
@@ -72,9 +72,15 @@ vscale_border=0
 
 ## Simultaneous analog and HDMI output
 
-Many game cores send their native picture to analog while the scaler produces a separate HD picture for HDMI. MiSTerVision’s Linux framebuffer needs the scaler on analog too. With `vga_scaler=1`, analog uses the timing selected by `video_mode`, as HDMI does. A 240p timing can work on the CRT while leaving an HDMI monitor blank because that monitor does not accept the timing. See [MiSTer’s video settings](https://mister-devel.github.io/MkDocs_MiSTer/advanced/ini/).
+Many game cores send their native picture to analog while the scaler produces a separate HD picture for HDMI. MiSTerVision’s tested analog framebuffer path uses the scaler too. With `vga_scaler=1`, analog uses the timing selected by `video_mode`, as HDMI does. A 240p timing can work on the CRT while leaving an HDMI monitor blank because that monitor does not accept the timing. See [MiSTer’s video settings](https://mister-devel.github.io/MkDocs_MiSTer/advanced/ini/).
 
-Simultaneous display therefore requires both displays to accept the output timing, or an external scaler to convert the CRT-compatible signal for the modern display. MiSTerVision does not currently provide independent HD and CRT framebuffer outputs. The interlaced RGB path also enables `direct_video`, which MiSTer documents as incompatible with ordinary HDMI monitors. See [Direct Video](https://mister-devel.github.io/MkDocs_MiSTer/advanced/directvideo/).
+With this scaler path, simultaneous display requires both displays to accept the output timing, or an external scaler to convert the CRT-compatible signal for the modern display. Independent HD and CRT framebuffer playback is not a validated MiSTerVision configuration. The interlaced RGB path also enables `direct_video`, which MiSTer documents as incompatible with ordinary HDMI monitors. See [Direct Video](https://mister-devel.github.io/MkDocs_MiSTer/advanced/directvideo/).
+
+### Native analog framebuffer (`fb_terminal=2`)
+
+Recent Main and Menu cores can display a CRT-sized Linux framebuffer through the native analog path with `fb_terminal=2`, `vga_scaler=0`, and `direct_video=0`. This path differs from the scaler configuration above. [Issue #48](https://github.com/trentnix/mistervision/issues/48) reports color output with tearing on SS1 composite, including both 24 fps and 25 fps sources.
+
+The Menu analog reader can change framebuffer addresses between scanlines. MiSTerVision's page-flipping synchronization assumes the displayed page changes between frames. Simulation reproduces the mismatch at both 240-line and 288-line sizes. A complete fix must hold a page for an analog frame and prevent the player from reusing it before analog scanning finishes. The existing HDMI/scaler frame counter does not establish that boundary. The experimental native analog path is not covered by the tear-free behavior described below.
 
 ## HDMI framebuffer scaling
 
@@ -150,7 +156,7 @@ Native output requires a kernel with working framebuffer mapping and VSync suppo
 
 The UI layout remains 640×240 or 640×288. Interlaced video uses all 640×480 or 640×576 pixels. Letterboxing and shared overlays are centered in that full framebuffer. Original/Zoom, subtitles, captions, pause, and seeking retain their normal controls.
 
-Starting with v1.6.1, both progressive and interlaced MPlayer output use page flipping to avoid writing into the displayed video frame. MPlayer prepares a back page before its presentation deadline, then submits the flip at that deadline. A kernel field counter prevents reuse while a flip is pending. Paused redraws use the same ownership rules. The loading indicator clears on the first presented frame, not while a frame is merely being prepared.
+Starting with v1.6.1, the tested progressive scaler and bundled interlaced MPlayer output paths use page flipping to avoid writing into the displayed video frame. MPlayer prepares a back page before its presentation deadline, then submits the flip at that deadline. A kernel field counter prevents reuse while a flip is pending. Paused redraws use the same ownership rules. The loading indicator clears on the first presented frame, not while a frame is merely being prepared.
 
 For 480i Live TV, Jellyfin and Plex conversion is capped at 30000/1001 fps. Progressive NTSC uses 30 fps and PAL uses 25 fps. Slower sources are not forced to those rates. The player retains audio-clock correction and does not force playback speed. Interlaced output does not recover source fields lost during conversion or add 50/60 fps transcoding. Film-rate material can retain normal 3:2 cadence, and thin detail can show interline flicker.
 
@@ -162,9 +168,39 @@ I check carousel and list navigation, preview text, playback, seeking, controls 
 
 Automated tests exercise display negotiation, aspect ratios, framebuffer presentation, overlay composition, progressive and interlaced page ownership, startup recovery, and decoder timing. Headless tests run locally and in CI. Release checks verify the packaged binaries, checksums, and updater recovery. An isolated MiSTer smoke check runs the packaged client and player without changing the installed application or display settings.
 
-PAL 288p/576i and SS1-specific analog paths need contributors with suitable hardware. ConsoleMode was tested on the maintainer’s MiSTer Multisystem 2. That does not establish SS1 compatibility. See [open hardware work](GAP_ANALYSIS.md#open-compatibility-work).
+A contributor has reported working PAL progressive RGB and component output as documented below. Interlaced PAL timing and other PAL output paths still need confirmation. SS1-specific analog paths also need contributors with suitable hardware. ConsoleMode was tested on the maintainer’s MiSTer Multisystem 2. That does not establish SS1 compatibility. See [open hardware work](GAP_ANALYSIS.md#open-compatibility-work).
 
 The composite 240p setup uses `vga_scaler=1` and `composite_sync=0` in `[Menu]`, with a 15 kHz timing. Interlaced output uses the bundled core and its scoped settings. Hardware, adapters, and televisions vary, so reports should include the connection and relevant `MiSTer.ini` settings.
+
+## Reported PAL RGB and component configurations
+
+Redphosphors reported stable progressive and interlaced output with MiSTerVision v1.7 and an Analog IO Board v6.1 on two setups:
+
+| Connection | Display | Report |
+| --- | --- | --- |
+| RGBS | Sony PVM-14N6U | [RGB report](https://github.com/trentnix/mistervision/issues/28#issuecomment-6258728639) |
+| YPbPr component | NTSC Samsung TV, model unspecified, reported to accept PAL resolution and frequency | [Component report](https://github.com/trentnix/mistervision/issues/28#issuecomment-6258778429) |
+
+Both reports describe readable UI scaling, working music and video playback, correct overlays, and audio/video that appeared to remain synchronized. Both progressive configurations use the same 640×288, 50 Hz timing through the scaler. The RGB settings are below. The component report changes only `vga_mode=rgb` to `vga_mode=ypbpr` in this block.
+
+```ini
+[Menu]
+vga_mode=rgb
+vga_scaler=1
+vga_sog=0
+composite_sync=0
+forced_scandoubler=0
+direct_video=0
+fb_terminal=1
+menu_pal=1
+video_mode=640,24,64,72,288,5,5,14,12480
+vscale_mode=0
+vscale_border=8
+```
+
+These settings describe the contributor's working setup, not a universal PAL preset. Back up the active INI profile before changing settings. Preserve unrelated settings and use timings supported by the connected display.
+
+Both reports also describe working interlaced output, but the posted PAL timing settings are under `[Menu]`. The excerpts do not establish the timing used by `[MiSTerVisionInterlaced]`. Interlaced diagnostics are needed before recording that mode as confirmed 576i. RGB and component output do not validate PAL composite or S-Video color encoding, and these scaler configurations do not validate the native analog path in issue #48.
 
 ## VGA PC monitors and startup validation
 

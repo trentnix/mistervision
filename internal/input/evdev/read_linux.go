@@ -25,14 +25,15 @@ type event struct {
 }
 
 type device struct {
-	fd       int
-	name     string
-	held     map[uint16]control.Action
-	bindings Profile
-	axes     map[uint16]*mappedAxis
-	hats     [2]bool
-	about    aboutHold
-	legend   control.Labels
+	fd        int
+	name      string
+	held      map[uint16]control.Action
+	bindings  Profile
+	overrides Profile
+	axes      map[uint16]*mappedAxis
+	hats      [2]bool
+	about     aboutHold
+	legend    control.Labels
 }
 
 // action ignores MiSTer's synthetic action keys. Its arrow echoes are needed
@@ -192,8 +193,8 @@ func direction(key control.Action) bool {
 }
 
 // openDevices adds newly available nodes without grabbing them exclusively.
-// The optional log describes only this scan and never records input events.
-func openDevices(devices map[string]*device, config Config, log *diagnostics.Log) {
+// The optional log describes newly discovered devices, never input events.
+func openDevices(devices map[string]*device, config Config, source MappingSource, log *diagnostics.Log) {
 	paths, _ := filepath.Glob("/dev/input/event*")
 	for _, path := range paths {
 		if devices[path] != nil {
@@ -213,7 +214,7 @@ func openDevices(devices map[string]*device, config Config, log *diagnostics.Log
 			continue
 		}
 		devices[path] = &device{fd: fd, name: strings.TrimRight(string(name[:]), "\x00"), held: make(map[uint16]control.Action)}
-		devices[path].configure(config)
+		devices[path].configure(config, source, log)
 		if log != nil {
 			d := devices[path]
 			name := strings.Map(func(r rune) rune {
@@ -228,14 +229,15 @@ func openDevices(devices map[string]*device, config Config, log *diagnostics.Log
 }
 
 // Read owns all event descriptors and rescans for hotplugged controllers.
-// A non-nil log records the initial device scan, never input events or hotplug polls.
+// A non-nil log records device discovery and mapping results, never input events.
+// A nil source uses built-in bindings followed by explicit profiles.
 // The terminal is not read here, so virtual joystick echoes cannot fire twice.
-func Read(ctx context.Context, config Config, log *diagnostics.Log) (<-chan control.Event, <-chan struct{}, error) {
+func Read(ctx context.Context, config Config, source MappingSource, log *diagnostics.Log) (<-chan control.Event, <-chan struct{}, error) {
 	if err := config.Validate(); err != nil {
 		return nil, nil, err
 	}
 	devices := make(map[string]*device)
-	openDevices(devices, config, log)
+	openDevices(devices, config, source, log)
 	if len(devices) == 0 {
 		return nil, nil, errors.New("cannot open hardware input devices")
 	}
@@ -271,7 +273,7 @@ func Read(ctx context.Context, config Config, log *diagnostics.Log) (<-chan cont
 				return
 			case now := <-ticker.C:
 				if !now.Before(scan) {
-					openDevices(devices, config, nil)
+					openDevices(devices, config, source, log)
 					scan = now.Add(2 * time.Second)
 				}
 				pressed := make(map[control.Action]bool)

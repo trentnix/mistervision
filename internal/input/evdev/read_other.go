@@ -11,6 +11,6 @@ import (
 )
 
 // Read reports that native input is unavailable on this platform.
-func Read(context.Context, Config, *diagnostics.Log) (<-chan control.Event, <-chan struct{}, error) {
+func Read(context.Context, Config, MappingSource, *diagnostics.Log) (<-chan control.Event, <-chan struct{}, error) {
 	return nil, nil, errors.New("hardware input requires Linux")
 }

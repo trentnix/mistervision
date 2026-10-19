@@ -130,11 +130,17 @@ About offers **Switch profile** when multiple saved Jellyfin users or Plex Home 
 ## Controls
 
 
-I test with an Xbox controller. The default layout follows MiSTer: B selects, plays, or pauses, and A goes back, cancels, or stops. Use the D-pad or left analog stick to navigate. Hold Start for two seconds to open the exit confirmation from any screen. B exits and A cancels. During video or music playback, Up/Down shows or hides controls. Left/Right seeks. Holding either direction repeats at a steady rate. Shoulder buttons change music tracks or queued videos. Triggers have no default action and can be configured. During music playback, Select/Tab opens repeat/shuffle settings and X/O changes the background. On movie and episode previews, X/O marks the item watched or unwatched. During video playback, X/O skips an intro, credits, or another segment when the server supplies markers and a skip prompt is visible. See [segment skipping](docs/GO_PLAYBACK.md#segment-skipping).
+I test with an Xbox controller. B selects, plays, or pauses, and A goes back, cancels, or stops. The default buttons match MiSTer’s menu so selecting and going back stay consistent when moving between MiSTer and MiSTerVision.
+
+Use the D-pad or left analog stick to navigate. Hold Start for two seconds to open the exit confirmation from any screen. B exits and A cancels.
+
+During video or music playback, Up/Down shows or hides controls. Left/Right seeks. Holding either direction repeats at a steady rate. Shoulder buttons change music tracks or queued videos. Triggers have no default action and can be configured.
+
+During music playback, Select/Tab opens repeat/shuffle settings and X/O changes the background. On movie and episode previews, X/O marks the item watched or unwatched. During video playback, X/O skips an intro, credits, or another segment when the server supplies markers and a skip prompt is visible. See [segment skipping](docs/GO_PLAYBACK.md#segment-skipping).
 
 After an episode finishes, choose Play next episode or Back to episodes. The prompt works with Plex and Jellyfin and waits for your choice. See [next episode](docs/GO_PLAYBACK.md#next-episode).
 
-Controller mappings are configurable in the `input` section of `settings.json`. For example, if you prefer A to select and B to go back, add this section while preserving your other settings:
+MiSTerVision uses controller mappings saved through MiSTer’s **Define joystick buttons**, with built-in defaults when no usable map exists. You can override bindings and labels in the `input` section of `settings.json`. For example, if you prefer A to select and B to go back, add this section while preserving your other settings:
 
 ```json
 {
@@ -235,7 +241,7 @@ Search, automatic photo slideshows, and photo zoom are not implemented. Plex rel
 See the [Jellyfin and Plex gap analysis](docs/GAP_ANALYSIS.md) for missing features, current limitations, and intentional exclusions.
 
 - **Broader controller support:** Testing more controllers, recognizing controller families, and showing their button labels automatically are potential future improvements. Other controllers may need a custom input profile today.
-- **PAL 288p/576i validation:** Someone with PAL hardware will need to validate output. My hardware testing covers NTSC CRT output, including direct YPbPr component, and HDMI. See [tested display configurations](docs/GO_DISPLAY.md#how-i-test-display-changes).
+- **PAL output validation:** A contributor reports working 288p RGB and component output. Interlaced PAL timing and PAL composite/S-Video output still need confirmation. See the [reported PAL configuration](docs/GO_DISPLAY.md#reported-pal-rgb-and-component-configurations).
 - **Zaparoo DDR integration:** Deferred until I have a way to test it. Zaparoo is not required for the supported interlaced output.
 - **MiSTer background-music hardware validation:** Suspension and restoration are implemented and covered by automated tests. Testing with the actual add-on is deferred because I do not use it. This is separate from music played through Jellyfin or Plex.
 

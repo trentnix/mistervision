@@ -182,7 +182,7 @@ func TestSeekHoldRepeatsWithoutNavigationAcceleration(t *testing.T) {
 
 func TestAboutHoldFollowsConfiguredBinding(t *testing.T) {
 	d := device{name: "Custom pad", held: make(map[uint16]control.Action)}
-	d.configure(Config{Profiles: []Profile{{Match: "Custom pad", Buttons: map[uint16]control.Action{315: "", 307: control.About}}}})
+	d.configure(Config{Profiles: []Profile{{Match: "Custom pad", Buttons: map[uint16]control.Action{315: "", 307: control.About}}}}, nil, nil)
 	start := time.Unix(100, 0)
 	if d.accept(event{Type: 1, Code: 315, Value: 1}) != "" {
 		t.Fatal("disabled Start binding remained active")

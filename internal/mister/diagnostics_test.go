@@ -173,3 +173,23 @@ func TestGroupedSettingsLogRemainsBounded(t *testing.T) {
 		}
 	}
 }
+
+// PAL source frame rate does not establish the analog output timing. Preserve
+// the configured Menu timing beside the framebuffer route in diagnostic logs.
+func TestSettingsLogIncludesNativeAnalogTiming(t *testing.T) {
+	data := settingsLog(t, strings.NewReader(`[Menu]
+fb_terminal=2
+vga_scaler=0
+direct_video=0
+menu_pal=1
+menu_pal=private-value
+`))
+	for _, want := range []string{`"key":"fb_terminal","value":"2"`, `"key":"menu_pal","value":"1"`, `"rejected_values":1`} {
+		if !strings.Contains(data, want) {
+			t.Fatalf("missing %s: %s", want, data)
+		}
+	}
+	if strings.Contains(data, "private-value") {
+		t.Fatal("invalid timing value leaked into diagnostics")
+	}
+}
