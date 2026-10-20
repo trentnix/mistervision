@@ -18,6 +18,16 @@ func (r *Renderer) Label(text string, width, size, limit int, scaleY float32, in
 // LabelDensity rasterizes the same logical label at a higher pixel density.
 // Shaping and wrapping remain identical to Label. The caller owns the image.
 func (r *Renderer) LabelDensity(text string, width, size, limit int, scaleY float32, ink color.RGBA, sx, sy float32) *image.RGBA {
+	return r.labelDensity(text, width, size, limit, scaleY, ink, sx, sy, false)
+}
+
+// CenteredLabelDensity centers each wrapped line within the label's measured width.
+// Layout, truncation, pixel density, and ownership match LabelDensity.
+func (r *Renderer) CenteredLabelDensity(text string, width, size, limit int, scaleY float32, ink color.RGBA, sx, sy float32) *image.RGBA {
+	return r.labelDensity(text, width, size, limit, scaleY, ink, sx, sy, true)
+}
+
+func (r *Renderer) labelDensity(text string, width, size, limit int, scaleY float32, ink color.RGBA, sx, sy float32, centered bool) *image.RGBA {
 	if sx <= 0 || sy <= 0 || width <= 6 || size <= 0 || limit <= 0 || scaleY <= 0 {
 		return nil
 	}
@@ -38,7 +48,7 @@ func (r *Renderer) LabelDensity(text string, width, size, limit int, scaleY floa
 		}
 		used = max(used, (advance+63)/64)
 	}
-	mask := rasterMaskDensity(lines, min(width, used+6), size, scaleY, false, sx, sy)
+	mask := rasterMaskDensity(lines, min(width, used+6), size, scaleY, centered, sx, sy)
 	if mask == nil {
 		return nil
 	}

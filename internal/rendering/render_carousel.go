@@ -2,8 +2,15 @@ package rendering
 
 import (
 	"math"
+	"unicode"
+
 	"mistervision/internal/input/control"
 	"mistervision/internal/ui"
+)
+
+const (
+	carouselNameWidth = 240
+	carouselNameRunes = 64
 )
 
 // carousel draws library names over cached artwork strips and returns its controls.
@@ -27,12 +34,16 @@ func (p *screenPainter) carousel() [][]controlHint {
 	p.homeHeader()
 	centers := make([]float64, len(v.Page.Items))
 	names := make([]*ui.RasterImage, len(centers))
+	rowHeight := 0
 	for i, item := range v.Page.Items {
 		color := uint32(0xffffff)
 		if i == v.Selected {
 			color = titleColor
 		}
-		names[i] = p.headingText(item.Name, 180, 34, 1, color)
+		names[i] = p.centeredHeadingText(carouselName(item.Name), carouselNameWidth, 34, 2, color)
+		if names[i] != nil {
+			rowHeight = max(rowHeight, names[i].Bounds().Dy())
+		}
 		if i > 0 {
 			centers[i] = centers[i-1] + float64(labelWidth(names[i-1])+labelWidth(names[i]))/2 + 74
 		}
@@ -43,15 +54,15 @@ func (p *screenPainter) carousel() [][]controlHint {
 		hi := min(lo+1, len(centers)-1)
 		origin := centers[lo] + (centers[hi]-centers[lo])*(pos-float64(lo))
 		cy := (sy + 24 + h - sy - 28) / 2
-		rowHeight := 0
+		rowTop := cy - rowHeight/2 - 4
 		for i, name := range names {
 			x := w/2 + int(centers[i]-origin) - labelWidth(name)/2
 			if name != nil {
-				rowHeight = max(rowHeight, name.Bounds().Dy())
+				y := rowTop + (rowHeight-name.Bounds().Dy())/2
 				if p.background != nil {
-					p.background.full.BlitInViewport(c, name, x, cy-14, name.Bounds().Dx(), name.Bounds().Dy())
+					p.background.full.BlitInViewport(c, name, x, y, name.Bounds().Dx(), name.Bounds().Dy())
 				} else {
-					c.Blit(name, x, cy-14, name.Bounds().Dx(), name.Bounds().Dy())
+					c.Blit(name, x, y, name.Bounds().Dx(), name.Bounds().Dy())
 				}
 			}
 		}
@@ -59,8 +70,8 @@ func (p *screenPainter) carousel() [][]controlHint {
 			// Draw each name once, then copy only the shared row into the
 			// foreground so final composition preserves the complete carousel.
 			_, sy := c.Density()
-			top := int(math.Round(float64(cy-14) * sy))
-			bottom := int(math.Round(float64(cy-14+rowHeight) * sy))
+			top := int(math.Round(float64(rowTop) * sy))
+			bottom := int(math.Round(float64(rowTop+rowHeight) * sy))
 			p.background.copyCenterRows(c, top, bottom)
 		}
 		text := ""
@@ -70,7 +81,7 @@ func (p *screenPainter) carousel() [][]controlHint {
 			text = libraryCountText(*v.Item(), *p.scene.LibraryCount)
 		}
 		if label := p.primaryText(text, w-48, 18, 1, dimColor); label != nil {
-			c.Blit(label, (w-label.Bounds().Dx())/2, cy+12, label.Bounds().Dx(), label.Bounds().Dy())
+			c.Blit(label, (w-label.Bounds().Dx())/2, rowTop+rowHeight+6, label.Bounds().Dx(), label.Bounds().Dy())
 		}
 	}
 	labels := p.scene.Controls
@@ -92,4 +103,29 @@ func labelWidth(im *ui.RasterImage) int {
 		return 0
 	}
 	return im.Bounds().Dx()
+}
+
+// carouselName bounds shaping and cache storage without changing the server name.
+// Collapse whitespace so embedded line breaks cannot consume the two visible lines.
+func carouselName(name string) string {
+	runes := make([]rune, 0, carouselNameRunes+1)
+	space := false
+	for _, r := range name {
+		if unicode.IsSpace(r) {
+			space = len(runes) > 0
+			continue
+		}
+		if unicode.IsControl(r) {
+			continue
+		}
+		if space {
+			runes = append(runes, ' ')
+			space = false
+		}
+		runes = append(runes, r)
+		if len(runes) > carouselNameRunes {
+			return string(runes[:carouselNameRunes-1]) + "…"
+		}
+	}
+	return string(runes)
 }

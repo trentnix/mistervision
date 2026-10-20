@@ -1,6 +1,7 @@
 package rendering
 
 import (
+	"bytes"
 	"fmt"
 	"image"
 	"image/color"
@@ -77,10 +78,8 @@ func TestCarouselShowsLibraryName(t *testing.T) {
 	}
 	m.Content.Page.Items[0].Name = "Family Cinema 4K"
 	otherName := render(640, 240, m, SetupPresentation{}, Artwork{}, "", Animation{}, now)
-	for i := range frame {
-		if frame[i] != otherName[i] {
-			t.Fatal("carousel name exceeds the C client's 160-pixel limit")
-		}
+	if bytes.Equal(frame, otherName) {
+		t.Fatal("longer library names should retain their distinguishing suffix")
 	}
 }
 

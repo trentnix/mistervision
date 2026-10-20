@@ -1,6 +1,6 @@
 # Browsing and sign-in
 
-Use the [MiSTer launcher](GO_BUILD.md#install-on-mister) or [development harness](../tools/ghostty/README.md). The home carousel shows server library names and a combined Continue Watching card. Tab/SELECT switches between the carousel and root library list.
+Use the [MiSTer launcher](GO_BUILD.md#install-on-mister) or [development harness](../tools/ghostty/README.md). The home carousel shows server library names and a combined Continue Watching card. Tab/SELECT switches between the carousel and root library list. Carousel names wrap into two centered lines at the normal heading size. Each label is limited to 240 logical pixels in width and 64 Unicode characters, with an ellipsis when the name does not fit. The item count stays below the title area.
 
 Interface text uses the same Noto fonts as captions. List titles are bold, and About, connection choices, and account prompts use larger white body text. Navigation hints and the clock retain the bitmap font. Home and library lists share title and subtext sizes and roomy row spacing. The home List view shows one fewer row to leave room for the update notice and viewer information. Subtext is indented. Two-line selections have equal visible padding above the title and below the subtext. The home carousel and root List view share the title, update notice, and active viewer in the same positions.
 
