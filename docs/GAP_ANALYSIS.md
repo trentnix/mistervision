@@ -2,7 +2,7 @@
 
 This document records missing features, current limitations, and intentional exclusions for Jellyfin and Plex without assigning a release schedule. MiSTerVision targets personal media on a consumer CRT and also supports HDMI displays. Both providers are supported, but matching every feature of either ecosystem is not the goal.
 
-Implementation status was reviewed October 11, 2026. The release baseline is v1.7.0. Comparisons with other clients retain the September 19 documentation review.
+Implementation status was reviewed October 20, 2026. The release baseline is v1.7.1. Comparisons with other clients retain the September 19 documentation review.
 
 ## Additions in v1.7.0
 
