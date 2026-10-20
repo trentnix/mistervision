@@ -247,7 +247,8 @@ static int fb_dev_fd=-1, fb_yres=480, fb_page, vo_doublebuffering;
 static struct fb_var_screeninfo fb_vinfo;
 static unsigned char pages[2][32];
 static unsigned char *center=pages[0], *frame_buffer=pages[0], *pf_page[2]={pages[0],pages[1]};
-static int pf_active, pf_pending, pf_prepared, pf_back=1;
+static int pf_active, pf_pending, pf_prepared, pf_back=1, pf_analog;
+static void pf_analog_border(uint8_t *page) { assert(!pf_analog); }
 static size_t pf_center_off;
 static int displayed, submitted, waits, flips, writes;
 static int pf_init(void) {return 1;}

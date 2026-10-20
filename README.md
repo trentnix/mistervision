@@ -57,7 +57,7 @@ If startup returns immediately to the menu, attach `/media/fat/mistervision/star
 
 ### CRT
 
-Start with your working CRT timing and leave `display.interlaced` off. Analog output must show the Linux framebuffer through the scaler, using `vga_scaler=1` with timing and sync settings appropriate for your CRT and adapter. A working game-core picture alone does not verify the framebuffer route.
+Start with your working CRT timing and leave `display.interlaced` off. The scaler route uses `fb_terminal=1` and `vga_scaler=1` with timing and sync settings appropriate for your CRT and adapter. Recent Main and Menu cores also support a [native analog framebuffer route](docs/GO_DISPLAY.md#native-analog-framebuffer-fb_terminal2) using `fb_terminal=2`. A working game-core picture alone does not verify either framebuffer route.
 
 See the [CRT setup and tested composite settings](docs/GO_DISPLAY.md#composite-and-s-video-output). Back up `MiSTer.ini` before editing. Merge settings into its existing `[Menu]` section and preserve other core settings. Do not copy HD timing into a standard-definition CRT configuration.
 
@@ -79,7 +79,7 @@ The included core loads automatically. The normal menu returns on exit. Set `int
 
 #### If the picture is wrong
 
-- **“Either disable framebuffer … or enable scaler on VGA”**: keep `fb_terminal=1`. Enable `vga_scaler=1` with CRT-compatible timing. Disabling the framebuffer is not a fix for MiSTerVision.
+- **“Either disable framebuffer … or enable scaler on VGA”**: use `fb_terminal=1` with `vga_scaler=1` and CRT-compatible timing, or follow the [native analog setup](docs/GO_DISPLAY.md#native-analog-framebuffer-fb_terminal2) if your Main and Menu cores support it. Disabling the framebuffer is not a fix for MiSTerVision.
 - **Blank or rolling picture**: check the adapter’s RGB/component/composite requirements, sync switches, and NTSC/PAL settings. Return to the last working configuration before trying another mode.
 - **Clipped text or edges**: check overscan and `vscale_border`. The tested example’s border value may need adjustment for your television.
 - **Trouble after enabling interlacing**: exit the app, set `display.interlaced` to `false`, and relaunch. If you cannot see the menu, edit the setting through SSH or on the SD card and restart MiSTer.
@@ -241,7 +241,7 @@ Search, automatic photo slideshows, and photo zoom are not implemented. Plex rel
 See the [Jellyfin and Plex gap analysis](docs/GAP_ANALYSIS.md) for missing features, current limitations, and intentional exclusions.
 
 - **Broader controller support:** Testing more controllers, recognizing controller families, and showing their button labels automatically are potential future improvements. Other controllers may need a custom input profile today.
-- **PAL output validation:** A contributor reports working 288p RGB and component output. Interlaced PAL timing and PAL composite/S-Video output still need confirmation. See the [reported PAL configuration](docs/GO_DISPLAY.md#reported-pal-rgb-and-component-configurations).
+- **PAL output validation:** A contributor has validated 288p and 576i RGB output and reported working progressive and interlaced component output. PAL composite/S-Video encoding and other output paths still need validation. See the [reported PAL configuration](docs/GO_DISPLAY.md#reported-pal-rgb-and-component-configurations).
 - **Zaparoo DDR integration:** Deferred until I have a way to test it. Zaparoo is not required for the supported interlaced output.
 - **MiSTer background-music hardware validation:** Suspension and restoration are implemented and covered by automated tests. Testing with the actual add-on is deferred because I do not use it. This is separate from music played through Jellyfin or Plex.
 

@@ -11,7 +11,7 @@
 @@ -701,6 +702,50 @@
  #define PF_MODE_PARAM    "/sys/module/MiSTer_fb/parameters/mode"
  #define PF_FMT_WORD      0x8016u   /* FB_EN | FB_FMT_RxB | FB_FMT_8888 — what Main sets for the Linux fb */
- 
+
 +/* A submitted page must reach VSync before its predecessor is reused. */
 +static int pf_pending, pf_prepared;
 +static int pf_field_fd = -1;
@@ -59,10 +59,11 @@
  static int      pf_active;      /* page-flip mode engaged for this playback */
  static int      pf_back;        /* page being rendered into (not displayed) */
  static uint8_t *pf_page[2];     /* both pages, mapped through the fb driver */
-@@ -710,14 +755,30 @@
+@@ -710,14 +755,93 @@
  static volatile uint32_t *pf_gpo, *pf_gpi;
  static void    *pf_reg_map;
- 
+
+-static void pf_spi_word(uint32_t base_gpo, uint16_t w)
 +/* Bound hardware acknowledgment waits so a removed/reset core cannot leave
 + * a decoder spinning forever while the display supervisor waits to restore. */
 +static int pf_wait_ack(int high)
@@ -74,7 +75,7 @@
 +    }
 +}
 +
- static void pf_spi_word(uint32_t base_gpo, uint16_t w)
++static uint16_t pf_spi_word(uint32_t base_gpo, uint16_t w)
  {
      uint32_t g = (base_gpo & ~(0xFFFFu | PF_SSPI_STROBE)) | w;
      *pf_gpo = g;
@@ -89,10 +90,124 @@
 +        mp_msg(MSGT_VO, MSGL_ERR, "Interlaced scanout acknowledgment timed out\n");
 +        exit(1);
 +    }
++    return (uint16_t)*pf_gpi;
++}
++
++
++/* The display supervisor selects native analog synchronization only for
++ * Menu's fb_terminal=2 route. Scaler and interlaced output keep their fences. */
++static int pf_analog;
++static unsigned pf_analog_flips, pf_analog_retries, pf_analog_late;
++static int64_t pf_analog_max_us;
++
++static int pf_analog_requested(void)
++{
++    const char *native = getenv("MISTERVISION_NATIVE_ANALOG_SYNC");
++    const char *progressive = getenv("MISTERVISION_PROGRESSIVE_PAGEFLIP");
++    const char *interlaced = getenv("MISTERVISION_INTERLACED");
++    return native && !strcmp(native, "1") &&
++           progressive && !strcmp(progressive, "1") &&
++           !(interlaced && !strcmp(interlaced, "1"));
++}
++
++static unsigned pf_analog_counter(void)
++{
++    uint32_t gpo = *pf_gpo | 0x80000000u | PF_SSPI_IO_EN;
++    *pf_gpo = gpo;
++    unsigned result = pf_spi_word(gpo, 0x42);
++    *pf_gpo = gpo & ~PF_SSPI_IO_EN;
++    if (!(result & 0x100)) {
++        mp_msg(MSGT_VO, MSGL_ERR, "Native analog frame counter unavailable\n");
++        exit(1);
++    }
++    return result & 0xff;
++}
++
++/* The core counter follows analog VSync, unlike the kernel's HDMI counter.
++ * Reject transitions observed across scheduling stalls. The caller must also
++ * recheck elapsed time immediately before submitting the page address. */
++static int64_t pf_analog_blank(void)
++{
++    unsigned previous = pf_analog_counter();
++    int64_t sampled = av_gettime_relative();
++    int64_t deadline = sampled + 100000;
++    while (av_gettime_relative() < deadline) {
++        av_usleep(50);
++        unsigned current = pf_analog_counter();
++        int64_t now = av_gettime_relative();
++        if (current != previous) {
++            if (((current - previous) & 0xff) == 1 && now - sampled < 300)
++                return now;
++            pf_analog_retries++;
++        }
++        previous = current;
++        sampled = now;
++    }
++    mp_msg(MSGT_VO, MSGL_ERR, "Native analog frame counter timed out\n");
++    exit(1);
++}
++
++/* Row zero is prefetched before VSync. Identical black edge rows in both
++ * pages keep that cached row valid across a flip without changing geometry. */
++static void pf_analog_border(uint8_t *page)
++{
++    memset(page, 0, fb_line_len);
++    memset(page + (size_t)(fb_yres - 1) * fb_line_len, 0, fb_line_len);
  }
- 
+
  /* Repoint the scaler at page n: command + format word + base low/high, then
-@@ -1127,12 +1188,8 @@
+@@ -726,6 +850,17 @@
+  * exactly as Main_MiSTer programmed them. */
+ static void pf_flip_to(int n)
+ {
++    int64_t edge = 0;
++    if (pf_analog) {
++        int64_t deadline = av_gettime_relative() + 200000;
++        do {
++            if (av_gettime_relative() >= deadline) {
++                mp_msg(MSGT_VO, MSGL_ERR, "Native analog flip deadline missed\n");
++                exit(1);
++            }
++            edge = pf_analog_blank();
++        } while (av_gettime_relative() - edge >= 300);
++    }
+     uint32_t phys = pf_page_phys[n];
+     uint32_t gpo  = (*pf_gpo | 0x80000000u) | PF_SSPI_IO_EN;
+     *pf_gpo = gpo;
+@@ -734,6 +869,12 @@
+     pf_spi_word(gpo, (uint16_t)(phys & 0xFFFF));
+     pf_spi_word(gpo, (uint16_t)(phys >> 16));
+     *pf_gpo = gpo & ~PF_SSPI_IO_EN;
++    if (pf_analog) {
++        int64_t elapsed = av_gettime_relative() - edge;
++        pf_analog_flips++;
++        if (elapsed > pf_analog_max_us) pf_analog_max_us = elapsed;
++        if (elapsed > 500) pf_analog_late++;
++    }
+ }
+
+ /* Only a display supervisor that owns SPI access enables page flipping. */
+@@ -803,6 +944,19 @@
+     pf_gpo = (volatile uint32_t *)((uint8_t *)pf_reg_map + PF_GPO_OFF);
+     pf_gpi = (volatile uint32_t *)((uint8_t *)pf_reg_map + PF_GPI_OFF);
+
++    pf_analog = pf_analog_requested();
++    pf_analog_flips = pf_analog_retries = pf_analog_late = 0;
++    pf_analog_max_us = 0;
++    if (pf_analog) {
++        if (fb_xres != 640 || (fb_yres != 240 && fb_yres != 288) || fb_line_len != 2560) {
++            mp_msg(MSGT_VO, MSGL_ERR, "Native analog synchronization requires 640x240 or 640x288\n");
++            exit(1);
++        }
++        (void)pf_analog_counter();
++        pf_analog_border(pf_page[0]);
++        pf_analog_border(pf_page[1]);
++        mp_msg(MSGT_VO, MSGL_INFO, "fbdev: native analog synchronization enabled\n");
++    }
+     pf_back = 1;   /* page 0 is on screen right now */
+     return 1;
+ }
+@@ -1136,12 +1290,8 @@
           * over the displayed one. Page 0 is the same physical memory this
           * fb0 mmap points at, so the centering offset carries over 1:1. */
          pf_active = 0;
@@ -104,10 +219,10 @@
 -        }
 +        /* Initialize interlaced pages only when the first frame claims output.
 +         * Changing the driver mapping during buffering would blank Go's UI. */
- 
+
          mp_msg(MSGT_VO, MSGL_DBG2, "frame_buffer @ %p\n", frame_buffer);
          mp_msg(MSGT_VO, MSGL_DBG2, "center @ %p\n", center);
-@@ -1285,6 +1342,21 @@
+@@ -1294,6 +1444,21 @@
          return 0;
      }
      go_output_fd = fd;
@@ -128,8 +243,8 @@
 +    }
      return 1;
  }
- 
-@@ -1411,11 +1483,6 @@
+
+@@ -1420,11 +1585,6 @@
          }
          memcpy(center + (size_t)y * fb_line_len, row,
                 (size_t)in_width * fb_pixel_size);
@@ -140,9 +255,9 @@
 -        fflush(stdout);
      }
  }
- 
-@@ -1601,7 +1668,7 @@
- 
+
+@@ -1610,7 +1770,7 @@
+
      /* Match the C player's pacing before MPlayer schedules presentation.
       * Waiting in flip_page adds another delay after that deadline. */
 -    if (y == 0 && !pf_active && access("/tmp/misterdvd_vsync", F_OK) == 0) {
@@ -150,10 +265,10 @@
          __u32 dummy = 0;
          ioctl(fb_dev_fd, FBIO_WAITFORVSYNC, &dummy);
      }
-@@ -1625,14 +1692,13 @@
+@@ -1634,14 +1794,13 @@
  {
  }
- 
+
 -static void flip_page(void)
 -{
 -    int next_page = !fb_page;
@@ -172,10 +287,11 @@
      /* Session-message banner over the finished frame — `center` points at
       * the frame this call is about to show in every mode (pf_back page
       * under page flipping, the live/back buffer otherwise). */
-@@ -1643,11 +1709,32 @@
+@@ -1652,11 +1811,33 @@
          center = output;
      }
      overlay_frame();
++    if (pf_analog) pf_analog_border(pf_page[pf_back]);
 +    pf_prepared = pf_active;
 +}
 +
@@ -205,7 +321,7 @@
          pf_back ^= 1;
          center = pf_page[pf_back] + pf_center_off;
          return;
-@@ -1669,6 +1756,10 @@
+@@ -1678,6 +1859,10 @@
      center = go_video;
      vo_draw_text(in_width, in_height, draw_alpha);
      center = output;
@@ -214,9 +330,9 @@
 +    /* Prepare both progressive and interlaced back pages before clock wait. */
 +    if (pageflip_enabled()) prepare_frame();
  }
- 
+
  static void uninit(void)
-@@ -1677,6 +1768,9 @@
+@@ -1686,10 +1871,20 @@
      free(go_video);
      free(go_row);
      go_video = go_row = NULL;
@@ -226,3 +342,14 @@
      /* Best-effort restore of the normal display page (the app enforces the
       * same after killing the player, since a SIGKILL never reaches here).
       * Main_MiSTer is still SIGSTOPped at this point, so the SPI is safe. */
+     if (pf_active) {
++        if (pf_analog) {
++            mp_msg(MSGT_VO, MSGL_INFO,
++                   "fbdev: analog sync flips=%u retries=%u late=%u max_us=%lld\n",
++                   pf_analog_flips, pf_analog_retries, pf_analog_late,
++                   (long long)pf_analog_max_us);
++            pf_analog = 0; /* Restore the UI without another analog wait. */
++        }
+         pf_flip_to(0);
+         munmap(pf_page[0], pf_map_len * 2);   /* one double-length mapping, see pf_init */
+         munmap(pf_reg_map, PF_FPGA_REG_SIZE);

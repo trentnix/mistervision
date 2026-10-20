@@ -2,7 +2,7 @@
 
 This document records missing features, current limitations, and intentional exclusions for Jellyfin and Plex without assigning a release schedule. MiSTerVision targets personal media on a consumer CRT and also supports HDMI displays. Both providers are supported, but matching every feature of either ecosystem is not the goal.
 
-Implementation status was reviewed October 11, 2026. The release baseline is v1.7.0. Comparisons with other clients retain the September 19 documentation review.
+Implementation status was reviewed October 20, 2026. The release baseline is v1.7.1. Comparisons with other clients retain the September 19 documentation review.
 
 ## Additions in v1.7.0
 
@@ -19,6 +19,10 @@ The interface supports progressive and interlaced CRT output, HDMI framebuffer s
 ### Playback controls in v1.6.3
 
 Left/Right seeks, LB/RB changes music tracks or queued videos, and Up/Down toggles controls. Automatic trigger-axis bindings were removed to address [unintended seeking (#30)](https://github.com/trentnix/mistervision/issues/30). Explicit input profiles can still bind triggers. MiSTerVision now reads saved MiSTer controller mappings, with explicit application profiles taking precedence. Automatic controller-family recognition and matching physical button labels remain separate gaps.
+
+### Fixes in v1.7.1
+
+Native analog playback now uses the analog frame counter when the active Menu configuration selects `fb_terminal=2` at 640×240 or 640×288. The [SS1 composite reporter confirmed that the test build removed tearing (#48)](https://github.com/trentnix/mistervision/issues/48#issuecomment-6292276662). HDMI, scaler output, and interlaced output keep their existing synchronization. PAL composite and S-Video hardware validation remains separate from this timing fix.
 
 ### Fixes in v1.6.1
 
@@ -94,7 +98,7 @@ Live TV timeshifting is absent from both MiSTerVision adapters. Plex provides a 
 ## Open compatibility work
 
 - **[SuperStation One (#22)](https://github.com/trentnix/mistervision/issues/22):** ConsoleMode handoff and diagnostics are implemented. The reporter confirmed the tearing fix on HDMI and VGA, then reported smooth HDMI playback with the output-sized transcoding change in v1.6.2. VGA testing of the sizing change remains open. The maintainer has no SS1 and relies on reporter validation.
-- **[PAL validation (#28)](https://github.com/trentnix/mistervision/issues/28):** A contributor reports working 288p output with an Analog IO Board v6.1 over RGBS to a Sony PVM-14N6U and over YPbPr to an NTSC Samsung TV reported to accept PAL timing. Interlaced output also reportedly works, but 576i timing needs diagnostic confirmation. PAL composite/S-Video encoding and other output paths remain unvalidated. See the [reported configuration](GO_DISPLAY.md#reported-pal-rgb-and-component-configurations).
+- **[PAL validation (#28)](https://github.com/trentnix/mistervision/issues/28):** A contributor has validated 288p and 576i RGBS output with an Analog IO Board v6.1 and Sony PVM-14N6U, including logs confirming framebuffer sizes and interlaced mode. Progressive and interlaced YPbPr output reportedly work on an NTSC Samsung TV that accepts PAL timing, without a separate diagnostic capture. Remaining work covers PAL composite/S-Video encoding and additional output paths. See the [reported configuration](GO_DISPLAY.md#reported-pal-rgb-and-component-configurations).
 
 ## Implementation considerations
 
