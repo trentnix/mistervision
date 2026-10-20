@@ -94,7 +94,7 @@ Live TV timeshifting is absent from both MiSTerVision adapters. Plex provides a 
 ## Open compatibility work
 
 - **[SuperStation One (#22)](https://github.com/trentnix/mistervision/issues/22):** ConsoleMode handoff and diagnostics are implemented. The reporter confirmed the tearing fix on HDMI and VGA, then reported smooth HDMI playback with the output-sized transcoding change in v1.6.2. VGA testing of the sizing change remains open. The maintainer has no SS1 and relies on reporter validation.
-- **[PAL validation (#28)](https://github.com/trentnix/mistervision/issues/28):** A contributor reports working 288p output with an Analog IO Board v6.1 over RGBS to a Sony PVM-14N6U and over YPbPr to an NTSC Samsung TV reported to accept PAL timing. Interlaced output also reportedly works, but 576i timing needs diagnostic confirmation. PAL composite/S-Video encoding and other output paths remain unvalidated. See the [reported configuration](GO_DISPLAY.md#reported-pal-rgb-and-component-configurations).
+- **[PAL validation (#28)](https://github.com/trentnix/mistervision/issues/28):** A contributor has validated 288p and 576i RGBS output with an Analog IO Board v6.1 and Sony PVM-14N6U, including logs confirming framebuffer sizes and interlaced mode. Progressive and interlaced YPbPr output reportedly work on an NTSC Samsung TV that accepts PAL timing, without a separate diagnostic capture. Remaining work covers PAL composite/S-Video encoding and additional output paths. See the [reported configuration](GO_DISPLAY.md#reported-pal-rgb-and-component-configurations).
 
 ## Implementation considerations
 
