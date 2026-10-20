@@ -2,7 +2,7 @@
 
 This document records missing features, current limitations, and intentional exclusions for Jellyfin and Plex without assigning a release schedule. MiSTerVision targets personal media on a consumer CRT and also supports HDMI displays. Both providers are supported, but matching every feature of either ecosystem is not the goal.
 
-Implementation status was reviewed October 20, 2026. The release baseline is v1.7.1. Comparisons with other clients retain the September 19 documentation review.
+Implementation status was reviewed October 20, 2026. The release baseline is v1.7.2. Comparisons with other clients retain the September 19 documentation review.
 
 ## Additions in v1.7.0
 
@@ -19,6 +19,10 @@ The interface supports progressive and interlaced CRT output, HDMI framebuffer s
 ### Playback controls in v1.6.3
 
 Left/Right seeks, LB/RB changes music tracks or queued videos, and Up/Down toggles controls. Automatic trigger-axis bindings were removed to address [unintended seeking (#30)](https://github.com/trentnix/mistervision/issues/30). Explicit input profiles can still bind triggers. MiSTerVision now reads saved MiSTer controller mappings, with explicit application profiles taking precedence. Automatic controller-family recognition and matching physical button labels remain separate gaps.
+
+### Carousel names in v1.7.2
+
+Library names wrap into two centered lines with a bounded width and a 64-code-point limit. Names that do not fit end in an ellipsis. Both display shapes retain the same heading size and keep the count below the title area.
 
 ### Fixes in v1.7.1
 

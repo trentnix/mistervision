@@ -33,15 +33,14 @@ type primaryTextKey struct {
 	width, size, lines int
 	color              uint32
 	scaleY             float32
-	bold               bool
+	bold, centered     bool
 }
 
 func (c *primaryTextCache) image(key primaryTextKey) *image.RGBA {
 	if entry, ok := c.images[key]; ok {
 		return entry.image
 	}
-	im := c.renderer.Label(key.text, key.width, key.size, key.lines, key.scaleY,
-		color.RGBA{R: byte(key.color >> 16), G: byte(key.color >> 8), B: byte(key.color), A: 255})
+	im := c.label(key, 1, 1)
 	if key.bold && im != nil {
 		// A one-pixel horizontal stroke gives the bundled regular face a
 		// modest heading weight without changing its advance or line breaks.
@@ -83,12 +82,21 @@ func (p *screenPainter) headingText(text string, width, size, lines int, color u
 	return p.textImage(text, width, size, lines, color, true)
 }
 
+// centeredHeadingText keeps each line centered in a wrapped carousel title.
+func (p *screenPainter) centeredHeadingText(text string, width, size, lines int, color uint32) *ui.RasterImage {
+	return p.alignedTextImage(text, width, size, lines, color, true, true)
+}
+
 func (p *screenPainter) textImage(text string, width, size, lines int, color uint32, bold bool) *ui.RasterImage {
+	return p.alignedTextImage(text, width, size, lines, color, bold, false)
+}
+
+func (p *screenPainter) alignedTextImage(text string, width, size, lines int, color uint32, bold, centered bool) *ui.RasterImage {
 	if p.cache == nil {
 		p.cache = &sceneCache{}
 	}
 	key := primaryTextKey{text: text, width: width, size: size, lines: lines, color: color,
-		scaleY: float32(p.height) * 4 / float32(p.width*3), bold: bold}
+		scaleY: float32(p.height) * 4 / float32(p.width*3), bold: bold, centered: centered}
 	sx, sy := p.canvas.Density()
 	return p.cache.text.denseImage(key, sx, sy)
 }
@@ -163,7 +171,7 @@ func (c *primaryTextCache) denseImage(key primaryTextKey, sx, sy float64) *ui.Ra
 	}
 	source := im
 	if sx != 1 || sy != 1 {
-		source = c.renderer.LabelDensity(key.text, key.width, key.size, key.lines, key.scaleY, color.RGBA{R: byte(key.color >> 16), G: byte(key.color >> 8), B: byte(key.color), A: 255}, float32(sx), float32(sy))
+		source = c.label(key, float32(sx), float32(sy))
 		if key.bold {
 			stroke := max(1, int(math.Round(sx)))
 			for y := 0; y < source.Rect.Dy(); y++ {
@@ -184,4 +192,13 @@ func (c *primaryTextCache) denseImage(key primaryTextKey, sx, sy float64) *ui.Ra
 	entry.dense = &ui.RasterImage{RGBA: im, Source: source}
 	entry.sx, entry.sy = sx, sy
 	return entry.dense
+}
+
+// label uses the same alignment for logical metrics and the display-density raster.
+func (c *primaryTextCache) label(key primaryTextKey, sx, sy float32) *image.RGBA {
+	render := c.renderer.LabelDensity
+	if key.centered {
+		render = c.renderer.CenteredLabelDensity
+	}
+	return render(key.text, key.width, key.size, key.lines, key.scaleY, color.RGBA{R: byte(key.color >> 16), G: byte(key.color >> 8), B: byte(key.color), A: 255}, sx, sy)
 }

@@ -28,3 +28,26 @@ func TestLabelWrapsAndPreservesCaptionCache(t *testing.T) {
 		t.Fatal("empty label rendered")
 	}
 }
+
+func TestCenteredLabelKeepsShortLineCenteredAtEachDensity(t *testing.T) {
+	var r Renderer
+	for _, density := range []float32{1, 1.5, 2} {
+		im := r.CenteredLabelDensity("A wide heading\nI", 240, 24, 2, 1, color.RGBA{255, 255, 255, 255}, density, density)
+		left, right := im.Bounds().Dx(), -1
+		for y := im.Bounds().Dy() / 2; y < im.Bounds().Dy(); y++ {
+			for x := 0; x < im.Bounds().Dx(); x++ {
+				if im.RGBAAt(x, y).A > 32 {
+					left = min(left, x)
+					right = max(right, x)
+				}
+			}
+		}
+		if right < left {
+			t.Fatal("missing second line")
+		}
+		delta := (left + right) - im.Bounds().Dx()
+		if delta < -int(4*density) || delta > int(4*density) {
+			t.Fatalf("density %g: short line is off center by %d pixels", density, delta/2)
+		}
+	}
+}
