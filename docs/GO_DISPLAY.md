@@ -31,7 +31,7 @@ The handoff was developed against ConsoleMode 1.1.4.2 on the maintainer's MiSTer
 
 ## Composite and S-Video output
 
-MiSTerVision draws through the Linux framebuffer. The tested analog output path displays that framebuffer through the scaler. If the CRT says to disable the framebuffer or enable the VGA scaler, use `vga_scaler=1` with a CRT-compatible timing. Disabling `fb_terminal` does not solve the application’s display requirement.
+MiSTerVision draws through the Linux framebuffer. The scaler route below is tested with Super Video Custard. Recent Main and Menu cores also support a [native analog framebuffer route](#native-analog-framebuffer-fb_terminal2), which the SS1 composite contributor validated. Select the route appropriate for your hardware. Disabling `fb_terminal` does not solve the application’s display requirement.
 
 The following **NTSC 240p** settings worked over composite through a Super Video Custard on a MiSTer Multisystem 2. Back up `/media/fat/MiSTer.ini`, then merge these keys into its existing `[Menu]` section. Preserve other sections. Exit MiSTerVision before editing and reload the Menu core afterward.
 
@@ -52,7 +52,7 @@ vscale_border=8
 
 Set `display.interlaced` to `false` in `settings.json` for this configuration. The border value suits my CRT’s overscan and can be adjusted. These are adapter-specific settings, not a preset for every composite or S-Video connection. The Custard converts RGB to composite/S-Video, so it uses `vga_mode=rgb`. Other adapters may require different settings.
 
-Follow the [Custard manual](https://multisystem.uk/media/2025/04/Super_Video_Custard_Manual.pdf) for its NTSC/PAL, termination, and sync-on-green switches. Its normal game-core instructions use `vga_scaler=0`. MiSTerVision requires the framebuffer route above instead. Composite browsing and playback have been tested at 240p and 480i.
+Follow the [Custard manual](https://multisystem.uk/media/2025/04/Super_Video_Custard_Manual.pdf) for its NTSC/PAL, termination, and sync-on-green switches. Its normal game-core instructions use `vga_scaler=0`. The tested Custard framebuffer configuration above uses the scaler instead. Composite browsing and playback have been tested at 240p and 480i.
 
 ## HDMI output
 
