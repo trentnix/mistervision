@@ -147,11 +147,15 @@ func RunProgressive(ctx context.Context, c Config, args []string) (err error) {
 	if err = nativeFramebufferControl().configureProgressive(setup, c); err != nil {
 		return err
 	}
+	analog, err := nativeAnalogEnvironment("MENU")
+	if err != nil {
+		return fmt.Errorf("selecting playback synchronization: %w", err)
+	}
 	mainPID, err = stopMain(setup)
 	if err != nil {
 		return err
 	}
-	return runChild(ctx, args, scaledEnv+"=1", ownerEnv+"="+owner, ProgressiveEnv+"=1")
+	return runChild(ctx, args, scaledEnv+"=1", ownerEnv+"="+owner, ProgressiveEnv+"=1", analog)
 }
 
 // configureProgressive preserves CRT timing and honors configured HDMI limits.

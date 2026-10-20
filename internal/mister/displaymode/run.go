@@ -94,7 +94,7 @@ func Run(ctx context.Context, directory string, args []string) (err error) {
 	if err != nil {
 		return err
 	}
-	return runChild(ctx, args, ActiveEnv+"=1", ownerEnv+"="+owner)
+	return runChild(ctx, args, ActiveEnv+"=1", ownerEnv+"="+owner, NativeAnalogEnv+"=0")
 }
 
 // runChild gives either display supervisor the same cancellation, stream, and

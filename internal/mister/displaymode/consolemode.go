@@ -155,7 +155,7 @@ func RunConsoleMode(ctx context.Context, directory string, c Config, args []stri
 		return err
 	}
 	phase("configure-output")
-	environment := []string{consoleModeEnv + "=1", ownerEnv + "=" + owner}
+	environment := []string{consoleModeEnv + "=1", ownerEnv + "=" + owner, NativeAnalogEnv + "=0"}
 	if c.Interlaced {
 		mainPID, err = stopMain(ready)
 		if err != nil {
@@ -170,7 +170,11 @@ func RunConsoleMode(ctx context.Context, directory string, c Config, args []stri
 		if err != nil {
 			return err
 		}
-		environment = append(environment, scaledEnv+"=1", ProgressiveEnv+"=1")
+		analog, selectErr := nativeAnalogEnvironment(framebufferCore)
+		if selectErr != nil {
+			return fmt.Errorf("selecting playback synchronization: %w", selectErr)
+		}
+		environment = append(environment, scaledEnv+"=1", ProgressiveEnv+"=1", analog)
 	}
 	phase("client")
 	return runChild(ctx, args, environment...)

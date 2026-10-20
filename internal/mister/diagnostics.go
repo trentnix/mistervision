@@ -22,7 +22,7 @@ func RecordStartup(log *diagnostics.Log, interlaced bool) {
 	if log == nil {
 		return
 	}
-	log.Record("mister.display", slog.Bool("interlaced", interlaced))
+	log.Record("mister.display", slog.Bool("interlaced", interlaced), slog.Bool("native_analog_sync", displaymode.NativeAnalogEnabled()))
 	displaymode.RecordState(log, "startup")
 	recordActiveINI(log)
 	f, err := os.Open("/sys/module/MiSTer_fb/parameters/mode")

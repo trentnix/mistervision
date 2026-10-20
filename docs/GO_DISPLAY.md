@@ -78,9 +78,13 @@ With this scaler path, simultaneous display requires both displays to accept the
 
 ### Native analog framebuffer (`fb_terminal=2`)
 
-Recent Main and Menu cores can display a CRT-sized Linux framebuffer through the native analog path with `fb_terminal=2`, `vga_scaler=0`, and `direct_video=0`. This path differs from the scaler configuration above. [Issue #48](https://github.com/trentnix/mistervision/issues/48) reports color output with tearing on SS1 composite, including both 24 fps and 25 fps sources.
+Recent Main and Menu cores can display a CRT-sized Linux framebuffer through the native analog path with `fb_terminal=2`, `vga_scaler=0`, `direct_video=0`, and `forced_scandoubler=0`. This path differs from the scaler configuration above. MiSTerVision automatically enables native analog synchronization when those settings resolve in the active INI profile and the framebuffer is 640×240 or 640×288. HDMI, scaler output, and interlaced output retain their existing synchronization paths. No replacement Menu core or additional application setting is required.
 
-The Menu analog reader can change framebuffer addresses between scanlines. MiSTerVision's page-flipping synchronization assumes the displayed page changes between frames. Simulation reproduces the mismatch at both 240-line and 288-line sizes. A complete fix must hold a page for an analog frame and prevent the player from reusing it before analog scanning finishes. The existing HDMI/scaler frame counter does not establish that boundary. The experimental native analog path is not covered by the tear-free behavior described below.
+The native reader can change framebuffer addresses between scanlines. The player waits for a fresh analog VSync counter transition before changing pages. Both pages keep one black pixel row at the top and bottom because the core prefetches its first row before VSync. The player rejects transitions observed across scheduling delays and stops with a diagnostic error if the counter is unavailable or stops advancing. The framebuffer dimensions and signal timing stay unchanged.
+
+Startup diagnostics record `native_analog_sync`. Player logs report flip counts, scheduling retries, late submissions, and maximum submission time. If a `[video=...]` section overrides the framebuffer route, automatic selection stays disabled because the client cannot establish Main's exact refresh-rate match from the INI alone.
+
+Local regression checks cover route selection, 240-line and 288-line buffers, counter wraparound, scheduling delays, missing counters, and the existing scaler protocol. The [SS1 composite reporter confirmed smooth, tear-free SD and HD-source playback with the test build](https://github.com/trentnix/mistervision/issues/48#issuecomment-6292276662). HD sources are transcoded to the playback framebuffer size. This report does not establish native HD decoding performance or PAL composite color compatibility.
 
 ## HDMI framebuffer scaling
 

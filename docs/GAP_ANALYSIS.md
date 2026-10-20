@@ -20,6 +20,10 @@ The interface supports progressive and interlaced CRT output, HDMI framebuffer s
 
 Left/Right seeks, LB/RB changes music tracks or queued videos, and Up/Down toggles controls. Automatic trigger-axis bindings were removed to address [unintended seeking (#30)](https://github.com/trentnix/mistervision/issues/30). Explicit input profiles can still bind triggers. MiSTerVision now reads saved MiSTer controller mappings, with explicit application profiles taking precedence. Automatic controller-family recognition and matching physical button labels remain separate gaps.
 
+### Fixes in v1.7.1
+
+Native analog playback now uses the analog frame counter when the active Menu configuration selects `fb_terminal=2` at 640×240 or 640×288. The [SS1 composite reporter confirmed that the test build removed tearing (#48)](https://github.com/trentnix/mistervision/issues/48#issuecomment-6292276662). HDMI, scaler output, and interlaced output keep their existing synchronization. PAL composite and S-Video hardware validation remains separate from this timing fix.
+
 ### Fixes in v1.6.1
 
 - [Progressive page flipping (PR #38)](https://github.com/trentnix/mistervision/pull/38) addresses tearing by preparing video in a back page and presenting it under exclusive scanout ownership. The separate playback sizing improvement is included in v1.6.2.
