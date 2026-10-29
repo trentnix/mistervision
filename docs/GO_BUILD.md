@@ -1,6 +1,6 @@
 # Build and install
 
-Use Go 1.27.2 or later, a C compiler, and Python 3 on Linux. Go module dependencies are pinned in [go.mod](../go.mod). CI and release builds read the Go version from that file. MiSTer builds also need an ARM cross-compiler. Docker builds the separate MPlayer executable on the development machine, not on MiSTer.
+Use Go 1.27.3 or later, a C compiler, and Python 3 on Linux. Go module dependencies are pinned in [go.mod](../go.mod). CI and release builds read the Go version from that file. MiSTer builds also need an ARM cross-compiler. Docker builds the separate MPlayer executable on the development machine, not on MiSTer.
 
 ## Go client
 
