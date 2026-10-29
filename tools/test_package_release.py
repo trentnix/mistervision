@@ -189,6 +189,23 @@ class ReleaseTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "must default to non-interlaced"):
             self.package()
 
+    def test_bundled_core_takes_precedence_over_cached_upstream_core(self):
+        manifest = json.loads((self.root / "tools/interlaced-core.json").read_text())
+        data = b"patched interlaced core"
+        spec = {"path": "fpga/interlaced/InterlacedMenu.rbf", "sha256": release.sha256(data)}
+        manifest["files"]["InterlacedMenu.rbf"] = spec
+        self.write("tools/interlaced-core.json", json.dumps(manifest).encode())
+        self.write(spec["path"], data)
+        with mock.patch.object(release.subprocess, "check_call") as download:
+            self.assertEqual(release.interlaced_files(self.root, download=True)["InterlacedMenu.rbf"], data)
+            download.assert_not_called()
+        self.write(spec["path"], b"corrupt")
+        with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+            release.interlaced_files(self.root, download=True)
+        (self.root / spec["path"]).unlink()
+        with self.assertRaises(FileNotFoundError):
+            release.interlaced_files(self.root, download=True)
+
     def test_corrupt_core_or_source_is_rejected(self):
         for name in ("InterlacedMenu.rbf", "Menu_MiSTer-source.tar.gz"):
             path = self.root / "build/interlaced-core" / name

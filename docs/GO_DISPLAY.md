@@ -120,10 +120,10 @@ Widescreen fitting has local native-filter and real desktop-decoder coverage. Au
 
 ## Enable or disable interlaced output
 
-The single [application package](GO_BUILD.md#release-bundles) includes the matching client, player, and [InterlacedMenu.rbf v0.0.1](https://github.com/iwalton3/Menu_MiSTer/releases/tag/v0.0.1). Enable interlacing through `settings.json`, not a different download. Existing installations retain their configuration. Source builds must still place the pinned core beside `settings.json`, normally in `/media/fat/mistervision`. The supported core has this SHA-256:
+The single [application package](GO_BUILD.md#release-bundles) includes the matching client, player, and [interlaced core with the Y/C extension](../fpga/interlaced/README.md). Enable interlacing through `settings.json`, not a different download. Existing installations retain their configuration. Source builds must still place the pinned core beside `settings.json`, normally in `/media/fat/mistervision`. The supported core has this SHA-256:
 
 ```text
-0158e0338a00441271f38be0703c22253d53ea39b60a1a96b7ec964bedae8999
+a30287ba5323514164f8e8d0d74b857eadd0a2d1716b9d393b15d79ff4ef78d2
 ```
 
 To change an existing installation, set the `display` section in `settings.json`:
@@ -142,13 +142,19 @@ Launch **MiSTerVision** from the normal Scripts menu using the intended MiSTer I
 
 To return to progressive output, set `interlaced` to `false` or omit the section. Preserve other settings when editing. The same launcher supports both modes.
 
+### Experimental interlaced S-Video and composite
+
+The development core adds Y/C encoding to the interlaced framebuffer output. If your native analog adapter requires `vga_mode=svideo` or `vga_mode=cvbs`, keep that setting in the active INI profile and enable `display.interlaced`. The launcher inherits your color standard and sync settings. Install the matching client and core together. An older interlaced core cannot encode this framebuffer path.
+
+This path still needs direct S-Video/composite hardware validation. Test from a working progressive configuration and check color, stable field sync, and playback before relying on it. Super Video Custard converts RGB externally and must retain `vga_mode=rgb`. The new route does not add Y/C encoding to HDMI DAC adapters.
+
 ## Configuration changes and recovery
 
 The application writes `Interlaced.mgl` beside `settings.json` and a marked `[MiSTerVisionInterlaced]` section in the active MiSTer INI profile. Before its first change, it saves `<profile filename>.before-interlaced` beside `settings.json`. Backups are fully written and synced before their final names are published. Existing backups are preserved.
 
 Existing sections remain intact. An unmarked section with the same name causes an error instead of being overwritten. Disabling interlacing leaves the isolated section available for later use.
 
-The scoped section inherits RGB/component and PAL/NTSC settings. Both RGB and component enable `direct_video` and `forced_scandoubler` in this section. The bundled core requires the double-height framebuffer selected by `forced_scandoubler` and converts that timing to 15 kHz interlaced output. These rules do not establish compatibility with every cable or DAC.
+The scoped section inherits color encoding, sync, and PAL/NTSC settings. All supported encodings enable `direct_video` and `forced_scandoubler` in this section. The bundled core requires the double-height framebuffer selected by `forced_scandoubler` and converts that timing to 15 kHz interlaced output. These rules do not establish compatibility with every cable or DAC.
 
 The supervisor waits for the expected framebuffer, manages console modes, and pauses Main while the child owns hardware. It stops orphaned decoders, restores consoles, and resumes Main. The Scripts launcher reloads the menu after successful exit in either mode. The supervisor reloads the menu after a failure, before an update restart, or when run without the launcher.
 

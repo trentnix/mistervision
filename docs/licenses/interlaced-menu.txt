@@ -1,11 +1,13 @@
-Interlaced Menu core v0.0.1
+Interlaced Menu core v0.0.1 with MiSTerVision Y/C extension
 
-MiSTerVision includes the unmodified InterlacedMenu.rbf release by Izzie Walton:
+MiSTerVision includes a modified build of the InterlacedMenu.rbf release by Izzie Walton:
 https://github.com/iwalton3/Menu_MiSTer/releases/tag/v0.0.1
 
 Source revision: 7c51999ac103e53fa89c85fa6766a970e912d128
 Based on Menu_MiSTer. menu.sv is Copyright (C) 2017-2020 Sorgelig and licensed under GNU GPL version 2 or later. Individual source files retain their copyright and license notices. The included GPL text is interlaced-GPL-2.0.txt.
 
-The corresponding upstream source, including the rtl and sys directories and Quartus project files, is in third_party/Menu_MiSTer-source.tar.gz in the accompanying MiSTerVision source bundle. Extract it and open menu.qpf with Quartus Standard 17.0.2, the version recorded in menu.qsf. MiSTerVision does not modify this core. tools/interlaced-core.json pins both the released bitstream and its source archive by SHA-256.
+The corresponding source consists of third_party/Menu_MiSTer-source.tar.gz and fpga/interlaced/ in the accompanying MiSTerVision source bundle. The latter directory contains the scaler routing patch, added Y/C module, tests, and build script. The extension reuses Mike Simone's GPL-2.0-or-later yc_out encoder from the upstream source. Upstream copyright notices remain intact. MiSTerVision's modifications to this core remain GPL-2.0-or-later.
+
+Build with python3 fpga/interlaced/build.py /tmp/interlaced-yc-build. The script uses a pinned Quartus 17.0.2 container. tools/interlaced-core.json pins the modified bitstream and upstream source archive by SHA-256. See fpga/interlaced/README.md for build requirements and validation.
 
 This core remains separately licensed. MiSTerVision's application license does not replace its terms.
