@@ -50,12 +50,15 @@ func Parse(source settings.Section) (Config, error) {
 }
 
 const coreName = "MiSTerVisionInterlaced"
+const coreVersion = "v0.0.1-mistervision-yc1"
+const coreSize = 2506876
+const coreSHA256 = "a30287ba5323514164f8e8d0d74b857eadd0a2d1716b9d393b15d79ff4ef78d2"
 const blockStart = "; BEGIN MiSTerVision interlaced output"
 const blockEnd = "; END MiSTerVision interlaced output"
 
 // CoreConfig preserves existing INI text and adds an isolated MGL-name section.
 // The section is inert for the ordinary Menu core and other applications.
-// RGB and component inherit their existing color/sync settings unchanged.
+// Color encoding and sync settings are inherited from the active INI profile.
 func CoreConfig(data []byte) ([]byte, error) {
 	text := string(data)
 	if start := strings.Index(text, blockStart); start >= 0 {
@@ -74,11 +77,11 @@ func CoreConfig(data []byte) ([]byte, error) {
 	}
 	values := menuSettings([]byte(text), coreName)
 	if mode := values["vga_mode"]; mode != "" {
-		if mode != "rgb" && mode != "ypbpr" {
-			return nil, errors.New("interlaced output currently supports RGB or component vga_mode")
+		if mode != "rgb" && mode != "ypbpr" && mode != "svideo" && mode != "cvbs" {
+			return nil, errors.New("interlaced output requires vga_mode=rgb, ypbpr, svideo, or cvbs")
 		}
 	}
-	// The pinned core needs a double-height framebuffer for both RGB and component.
+	// The pinned core needs a double-height framebuffer for every color encoding.
 	// It converts the forced-scandoubler timing into 15 kHz interlaced output.
 	block := fmt.Sprintf("%s\n[%s]\nmain=MiSTer\ndirect_video=1\nforced_scandoubler=1\nfb_size=1\nfb_terminal=1\nlog_file_entry=1\n%s\n", blockStart, coreName, blockEnd)
 	if text != "" && !strings.HasSuffix(text, "\n") {
@@ -94,17 +97,17 @@ func prepareCore(directory string) (string, error) {
 	core := filepath.Join(directory, "InterlacedMenu.rbf")
 	info, statErr := os.Stat(core)
 	if statErr != nil {
-		return "", fmt.Errorf("install standalone InterlacedMenu.rbf v0.0.1 at %s: %w", core, statErr)
+		return "", fmt.Errorf("install standalone InterlacedMenu.rbf %s at %s: %w", coreVersion, core, statErr)
 	}
-	if info.Size() != 2489556 {
-		return "", errors.New("unsupported interlaced core: install InterlacedMenu.rbf v0.0.1")
+	if info.Size() != coreSize {
+		return "", fmt.Errorf("unsupported interlaced core: install InterlacedMenu.rbf %s", coreVersion)
 	}
 	bitstream, readErr := os.ReadFile(core)
 	if readErr != nil {
 		return "", readErr
 	}
-	if fmt.Sprintf("%x", sha256.Sum256(bitstream)) != "0158e0338a00441271f38be0703c22253d53ea39b60a1a96b7ec964bedae8999" {
-		return "", errors.New("interlaced core checksum does not match v0.0.1")
+	if fmt.Sprintf("%x", sha256.Sum256(bitstream)) != coreSHA256 {
+		return "", fmt.Errorf("interlaced core checksum does not match %s", coreVersion)
 	}
 	ini, err := ActiveINIPath()
 	if err != nil {

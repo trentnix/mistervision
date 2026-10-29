@@ -1,0 +1,53 @@
+--- a/sys/sys_top.v
++++ b/sys/sys_top.v
+@@ -1546,7 +1546,8 @@
+ 
+ 
+ 	wire VGA_DISABLE;
+-	wire [23:0] vgas_o;
++	wire [23:0] vgas_o, vgas_rgb;
++	wire vgas_rgb_hs, vgas_rgb_vs, vgas_rgb_cs, vgas_rgb_de;
+ 	wire vgas_hs, vgas_vs, vgas_cs, vgas_de;
+ 	`ifndef MISTER_DEBUG_NOHDMI
+ 		vga_out vga_scaler_out
+@@ -1557,13 +1558,35 @@
+ 			.vsync(hdmi_vs_osd),
+ 			.csync(hdmi_cs_osd),
+ 			.de(hdmi_de_osd),
+-			.dout(vgas_o),
++			.dout(vgas_rgb),
+ 			.din({24{hdmi_de_osd}} & hdmi_data_osd),
+-			.hsync_o(vgas_hs),
+-			.vsync_o(vgas_vs),
+-			.csync_o(vgas_cs),
+-			.de_o(vgas_de)
++			.hsync_o(vgas_rgb_hs),
++			.vsync_o(vgas_rgb_vs),
++			.csync_o(vgas_rgb_cs),
++			.de_o(vgas_rgb_de)
+ 		);
++        `ifndef MISTER_DISABLE_YC
++            wire [23:0] vgas_yc;
++            wire vgas_yc_hs, vgas_yc_vs, vgas_yc_cs, vgas_yc_de;
++            interlaced_yc scaler_yc (
++                .clk(clk_hdmi), .phase_inc(PhaseInc),
++                .burst_range(ColorBurst_Range), .pal(pal_en), .cvbs(cvbs),
++                .rgb({24{hdmi_de_osd}} & hdmi_data_osd),
++                .hs(hdmi_hs_osd), .vs(hdmi_vs_osd),
++                .cs(hdmi_cs_osd), .de(hdmi_de_osd),
++                .video(vgas_yc), .hs_out(vgas_yc_hs), .vs_out(vgas_yc_vs),
++                .cs_out(vgas_yc_cs), .de_out(vgas_yc_de)
++            );
++            // Native Y/C and all RGB/component modes retain their original paths.
++            assign {vgas_o, vgas_hs, vgas_vs, vgas_cs, vgas_de} =
++                (ilace_auto && yc_en) ?
++                {vgas_yc, vgas_yc_hs, vgas_yc_vs, vgas_yc_cs, vgas_yc_de} :
++                {vgas_rgb, vgas_rgb_hs, vgas_rgb_vs, vgas_rgb_cs, vgas_rgb_de};
++        `else
++            assign {vgas_o, vgas_hs, vgas_vs, vgas_cs, vgas_de} =
++                {vgas_rgb, vgas_rgb_hs, vgas_rgb_vs, vgas_rgb_cs, vgas_rgb_de};
++        `endif
++
+ 	`else
+ 		assign {vgas_o, vgas_hs, vgas_vs, vgas_cs, vgas_de} = 0;
+ 	`endif
