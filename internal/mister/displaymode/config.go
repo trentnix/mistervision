@@ -50,9 +50,9 @@ func Parse(source settings.Section) (Config, error) {
 }
 
 const coreName = "MiSTerVisionInterlaced"
-const coreVersion = "v0.0.1-mistervision-yc1"
-const coreSize = 2506876
-const coreSHA256 = "a30287ba5323514164f8e8d0d74b857eadd0a2d1716b9d393b15d79ff4ef78d2"
+const coreVersion = "v0.0.1-mistervision-yc2"
+const coreSize = 2488488
+const coreSHA256 = "24baa391734c04d66c937fb7abfa6b4b9f6548b49b21d66abbb6726d027a7fa8"
 const blockStart = "; BEGIN MiSTerVision interlaced output"
 const blockEnd = "; END MiSTerVision interlaced output"
 
