@@ -6,7 +6,9 @@ The encoder is experimental until color and sync have been checked through a dir
 
 ## Implementation
 
-`scaler-yc.patch` selects the new encoder only when the standalone interlaced modeline and Main's Y/C flag are both active. `interlaced_yc.sv` uses the upstream `yc_out` encoder at the scaler clock. It converts Main's 20 MHz encoder parameters to the standalone raster's 12.5875 MHz clock. The conversion preserves the selected carrier, including NTSC, PAL, PAL60, PAL-M, and Main's carrier adjustments. It does not change the raster, framebuffer dimensions, page flipping, or video decoding.
+`scaler-yc.patch` selects the new encoder only when the standalone interlaced modeline and Main's Y/C flag are both active. `interlaced_yc.sv` uses an interlaced-only copy of the [MiSTer template encoder](https://github.com/MiSTer-devel/Template_MiSTer/blob/5dda37366d02b04b8448da7b322235c1831af811/sys/yc_out.sv) at the scaler clock. It converts Main's 20 MHz encoder parameters to the standalone raster's 12.5875 MHz clock. The conversion preserves the selected carrier, including NTSC, PAL, PAL60, PAL-M, and Main's carrier adjustments. It does not change the raster, framebuffer dimensions, page flipping, or video decoding.
+
+The scaler copy is vendored as `interlaced_yc_encoder.sv` with the module renamed. This revision includes upstream fixes for PAL chroma arithmetic and for matching brightness and sync samples. The native progressive output continues to use the encoder from the pinned Menu revision.
 
 Parameter conversion uses registered arithmetic and serial division. Settings are published together after conversion. A change during conversion discards the pending result. This work happens in the FPGA, not on the ARM processor.
 
@@ -29,6 +31,6 @@ python3 fpga/interlaced/build.py /tmp/interlaced-yc-simulation --prepare-only
 python3 fpga/interlaced/test.py /tmp/interlaced-yc-simulation
 ```
 
-The tests measure carrier frequency, check burst timing and sync alignment, exercise settings changes, and compare the actual scaler-output block against upstream RGB/component output. They also compile the path with Y/C disabled. Simulation adapts two upstream declarations for Verilator without changing synthesis source.
+The tests measure carrier frequency, check burst timing, PAL chroma on alternating lines and alignment of active video with the waveform, exercise settings changes, and compare the actual scaler-output block against upstream RGB/component output. They also compile the path with Y/C disabled. Simulation adapts an upstream struct declaration for Verilator without changing synthesis source.
 
 Physical validation must check color, field lock, cropping, and motion through the intended adapter and television. Software framebuffer readback cannot validate the analog signal.

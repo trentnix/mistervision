@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Simulate the scaler encoder against the pinned Menu encoder using Verilator."""
+"""Simulate the scaler encoder against the pinned interlaced encoder using Verilator."""
 
 import argparse
 from pathlib import Path
@@ -16,15 +16,12 @@ def main():
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="mistervision-yc-test-") as temporary:
         root = Path(temporary)
-        encoder = (args.source / "sys/yc_out.sv").read_text()
-        # Verilator 5.006 cannot initialize this unpacked wire array and loses
-        # overlapping nonblocking assignments to unpacked struct members.
-        # A constant LUT and packed structs preserve the encoder's hardware
-        # semantics. The synthesis source remains untouched.
-        encoder = encoder.replace("wire signed [10:0] chroma_SIN_LUT", "localparam logic signed [10:0] chroma_SIN_LUT")
+        encoder = (args.source / "sys/interlaced_yc_encoder.sv").read_text()
+        # Verilator 5.006 loses overlapping nonblocking assignments to members
+        # of unpacked structs. Match the synthesis behavior in the simulation.
         encoder = encoder.replace("typedef struct {", "typedef struct packed {")
-        (root / "yc_out.sv").write_text(encoder)
-        for name in ("interlaced_yc.sv", "yc_test.sv", "scaler_test.sv"):
+        (root / "interlaced_yc_encoder.sv").write_text(encoder)
+        for name in ("interlaced_yc.sv", "yc_test.sv", "yc_signal_test.sv", "scaler_test.sv"):
             shutil.copyfile(HERE / name, root / name)
         shutil.copyfile(args.source / "sys/vga_out.sv", root / "vga_out.sv")
         top = (args.source / "sys/sys_top.v").read_text()
@@ -41,13 +38,14 @@ def main():
 """ + block + "\nendmodule\n")
         for top, files, defines in (
             ("yc_test", ["yc_test.sv"], []),
+            ("yc_signal_test", ["yc_signal_test.sv"], []),
             ("scaler_test", ["scaler_test.sv", "test_scaler.sv", "vga_out.sv"], []),
             ("scaler_test", ["scaler_test.sv", "test_scaler.sv", "vga_out.sv"], ["+define+MISTER_DISABLE_YC"]),
             ("scaler_test", ["scaler_test.sv", "test_scaler.sv", "vga_out.sv"], ["+define+MISTER_DEBUG_NOHDMI"]),
             ("scaler_test", ["scaler_test.sv", "test_scaler.sv", "vga_out.sv"], ["+define+MISTER_DEBUG_NOHDMI", "+define+MISTER_DISABLE_YC"]),
         ):
             subprocess.run(["verilator", "--binary", "-j", "4", "--timing", "--top-module", top,
-                            "-Wno-fatal", "interlaced_yc.sv", "yc_out.sv"] + files + defines, cwd=root, check=True)
+                            "-Wno-fatal", "interlaced_yc.sv", "interlaced_yc_encoder.sv"] + files + defines, cwd=root, check=True)
             subprocess.run([str(root / "obj_dir" / ("V" + top))], cwd=root, check=True)
 
 

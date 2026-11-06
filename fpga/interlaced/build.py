@@ -47,9 +47,10 @@ def prepare(destination):
     build_id = destination / "sys/build_id.tcl"
     build_id.write_text(build_id.read_text().replace(
         "[clock format [ clock seconds ] -format %y%m%d]", manifest["build_date"]))
-    shutil.copyfile(HERE / "interlaced_yc.sv", destination / "sys/interlaced_yc.sv")
     with (destination / "files.qip").open("a") as output:
-        output.write("\nset_global_assignment -name SYSTEMVERILOG_FILE sys/interlaced_yc.sv\n")
+        for name in ("interlaced_yc.sv", "interlaced_yc_encoder.sv"):
+            shutil.copyfile(HERE / name, destination / "sys" / name)
+            output.write(f"\nset_global_assignment -name SYSTEMVERILOG_FILE sys/{name}\n")
 
 
 def main():

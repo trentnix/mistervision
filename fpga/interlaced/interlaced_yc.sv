@@ -73,7 +73,7 @@ module interlaced_yc (
         end
     end
 
-    yc_out encoder (
+    interlaced_yc_encoder encoder (
         .clk(clk), .PHASE_INC(scaled_phase), .PAL_EN(active[58]),
         .CVBS(active[57]), .COLORBURST_RANGE(scaled_burst),
         .din(rgb), .hsync(hs), .vsync(vs), .csync(cs), .de(de),

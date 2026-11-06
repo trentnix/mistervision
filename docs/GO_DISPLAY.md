@@ -123,7 +123,7 @@ Widescreen fitting has local native-filter and real desktop-decoder coverage. Au
 The single [application package](GO_BUILD.md#release-bundles) includes the matching client, player, and [interlaced core with the Y/C extension](../fpga/interlaced/README.md). Enable interlacing through `settings.json`, not a different download. Existing installations retain their configuration. Source builds must still place the pinned core beside `settings.json`, normally in `/media/fat/mistervision`. The supported core has this SHA-256:
 
 ```text
-a30287ba5323514164f8e8d0d74b857eadd0a2d1716b9d393b15d79ff4ef78d2
+24baa391734c04d66c937fb7abfa6b4b9f6548b49b21d66abbb6726d027a7fa8
 ```
 
 To change an existing installation, set the `display` section in `settings.json`:

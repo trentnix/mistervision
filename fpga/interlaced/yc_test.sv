@@ -10,19 +10,20 @@ module yc_test;
     wire [23:0] video;
     wire hs_out, vs_out, cs_out, de_out;
     interlaced_yc dut(.*);
-    reg [4:0] h_history = 0, v_history = 0, c_history = 0, d_history = 0;
+    reg [7:0] h_history = 0, v_history = 0, c_history = 0, d_history = 0;
     integer ticks = 0, crossings = 0, last_chroma = 128;
     task tick;
         @(negedge clk);
-        h_history = {h_history[3:0], hs};
-        v_history = {v_history[3:0], vs};
-        c_history = {c_history[3:0], cs};
-        d_history = {d_history[3:0], de};
+        h_history = {h_history[6:0], hs};
+        v_history = {v_history[6:0], vs};
+        c_history = {c_history[6:0], cs};
+        d_history = {d_history[6:0], de};
         @(posedge clk); #1;
         ticks++;
         if (ticks > 32 && {hs_out, vs_out, cs_out, de_out} !==
-            {h_history[4], v_history[4], c_history[4], d_history[4]})
-            $fatal(1, "Encoder sync is not aligned: got %b expected %b phase1=%b phase4=%b", {hs_out, vs_out, cs_out, de_out}, {h_history[4], v_history[4], c_history[4], d_history[4]}, dut.encoder.phase[1].hsync, dut.encoder.phase[4].hsync);
+            {h_history[7], v_history[7], c_history[7], d_history[7]})
+            $fatal(1, "Encoder sync is not aligned: got %b expected %b",
+                   {hs_out, vs_out, cs_out, de_out}, {h_history[7], v_history[7], c_history[7], d_history[7]});
     endtask
     task standard(input bit p, input bit composite, input [39:0] phase,
                   input [16:0] burst, input [39:0] expected_phase,
