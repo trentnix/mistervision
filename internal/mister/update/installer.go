@@ -21,7 +21,8 @@ const pendingName = ".update-pending"
 var versionPattern = regexp.MustCompile(`^v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$`)
 
 // Installer owns fixed application and launcher destinations. It never changes
-// active settings, sign-in, preferences, caches, or the optional interlaced core.
+// active settings, sign-in, preferences, or caches. The bundled interlaced core
+// is replaced and rolled back with the application and player.
 // The caller must stop playback before Install and exit after success.
 type Installer struct {
 	root, launcher string

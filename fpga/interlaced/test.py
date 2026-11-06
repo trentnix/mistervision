@@ -43,6 +43,8 @@ def main():
             ("yc_test", ["yc_test.sv"], []),
             ("scaler_test", ["scaler_test.sv", "test_scaler.sv", "vga_out.sv"], []),
             ("scaler_test", ["scaler_test.sv", "test_scaler.sv", "vga_out.sv"], ["+define+MISTER_DISABLE_YC"]),
+            ("scaler_test", ["scaler_test.sv", "test_scaler.sv", "vga_out.sv"], ["+define+MISTER_DEBUG_NOHDMI"]),
+            ("scaler_test", ["scaler_test.sv", "test_scaler.sv", "vga_out.sv"], ["+define+MISTER_DEBUG_NOHDMI", "+define+MISTER_DISABLE_YC"]),
         ):
             subprocess.run(["verilator", "--binary", "-j", "4", "--timing", "--top-module", top,
                             "-Wno-fatal", "interlaced_yc.sv", "yc_out.sv"] + files + defines, cwd=root, check=True)

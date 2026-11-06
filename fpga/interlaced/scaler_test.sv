@@ -29,9 +29,14 @@ module scaler_test;
                 hdmi_data_osd = 24'($random);
                 {hdmi_hs_osd, hdmi_vs_osd, hdmi_cs_osd, hdmi_de_osd} = 4'($random);
                 @(posedge clk_hdmi); #1;
-                if (sample_no>8 && {vgas_o,vgas_hs,vgas_vs,vgas_cs,vgas_de} !==
-                    {reference_rgb,ref_hs,ref_vs,ref_cs,ref_de})
-                    $fatal(1,"Existing scaler path changed in mode %d", mode_no);
+                `ifdef MISTER_DEBUG_NOHDMI
+                    if ({vgas_o,vgas_hs,vgas_vs,vgas_cs,vgas_de} !== 28'd0)
+                        $fatal(1,"Disabled HDMI scaler outputs changed");
+                `else
+                    if (sample_no>8 && {vgas_o,vgas_hs,vgas_vs,vgas_cs,vgas_de} !==
+                        {reference_rgb,ref_hs,ref_vs,ref_cs,ref_de})
+                        $fatal(1,"Existing scaler path changed in mode %d", mode_no);
+                `endif
             end
         end
         ilace_auto = 1; yc_en = 1; ypbpr_en = 0;
@@ -44,7 +49,10 @@ module scaler_test;
             repeat(200) @(negedge clk_hdmi);
             repeat(1000) begin
                 @(posedge clk_hdmi); #1;
-                `ifdef MISTER_DISABLE_YC
+                `ifdef MISTER_DEBUG_NOHDMI
+                    if ({vgas_o,vgas_hs,vgas_vs,vgas_cs,vgas_de} !== 28'd0)
+                        $fatal(1,"Y/C enabled disabled HDMI scaler");
+                `elsif MISTER_DISABLE_YC
                     if (vgas_o !== reference_rgb) $fatal(1,"Disabled Y/C changed RGB");
                 `else
                     if (!cvbs && vgas_o[15:8] != 76) $fatal(1,"Interlaced S-Video route not selected");
@@ -52,7 +60,21 @@ module scaler_test;
                 `endif
             end
         end
-        $display("PASS active Y/C routing");
+        // Repeatedly leaving Y/C mode must immediately restore the untouched
+        // RGB/component output, including its original sync latency.
+        `ifndef MISTER_DEBUG_NOHDMI
+            for (int mode_no=0; mode_no<16; mode_no++) begin
+                @(negedge clk_hdmi);
+                yc_en = 0; ypbpr_en = mode_no[0];
+                repeat(10) @(negedge clk_hdmi);
+                if ({vgas_o,vgas_hs,vgas_vs,vgas_cs,vgas_de} !==
+                    {reference_rgb,ref_hs,ref_vs,ref_cs,ref_de})
+                    $fatal(1,"RGB/component not restored after Y/C");
+                yc_en = 1;
+                repeat(10) @(negedge clk_hdmi);
+            end
+        `endif
+        $display("PASS active Y/C routing and return to RGB/component");
         $display("PASS original RGB/component and non-interlaced scaler paths");
         $finish;
     end

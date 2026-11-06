@@ -64,6 +64,23 @@ module yc_test;
         end
         $display("PASS pal=%0d cvbs=%0d phase=%0d", p, composite, phase);
     endtask
+    // Compare the register arithmetic against a wide integer reference across
+    // boundary values and deterministic pseudo-random settings. Every setting
+    // must publish together, including PAL/CVBS and both burst endpoints.
+    task check_conversion(input [39:0] phase, input [16:0] burst,
+                          input bit p, input bit composite);
+        reg [63:0] expected;
+        reg [16:0] expected_burst;
+        phase_inc = phase; burst_range = burst; pal = p; cvbs = composite;
+        expected = (64'(phase) * 1600 + 503) / 1007;
+        expected_burst = {7'((32'(burst[16:10]) * 1007) / 1600),
+                          10'((32'(burst[9:0]) * 1007) / 1600)};
+        repeat(128) tick();
+        if (dut.scaled_phase !== expected[39:0] ||
+            dut.scaled_burst !== expected_burst ||
+            dut.active !== {p, composite, burst, phase})
+            $fatal(1, "Conversion mismatch phase=%d burst=%d", phase, burst);
+    endtask
     initial begin
         standard(0,0,40'd196787592471,{7'd20,10'd70},40'd312671447819,{7'd12,10'd44},2844);
         standard(0,1,40'd196787592471,{7'd20,10'd70},40'd312671447819,{7'd12,10'd44},2844);
@@ -80,6 +97,13 @@ module yc_test;
         if (dut.scaled_phase != 40'd387274309335 || !dut.active[57])
             $fatal(1, "Changed configuration was not published coherently");
         $display("PASS configuration change during conversion");
+        check_conversion(40'd0, 17'd0, 0, 0);
+        check_conversion(40'd1, 17'd1, 1, 1);
+        check_conversion(40'hffffffffff, 17'h1ffff, 0, 1);
+        for (int trial=0; trial<256; trial++)
+            check_conversion({8'($random),32'($random)}, 17'($random),
+                             trial[0], trial[1]);
+        $display("PASS boundary and randomized coherent conversions");
         $finish;
     end
 endmodule
