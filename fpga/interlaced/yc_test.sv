@@ -24,6 +24,26 @@ module yc_test;
             {h_history[4], v_history[4], c_history[4], d_history[4]})
             $fatal(1, "Encoder sync is not aligned: got %b expected %b phase1=%b phase4=%b", {hs_out, vs_out, cs_out, de_out}, {h_history[4], v_history[4], c_history[4], d_history[4]}, dut.encoder.phase[1].hsync, dut.encoder.phase[4].hsync);
     endtask
+    // RGB stays black after sync. Only the color burst should cross the
+    // blanking level on the C pin (S-Video) or the mixed Y pin (composite).
+    task check_color_burst(input bit composite);
+        integer blank, previous, level, rises;
+        blank = composite ? 64 : 128;
+        previous = blank;
+        rises = 0;
+        repeat (100) begin
+            tick();
+            level = composite ? int'(video[15:8]) : int'(video[23:16]);
+            if (previous < blank && level >= blank) rises++;
+            previous = level;
+        end
+        // The configured burst is nine cycles; allow one crossing at either edge.
+        if (rises < 8 || rises > 10)
+            $fatal(1, "Color burst: PAL=%0d CVBS=%0d expected 8-10 rises, got %0d", pal, composite, rises);
+        if (previous != blank)
+            $fatal(1, "Burst leaked into blanking: PAL=%0d CVBS=%0d level=%0d", pal, composite, previous);
+    endtask
+
     task standard(input bit p, input bit composite, input [39:0] phase,
                   input [16:0] burst, input [39:0] expected_phase,
                   input [16:0] expected_burst, input integer expected_crossings);
@@ -33,9 +53,7 @@ module yc_test;
         if (dut.scaled_phase != expected_phase || dut.scaled_burst != expected_burst)
             $fatal(1, "Incorrect carrier or burst scaling: %d %d", dut.scaled_phase, dut.scaled_burst);
         hs = 0; cs = 0;
-        repeat(100) tick();
-        // On gray, the burst must finish and chroma return to its neutral level.
-        if (!composite && video[23:16] != 128) $fatal(1, "Burst leaked into blanking");
+        check_color_burst(composite);
         rgb = 24'hff0000; de = 1;
         repeat(100) tick();
         crossings = 0;
