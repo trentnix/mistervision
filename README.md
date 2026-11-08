@@ -77,6 +77,8 @@ Exit MiSTerVision and edit `/media/fat/mistervision/settings.json`, preserving o
 
 The included core loads automatically. The normal menu returns on exit. Set `interlaced` to `false` to return to the default. No different package or launcher is needed. See [interlaced setup and recovery](docs/GO_DISPLAY.md#enable-or-disable-interlaced-output).
 
+Native S-Video and composite interlacing is experimental in v1.7.3. See [adapter settings and testing guidance](docs/GO_DISPLAY.md#experimental-interlaced-s-video-and-composite).
+
 #### If the picture is wrong
 
 - **“Either disable framebuffer … or enable scaler on VGA”**: use `fb_terminal=1` with `vga_scaler=1` and CRT-compatible timing, or follow the [native analog setup](docs/GO_DISPLAY.md#native-analog-framebuffer-fb_terminal2) if your Main and Menu cores support it. Disabling the framebuffer is not a fix for MiSTerVision.

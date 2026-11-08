@@ -4,7 +4,7 @@ MiSTerFin-derived application code remains under [CC BY-NC 4.0](../LICENSE). The
 
 ## Bundled code
 
-- **[Izzie Walton's interlaced Menu core v0.0.1](https://github.com/iwalton3/Menu_MiSTer/releases/tag/v0.0.1)** — included unmodified starting with v1.4.1. The top-level Menu source is Copyright (C) 2017–2020 Sorgelig, GPL-2.0-or-later. Individual source files retain their notices. Releases include the GPL text and [core notice](licenses/interlaced-menu.txt), plus the complete pinned source in `third_party/Menu_MiSTer-source.tar.gz` in the source bundle. See [display setup](GO_DISPLAY.md).
+- **[Izzie Walton's interlaced Menu core v0.0.1](https://github.com/iwalton3/Menu_MiSTer/releases/tag/v0.0.1)** — originally included unmodified starting with v1.4.1. The current development build adds an interlaced Y/C encoder route. Its GPL-2.0-or-later patch, module, and build recipe are in [`fpga/interlaced`](../fpga/interlaced/README.md). The top-level Menu source is Copyright (C) 2017–2020 Sorgelig, GPL-2.0-or-later. Individual source files retain their notices. Releases include the GPL text and [core notice](licenses/interlaced-menu.txt), plus the complete pinned source in `third_party/Menu_MiSTer-source.tar.gz` in the source bundle. See [display setup](GO_DISPLAY.md).
 
 - **Go runtime and standard library** — the Go Authors, BSD-style license. Release bundles include the license from the compiler used to build the client as `licenses/go-LICENSE`.
 

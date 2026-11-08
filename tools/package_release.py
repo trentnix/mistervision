@@ -15,14 +15,14 @@ import time
 import zipfile
 
 def interlaced_files(root, download=False):
-    """Read pinned core and source bytes, downloading only during release builds."""
+    """Read verified bundled core and upstream source, downloading missing upstream files."""
     manifest = json.loads((root / "tools/interlaced-core.json").read_text())
     cache = root / "build/interlaced-core"
     cache.mkdir(parents=True, exist_ok=True)
     result = {}
     for name, spec in manifest["files"].items():
-        path = cache / name
-        if not path.exists() and download:
+        path = root / spec["path"] if "path" in spec else cache / name
+        if not path.exists() and download and "url" in spec:
             with tempfile.TemporaryDirectory(dir=cache) as temporary:
                 candidate = Path(temporary) / name
                 subprocess.check_call(["curl", "--fail", "--location", "--silent", "--show-error",
