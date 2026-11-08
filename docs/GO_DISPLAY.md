@@ -146,7 +146,7 @@ To return to progressive output, set `interlaced` to `false` or omit the section
 
 ### Experimental interlaced S-Video and composite
 
-The development core adds Y/C encoding to the interlaced framebuffer output. If your native analog adapter requires `vga_mode=svideo` or `vga_mode=cvbs`, keep that setting in the active INI profile and enable `display.interlaced`. The launcher inherits your color standard and sync settings. Install the matching client and core together. An older interlaced core cannot encode this framebuffer path.
+Starting with v1.7.3, the bundled core includes experimental Y/C encoding for interlaced framebuffer output, with corrected PAL color calculations and aligned picture-edge timing. If your native analog adapter requires `vga_mode=svideo` or `vga_mode=cvbs`, keep that setting in the active INI profile and enable `display.interlaced`. The launcher inherits your color standard and sync settings. Install the matching client and core together. An older interlaced core cannot encode this framebuffer path.
 
 This path still needs direct S-Video/composite hardware validation. Test from a working progressive configuration and check color, stable field sync, and playback before relying on it. Super Video Custard converts RGB externally and must retain `vga_mode=rgb`. The new route does not add Y/C encoding to HDMI DAC adapters.
 

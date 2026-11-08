@@ -101,8 +101,11 @@ Live TV timeshifting is absent from both MiSTerVision adapters. Plex provides a 
 
 ## Open compatibility work
 
+- **[Interlaced S-Video/composite (#54)](https://github.com/trentnix/mistervision/issues/54):** v1.7.3 includes the encoder and color-burst, PAL, and picture-edge regression tests. The maintainer confirmed the combined build on component output. Native S-Video/composite color and field sync still need hardware confirmation.
+- **[Zaparoo startup (#52)](https://github.com/trentnix/mistervision/issues/52):** v1.7.3 recognizes the Zaparoo host during progressive startup. The reporter confirmed startup with the test build. This fix is separate from deferred Zaparoo DDR integration. ConsoleMode also preserves native analog framebuffer settings during handoff.
+
 - **[SuperStation One (#22)](https://github.com/trentnix/mistervision/issues/22):** ConsoleMode handoff and diagnostics are implemented. The reporter confirmed the tearing fix on HDMI and VGA, then reported smooth HDMI playback with the output-sized transcoding change in v1.6.2. VGA testing of the sizing change remains open. The maintainer has no SS1 and relies on reporter validation.
-- **[PAL validation (#28)](https://github.com/trentnix/mistervision/issues/28):** A contributor has validated 288p and 576i RGBS output with an Analog IO Board v6.1 and Sony PVM-14N6U, including logs confirming framebuffer sizes and interlaced mode. Progressive and interlaced YPbPr output reportedly work on an NTSC Samsung TV that accepts PAL timing, without a separate diagnostic capture. Remaining work covers PAL composite/S-Video encoding and additional output paths. See the [reported configuration](GO_DISPLAY.md#reported-pal-rgb-and-component-configurations).
+- **[PAL validation (#28)](https://github.com/trentnix/mistervision/issues/28):** A contributor has validated 288p and 576i RGBS output with an Analog IO Board v6.1 and Sony PVM-14N6U, including logs confirming framebuffer sizes and interlaced mode. Progressive and interlaced YPbPr output reportedly work on an NTSC Samsung TV that accepts PAL timing, without a separate diagnostic capture. v1.7.3 includes experimental interlaced composite/S-Video encoding with corrected PAL color and picture timing. Physical color and sync validation remains open. See the [reported configuration](GO_DISPLAY.md#reported-pal-rgb-and-component-configurations).
 
 ## Implementation considerations
 
