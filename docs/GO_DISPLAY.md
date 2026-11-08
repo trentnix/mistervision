@@ -21,9 +21,11 @@ When ConsoleMode is running, MiSTerVision temporarily uses the original MiSTer h
 
 The handoff uses the active MiSTer INI profile. MiSTerVision reads the host’s selection without changing it and resolves Main or one of the three alternate profiles. If the selection cannot be read or resolved safely, startup stops before changing the display. Reload Menu after adding or renaming alternate INI files, because the host caches their names.
 
-The active profile’s standard `[Menu]` settings must already support the intended output. A working native ConsoleMode CRT picture does not establish that the Linux framebuffer can reach the CRT. For analog output, configure the scaler and a CRT-compatible timing as described below. MiSTerVision does not infer safe analog timing from an HDMI resolution or replace the user's connector settings.
+The active profile’s standard `[Menu]` settings must already support the intended output. A working native ConsoleMode CRT picture does not establish that the Linux framebuffer can reach the CRT. For progressive analog output, use the scaler with CRT-compatible timing or the native framebuffer route (`fb_terminal=2`, `vga_scaler=0`, `direct_video=0`, and `forced_scandoubler=0`) on a compatible Main and Menu core. MiSTerVision does not infer safe analog timing from an HDMI resolution or replace the user's connector settings.
 
-The application adds an isolated `[MiSTerVisionFramebuffer]` section for host selection and console activation. Existing display settings remain unchanged. Before the first change, it saves `<profile filename>.before-consolemode` beside the application settings. The interlaced section also selects the original host. These sections apply only to the application's named core configurations.
+The application adds an isolated `[MiSTerVisionFramebuffer]` section for host selection and console activation. The handoff preserves a valid native `fb_terminal=2` route and replaces older managed overrides that forced it to `1`. Native playback synchronization still requires an actual 640×240 or 640×288 framebuffer. Ambiguous timing-specific route overrides are not accepted as evidence of a valid native CRT configuration.
+
+Existing display settings remain unchanged. Before the first change, it saves `<profile filename>.before-consolemode` beside the application settings. The interlaced section also selects the original host. These sections apply only to the application's named core configurations.
 
 With [diagnostics enabled](GO_DIAGNOSTICS.md), startup records the saved ConsoleMode display selections and follows host, core, terminal, and framebuffer state through the handoff. It records only known settings and bounded numeric values.
 

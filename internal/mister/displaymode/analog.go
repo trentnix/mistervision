@@ -1,8 +1,8 @@
 package displaymode
 
 import (
-	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -36,6 +36,12 @@ func nativeAnalogRoute(data []byte, name string, width, height int) bool {
 	if width != 640 || (height != 240 && height != 288) {
 		return false
 	}
+	return nativeAnalogConfigured(data, name)
+}
+
+// nativeAnalogConfigured recognizes an unambiguous native route before the
+// framebuffer is active. Playback must also verify its actual raster dimensions.
+func nativeAnalogConfigured(data []byte, name string) bool {
 	values := menuSettings(data, name)
 	for key, expected := range map[string]int{"fb_terminal": 2, "vga_scaler": 0, "direct_video": 0, "forced_scandoubler": 0} {
 		value, exists := values[key]
@@ -45,8 +51,8 @@ func nativeAnalogRoute(data []byte, name string, width, height int) bool {
 			}
 			continue
 		}
-		var number int
-		if _, err := fmt.Sscanf(value, "%d", &number); err != nil || number != expected {
+		number, err := strconv.Atoi(value)
+		if err != nil || number != expected {
 			return false
 		}
 	}

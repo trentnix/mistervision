@@ -22,6 +22,8 @@ func TestNativeAnalogRoute(t *testing.T) {
 		{"HDMI", native, "MENU", 640, 360, false},
 		{"wide", native, "MENU", 1280, 240, false},
 		{"invalid", native + "[Menu]\nfb_terminal=no", "MENU", 640, 240, false},
+		{"invalid suffix", native + "[Menu]\nfb_terminal=2invalid", "MENU", 640, 240, false},
+		{"invalid zero flag", native + "[Menu]\nvga_scaler=0invalid", "MENU", 640, 240, false},
 		{"comment", native + "[Menu]\nfb_terminal=2 ; native", "MENU", 640, 240, true},
 		{"other core", native + "[ao486]\nvga_scaler=1", "MENU", 640, 240, true},
 		{"handoff override", native + "[MiSTerVisionFramebuffer]\nfb_terminal=1", framebufferCore, 640, 240, false},

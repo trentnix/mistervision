@@ -94,7 +94,7 @@ func TestConfigureINIOnlyChangesSelectedProfile(t *testing.T) {
 		name      string
 		transform func([]byte) ([]byte, error)
 	}{
-		{"consolemode", consoleModeConfig}, {"interlaced", CoreConfig},
+		{"consolemode", func(data []byte) ([]byte, error) { return consoleModeConfig(data, false) }}, {"interlaced", CoreConfig},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := t.TempDir()
@@ -156,7 +156,7 @@ func TestConfigureINIBackupFailureLeavesProfileUnchanged(t *testing.T) {
 	if err := os.WriteFile(path, original, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := configureINI(path, filepath.Join(root, "missing"), "consolemode", consoleModeConfig); err == nil {
+	if err := configureINI(path, filepath.Join(root, "missing"), "consolemode", func(data []byte) ([]byte, error) { return consoleModeConfig(data, false) }); err == nil {
 		t.Fatal("missing backup directory accepted")
 	}
 	got, err := os.ReadFile(path)
@@ -175,7 +175,7 @@ func TestConfigureINIRejectsInvalidBackup(t *testing.T) {
 	if err := os.Mkdir(path+".before-consolemode", 0700); err != nil {
 		t.Fatal(err)
 	}
-	if err := configureINI(path, root, "consolemode", consoleModeConfig); err == nil {
+	if err := configureINI(path, root, "consolemode", func(data []byte) ([]byte, error) { return consoleModeConfig(data, false) }); err == nil {
 		t.Fatal("accepted a directory as backup")
 	}
 	got, err := os.ReadFile(path)
@@ -201,7 +201,7 @@ func TestConfigureINIIgnoresInterruptedTemporaryBackup(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, ".mistervision-interrupted"), original[:4], 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := configureINI(path, root, "consolemode", consoleModeConfig); err != nil {
+	if err := configureINI(path, root, "consolemode", func(data []byte) ([]byte, error) { return consoleModeConfig(data, false) }); err != nil {
 		t.Fatal(err)
 	}
 	got, err := os.ReadFile(path + ".before-consolemode")
